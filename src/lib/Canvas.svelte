@@ -5,6 +5,7 @@
 		Background,
 		Controls,
 		MiniMap,
+		useSvelteFlow,
 		type Node,
 		type Edge,
 		type Connection
@@ -18,19 +19,36 @@
 		universal: UniversalNode
 	};
 
-	let nodes = $state<Node[]>([]);
-	let edges = $state<Edge[]>([]);
+	// Use $state.raw for better performance with arrays as shown in reference
+	let nodes = $state.raw<Node[]>([]);
+	let edges = $state.raw<Edge[]>([]);
 	let nodesService: NodesService;
 	let showCreateModal = $state(false);
 	let createPosition = $state({ x: 0, y: 0 });
+	let saveTimeout: number;
+
+	// Auto-save positions when nodes change (e.g., after dragging)
+	$effect(() => {
+		if (nodesService && nodes.length > 0) {
+			clearTimeout(saveTimeout);
+			saveTimeout = setTimeout(() => {
+				nodesService.saveToStorage(nodes, edges);
+			}, 500);
+		}
+	});
 
 	onMount(() => {
 		nodesService = new NodesService(
-			(newNodes) => (nodes = newNodes),
+			(newNodes) => {
+				nodes = newNodes;
+			},
 			() => nodes,
-			(newEdges) => (edges = newEdges),
+			(newEdges) => {
+				edges = newEdges;
+			},
 			() => edges
 		);
+
 		nodesService.loadFromStorage();
 
 		// Add initial project node if none exist
@@ -96,19 +114,27 @@
 	}
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <svelte:window on:keydown={handleKeyDown} />
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="h-full w-full bg-zinc-950" onclick={handleCanvasClick}>
-	<SvelteFlow {nodes} {edges} {nodeTypes} onconnect={handleConnect} colorMode="dark">
+	<SvelteFlow
+		bind:nodes
+		bind:edges
+		{nodeTypes}
+		onconnect={handleConnect}
+		colorMode="dark"
+		nodesDraggable={true}
+		nodesConnectable={true}
+	>
 		<Background />
 		<Controls />
 		<MiniMap />
 	</SvelteFlow>
 </div>
-
-<!-- <div class="fixed top-0 left-0 text-white">
-	{JSON.stringify(nodes)}
-</div> -->
 
 {#if showCreateModal}
 	<CreateNodeModal

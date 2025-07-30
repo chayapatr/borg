@@ -15,27 +15,6 @@ export interface TemplateField {
 }
 
 export const nodeTemplates: Record<string, NodeTemplate> = {
-	blank: {
-		id: 'blank',
-		name: 'Blank Node',
-		color: '#52525b',
-		fields: [
-			{
-				id: 'title',
-				label: 'Title',
-				type: 'text',
-				placeholder: 'Enter title...',
-				required: true
-			},
-			{
-				id: 'description',
-				label: 'Description',
-				type: 'textarea',
-				placeholder: 'Enter description...'
-			}
-		]
-	},
-	
 	project: {
 		id: 'project',
 		name: 'Project',
@@ -224,6 +203,27 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				label: 'Tags',
 				type: 'tags',
 				placeholder: 'Add tags...'
+			}
+		]
+	},
+
+	blank: {
+		id: 'blank',
+		name: 'Blank Node',
+		color: '#52525b',
+		fields: [
+			{
+				id: 'title',
+				label: 'Title',
+				type: 'text',
+				placeholder: 'Enter title...',
+				required: true
+			},
+			{
+				id: 'description',
+				label: 'Description',
+				type: 'textarea',
+				placeholder: 'Enter description...'
 			}
 		]
 	}

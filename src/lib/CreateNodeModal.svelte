@@ -7,19 +7,13 @@
 		onClose: () => void;
 	}>();
 
-	let selectedTemplate = $state('');
-
-	function handleCreate() {
-		if (selectedTemplate) {
-			onCreate(selectedTemplate);
-		}
+	function handleCreateNode(templateType: string) {
+		onCreate(templateType);
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
 			onClose();
-		} else if (event.key === 'Enter' && selectedTemplate) {
-			handleCreate();
 		}
 	}
 
@@ -34,48 +28,38 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-50 flex items-center justify-center" onclick={handleBackdropClick}>
+<div
+	class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+	onclick={handleBackdropClick}
+>
 	<div class="w-96 rounded-lg border border-zinc-700 bg-zinc-900 p-6 shadow-xl">
 		<h2 class="mb-4 text-lg font-semibold text-zinc-100">Create New Node</h2>
 
-		<div class="space-y-3">
+		<div class="grid grid-cols-2 gap-3">
 			{#each Object.values(nodeTemplates) as template}
-				<label
-					class="flex cursor-pointer items-center space-x-3 rounded-lg border border-zinc-700 p-3 hover:bg-zinc-800"
+				<button
+					onclick={() => handleCreateNode(template.id)}
+					class="focus:ring-opacity-50 flex items-center space-x-3 rounded-lg border border-zinc-700 p-4 text-left transition-all hover:border-zinc-500 hover:bg-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
 				>
-					<input
-						type="radio"
-						bind:group={selectedTemplate}
-						value={template.id}
-						class="text-blue-600"
-					/>
-					<div class="flex items-center space-x-2">
-						<div class="h-4 w-4 rounded-full" style="background-color: {template.color};"></div>
-						<span class="text-zinc-200">{template.name}</span>
-					</div>
-				</label>
+					<div
+						class="h-3 w-3 flex-shrink-0 rounded-full"
+						style="background-color: {template.color};"
+					></div>
+					<span class="font-medium text-zinc-200">{template.name}</span>
+				</button>
 			{/each}
 		</div>
 
-		<div class="mt-6 flex justify-end space-x-3">
+		<div class="mt-6 flex items-center justify-between">
+			<div class="text-xs text-zinc-400">
+				Press <kbd class="rounded bg-zinc-800 px-2 py-1">Escape</kbd> to cancel
+			</div>
 			<button
 				onclick={onClose}
-				class="rounded bg-zinc-700 px-4 py-2 text-zinc-300 hover:bg-zinc-600"
+				class="rounded bg-zinc-700 px-4 py-2 text-zinc-300 transition-colors hover:bg-zinc-600"
 			>
 				Cancel
 			</button>
-			<button
-				onclick={handleCreate}
-				disabled={!selectedTemplate}
-				class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-			>
-				Create
-			</button>
 		</div>
-
-		<!-- <div class="mt-3 text-xs text-zinc-400">
-			Press <kbd class="rounded bg-zinc-800 px-1 py-0.5">Enter</kbd> to create or
-			<kbd class="rounded bg-zinc-800 px-1 py-0.5">Escape</kbd> to cancel
-		</div> -->
 	</div>
 </div>

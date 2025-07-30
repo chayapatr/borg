@@ -14,10 +14,10 @@ export class NodesService {
 	addNode(templateType: string, position: { x: number; y: number }) {
 		const template = getTemplate(templateType);
 		const id = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-		
+
 		// Initialize default data based on template
 		const nodeData: Record<string, any> = {};
-		template.fields.forEach(field => {
+		template.fields.forEach((field) => {
 			if (field.type === 'tags') {
 				nodeData[field.id] = [];
 			} else {
@@ -28,38 +28,38 @@ export class NodesService {
 		const newNode: Node = {
 			id,
 			type: 'universal',
-			position,
+			position: { ...position }, // Ensure clean position object
 			data: {
 				templateType,
 				nodeData
 			}
 		};
 
-		const updatedNodes = [...this.getNodes(), newNode];
+		// Simply add to existing array - binding will handle reactivity
+		const currentNodes = this.getNodes();
+		const updatedNodes = [...currentNodes, newNode];
 		this.setNodes(updatedNodes);
 		this.saveToStorage(updatedNodes, this.getEdges());
 	}
 
 	updateNode(nodeId: string, data: any) {
-		const updatedNodes = this.getNodes().map(node => 
-			node.id === nodeId 
-				? { ...node, data: { ...node.data, ...data } }
-				: node
+		const updatedNodes = this.getNodes().map((node) =>
+			node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
 		);
 		this.setNodes(updatedNodes);
 		this.saveToStorage(updatedNodes, this.getEdges());
 	}
 
 	deleteNode(nodeId: string) {
-		const updatedNodes = this.getNodes().filter(node => node.id !== nodeId);
+		const updatedNodes = this.getNodes().filter((node) => node.id !== nodeId);
 		this.setNodes(updatedNodes);
-		this.saveToStorage(updatedNodes, this.getEdges());
 
 		// Also remove any edges connected to this node
-		const updatedEdges = this.getEdges().filter(edge => 
-			edge.source !== nodeId && edge.target !== nodeId
+		const updatedEdges = this.getEdges().filter(
+			(edge) => edge.source !== nodeId && edge.target !== nodeId
 		);
 		this.setEdges(updatedEdges);
+		this.saveToStorage(updatedNodes, updatedEdges);
 	}
 
 	addEdge(edge: Edge) {
