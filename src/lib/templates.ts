@@ -8,10 +8,12 @@ export interface NodeTemplate {
 export interface TemplateField {
 	id: string;
 	label: string;
-	type: 'text' | 'textarea' | 'tags' | 'status' | 'link' | 'date';
+	type: 'text' | 'textarea' | 'tags' | 'status' | 'link' | 'date' | 'button';
 	placeholder?: string;
 	options?: string[];
 	required?: boolean;
+	buttonText?: string;
+	buttonUrl?: string;
 }
 
 export const nodeTemplates: Record<string, NodeTemplate> = {
@@ -26,12 +28,6 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				type: 'text',
 				placeholder: 'Enter project name...',
 				required: true
-			},
-			{
-				id: 'description',
-				label: 'Description',
-				type: 'textarea',
-				placeholder: 'Project description...'
 			},
 			{
 				id: 'collaborators',
@@ -73,17 +69,6 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				placeholder: 'Add authors...'
 			},
 			{
-				id: 'venue',
-				label: 'Target Venue',
-				type: 'text',
-				placeholder: 'Conference/Journal name...'
-			},
-			{
-				id: 'deadline',
-				label: 'Submission Deadline',
-				type: 'date'
-			},
-			{
 				id: 'status',
 				label: 'Status',
 				type: 'status',
@@ -91,9 +76,9 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 			},
 			{
 				id: 'overleaf',
-				label: 'Overleaf Link',
-				type: 'link',
-				placeholder: 'https://overleaf.com/...'
+				label: '',
+				type: 'button',
+				buttonText: 'Open Overleaf'
 			}
 		]
 	},
@@ -111,28 +96,10 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				required: true
 			},
 			{
-				id: 'description',
-				label: 'Description',
-				type: 'textarea',
-				placeholder: 'What does this code do?...'
-			},
-			{
 				id: 'github',
-				label: 'GitHub URL',
-				type: 'link',
-				placeholder: 'https://github.com/...'
-			},
-			{
-				id: 'language',
-				label: 'Languages/Frameworks',
-				type: 'tags',
-				placeholder: 'Python, React, etc...'
-			},
-			{
-				id: 'docs',
-				label: 'Documentation',
-				type: 'link',
-				placeholder: 'Documentation URL...'
+				label: '',
+				type: 'button',
+				buttonText: 'Open Github Repo'
 			}
 		]
 	},
@@ -203,6 +170,20 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				label: 'Tags',
 				type: 'tags',
 				placeholder: 'Add tags...'
+			}
+		]
+	},
+
+	storage: {
+		id: 'storage',
+		name: 'Storage',
+		color: '#06b6d4',
+		fields: [
+			{
+				id: 'drive',
+				label: '',
+				type: 'button',
+				buttonText: 'Connect to Google Drive'
 			}
 		]
 	},

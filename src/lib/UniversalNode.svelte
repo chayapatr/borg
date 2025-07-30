@@ -6,17 +6,25 @@
 	let { data, id } = $props<{ data: any; id: string }>();
 
 	let template: NodeTemplate = $derived(getTemplate(data.templateType || 'blank'));
-	let isEditing = $state(false);
 	let nodeData = $state(data.nodeData || {});
 
-	function handleEdit() {
-		isEditing = true;
-	}
+	// Track changes and auto-save with a timeout to debounce
+	let saveTimeout: number | undefined;
+	
+	$effect(() => {
+		// Skip initial effect run
+		if (Object.keys(nodeData).length === 0) return;
+		
+		// Debounce the save operation
+		if (saveTimeout) clearTimeout(saveTimeout);
+		saveTimeout = setTimeout(() => {
+			handleSave();
+		}, 500) as any;
+	});
 
 	function handleSave() {
 		// Update the node data in the store
 		data.nodeData = { ...nodeData };
-		isEditing = false;
 
 		// Dispatch a custom event to update the data service
 		const event = new CustomEvent('nodeUpdate', {
@@ -25,26 +33,13 @@
 		document.dispatchEvent(event);
 	}
 
-	function handleCancel() {
-		// Reset to original data
-		nodeData = { ...data.nodeData };
-		isEditing = false;
-	}
-
 	function handleKeyDown(event: KeyboardEvent) {
-		if (isEditing) {
-			// Editing mode shortcuts only
-			if (event.key === 'Enter' && event.metaKey) {
-				event.preventDefault();
-				event.stopPropagation();
-				handleSave();
-			} else if (event.key === 'Escape') {
-				event.preventDefault();
-				event.stopPropagation();
-				handleCancel();
-			}
+		// Auto-save on Cmd+Enter
+		if (event.key === 'Enter' && event.metaKey) {
+			event.preventDefault();
+			event.stopPropagation();
+			handleSave();
 		}
-		// Removed delete keyboard shortcut
 	}
 
 	function handleDelete() {
@@ -70,64 +65,30 @@
 			>
 		</div>
 
-		{#if !isEditing}
-			<div class="flex items-center gap-1">
-				<button
-					onclick={handleEdit}
-					aria-label="Edit node"
-					class="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-				>
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-						/>
-					</svg>
-				</button>
-				<button
-					onclick={handleDelete}
-					aria-label="Delete node"
-					class="rounded p-1 text-zinc-500 hover:bg-red-500/30 hover:text-zinc-300"
-				>
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-						/>
-					</svg>
-				</button>
-			</div>
-		{/if}
+		<div class="flex items-center gap-1">
+			<button
+				onclick={handleDelete}
+				aria-label="Delete node"
+				class="rounded p-1 text-zinc-500 hover:bg-red-500/30 hover:text-zinc-300"
+			>
+				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+					/>
+				</svg>
+			</button>
+		</div>
 	</div>
 	<div class="min-w-64 rounded-lg border border-zinc-600 bg-zinc-900 p-4 shadow-lg" role="button">
 		<!-- Node Content -->
 		<div class="space-y-3">
 			{#each template.fields as field}
-				<FieldRenderer {field} bind:value={nodeData[field.id]} readonly={!isEditing} />
+				<FieldRenderer {field} bind:value={nodeData[field.id]} readonly={false} />
 			{/each}
 		</div>
-
-		<!-- Edit Controls -->
-		{#if isEditing}
-			<div class="mt-4 flex justify-end gap-2 border-t border-zinc-700 pt-3">
-				<button
-					onclick={handleCancel}
-					class="rounded bg-zinc-700 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-600"
-				>
-					Cancel
-				</button>
-				<button
-					onclick={handleSave}
-					class="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-500"
-				>
-					Save
-				</button>
-			</div>
-		{/if}
 
 		<!-- Connection Handles -->
 		<Handle type="target" position={Position.Left} class="!bg-zinc-600" />
