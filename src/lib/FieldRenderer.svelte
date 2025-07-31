@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { TemplateField } from './templates';
+	import { PeopleService } from './services/PeopleService';
+	import { TimelineService } from './services/TimelineService';
 
 	let {
 		field,
@@ -12,6 +14,10 @@
 		readonly?: boolean;
 		mode?: 'display' | 'edit';
 	}>();
+
+	// Services for synced data
+	const peopleService = new PeopleService();
+	const timelineService = new TimelineService();
 
 	let showTagInput = $state(false);
 	let editingButton = $state(false);
@@ -239,6 +245,86 @@
 				placeholder="Enter URL..."
 				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
 			/>
+		{/if}
+	{:else if field.type === 'people-selector'}
+		<div class="space-y-2">
+			<div class="flex flex-wrap gap-1">
+				{#if value && Array.isArray(value) && value.length > 0}
+					{#each value as personId}
+						{@const person = peopleService.getPerson(personId)}
+						{#if person}
+							<span class="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2 py-1 text-xs text-white">
+								{person.name}
+								{#if mode === 'edit'}
+									<button 
+										onclick={() => {
+											value = value.filter(id => id !== personId);
+										}} 
+										class="hover:text-red-300"
+									> 
+										× 
+									</button>
+								{/if}
+							</span>
+						{/if}
+					{/each}
+				{/if}
+
+				{#if mode === 'edit'}
+					{@const availablePeople = peopleService.getAllPeople().filter(p => !value?.includes(p.id))}
+					{#if availablePeople.length > 0}
+						<select
+							value=""
+							onchange={(e) => {
+								const target = e.target as HTMLSelectElement;
+								const selectedId = target.value;
+								if (selectedId) {
+									value = value ? [...value, selectedId] : [selectedId];
+									target.value = '';
+								}
+							}}
+							class="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-100 focus:border-blue-500 focus:outline-none"
+						>
+							<option value="">Add person...</option>
+							{#each availablePeople as person}
+								<option value={person.id}>{person.name}</option>
+							{/each}
+						</select>
+					{/if}
+				{/if}
+			</div>
+		</div>
+	{:else if field.type === 'timeline-selector'}
+		{#if mode === 'display'}
+			{#if value}
+				{@const event = timelineService.getEvent(value)}
+				{#if event}
+					<div class="py-1 text-zinc-100">
+						<div class="font-medium">{event.title}</div>
+						<div class="text-sm text-zinc-400">
+							{new Date(event.date).toLocaleDateString()} • {timelineService.getTemplate(event.templateType).name}
+						</div>
+					</div>
+				{:else}
+					<div class="py-1 text-zinc-400">Event not found</div>
+				{/if}
+			{:else}
+				<div class="py-1 text-zinc-400">No event selected</div>
+			{/if}
+		{:else}
+			{@const events = timelineService.getEventsSortedByDate()}
+			<select
+				bind:value
+				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 focus:border-blue-500 focus:outline-none"
+			>
+				<option value="">Select timeline event...</option>
+				{#each events as event}
+					{@const template = timelineService.getTemplate(event.templateType)}
+					<option value={event.id}>
+						{event.title} ({new Date(event.date).toLocaleDateString()}) - {template.name}
+					</option>
+				{/each}
+			</select>
 		{/if}
 	{/if}
 </div>

@@ -8,7 +8,7 @@ export interface NodeTemplate {
 export interface TemplateField {
 	id: string;
 	label: string;
-	type: 'text' | 'textarea' | 'tags' | 'status' | 'link' | 'date' | 'button';
+	type: 'text' | 'textarea' | 'tags' | 'status' | 'link' | 'date' | 'button' | 'people-selector' | 'timeline-selector';
 	placeholder?: string;
 	options?: string[];
 	required?: boolean;
@@ -32,7 +32,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 			{
 				id: 'collaborators',
 				label: 'Collaborators',
-				type: 'tags',
+				type: 'people-selector',
 				placeholder: 'Add collaborators...'
 			},
 			{
@@ -98,45 +98,22 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 		]
 	},
 
-	conference: {
-		id: 'conference',
-		name: 'Conference',
+	time: {
+		id: 'time',
+		name: 'Timeline Event',
 		color: '#8b5cf6',
 		fields: [
 			{
-				id: 'title',
-				label: 'Conference Name',
-				type: 'text',
-				placeholder: 'Enter conference name...',
-				required: true
+				id: 'event',
+				label: 'Timeline Event',
+				type: 'timeline-selector',
+				placeholder: 'Select or create timeline event...'
 			},
 			{
-				id: 'venue',
-				label: 'Location',
-				type: 'text',
-				placeholder: 'City, Country...'
-			},
-			{
-				id: 'deadline',
-				label: 'Submission Deadline',
-				type: 'date'
-			},
-			{
-				id: 'acceptance_deadline',
-				label: 'Acceptance Notification',
-				type: 'date'
-			},
-			{
-				id: 'organization',
-				label: 'Organization',
-				type: 'tags',
-				placeholder: 'ACM, IEEE, etc...'
-			},
-			{
-				id: 'website',
-				label: 'Website',
-				type: 'link',
-				placeholder: 'https://...'
+				id: 'notes',
+				label: 'Notes',
+				type: 'textarea',
+				placeholder: 'Additional notes about this event...'
 			}
 		]
 	},
