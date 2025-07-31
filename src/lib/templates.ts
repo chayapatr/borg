@@ -63,12 +63,6 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				required: true
 			},
 			{
-				id: 'authors',
-				label: 'Authors',
-				type: 'tags',
-				placeholder: 'Add authors...'
-			},
-			{
 				id: 'status',
 				label: 'Status',
 				type: 'status',
@@ -183,7 +177,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'drive',
 				label: '',
 				type: 'button',
-				buttonText: 'Connect to Google Drive'
+				buttonText: 'Open Google Drive'
 			}
 		]
 	},

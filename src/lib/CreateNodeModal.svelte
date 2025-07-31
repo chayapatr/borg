@@ -7,8 +7,19 @@
 		onClose: () => void;
 	}>();
 
+	let isCreating = $state(false);
+
 	function handleCreateNode(templateType: string) {
+		// Prevent double-clicks
+		if (isCreating) return;
+		isCreating = true;
+		
 		onCreate(templateType);
+		
+		// Reset after a short delay to allow for normal modal closure
+		setTimeout(() => {
+			isCreating = false;
+		}, 100);
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -39,7 +50,8 @@
 			{#each Object.values(nodeTemplates) as template}
 				<button
 					onclick={() => handleCreateNode(template.id)}
-					class="focus:ring-opacity-50 flex items-center space-x-3 rounded-lg border border-zinc-700 p-4 text-left transition-all hover:border-zinc-500 hover:bg-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+					disabled={isCreating}
+					class="focus:ring-opacity-50 flex items-center space-x-3 rounded-lg border border-zinc-700 p-4 text-left transition-all hover:border-zinc-500 hover:bg-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					<div
 						class="h-3 w-3 flex-shrink-0 rounded-full"
