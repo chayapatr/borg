@@ -20,7 +20,7 @@
 		<!-- Header -->
 		<div class="border-b border-zinc-800 p-6">
 			<h1 class="text-xl font-semibold text-zinc-100">Things</h1>
-			<p class="mt-1 text-sm text-zinc-400">MIT Media Lab</p>
+			<!-- <p class="mt-1 text-sm text-zinc-400">MIT Media Lab</p> -->
 		</div>
 
 		<!-- Navigation Tabs -->

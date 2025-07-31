@@ -5,6 +5,11 @@ export interface NodeTemplate {
 	fields: TemplateField[];
 }
 
+export interface CustomField extends TemplateField {
+	id: string;
+	isCustom: true;
+}
+
 export interface TemplateField {
 	id: string;
 	label: string;
@@ -14,6 +19,7 @@ export interface TemplateField {
 	required?: boolean;
 	buttonText?: string;
 	buttonUrl?: string;
+	showInDisplay?: boolean; // Controls visibility in display mode, defaults to true
 }
 
 export const nodeTemplates: Record<string, NodeTemplate> = {

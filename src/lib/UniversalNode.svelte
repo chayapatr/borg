@@ -68,8 +68,20 @@
 		<!-- Node Content -->
 		<div class="space-y-3">
 			{#each template.fields as field}
-				<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" />
+				{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? true}
+				{#if isVisible}
+					<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" />
+				{/if}
 			{/each}
+			
+			{#if nodeData.customFields && Array.isArray(nodeData.customFields)}
+				{#each nodeData.customFields as field}
+					{@const isVisible = field.showInDisplay ?? true}
+					{#if isVisible}
+						<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" />
+					{/if}
+				{/each}
+			{/if}
 		</div>
 
 		<!-- Connection Handles -->

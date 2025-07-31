@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { getTemplate, type NodeTemplate } from './templates';
+	import { getTemplate, type NodeTemplate, type TemplateField } from './templates';
 	import FieldRenderer from './FieldRenderer.svelte';
+	import CustomFieldManager from './CustomFieldManager.svelte';
+	import FieldVisibilityManager from './FieldVisibilityManager.svelte';
 
 	let {
 		nodeId,
@@ -20,16 +22,24 @@
 
 	let template: NodeTemplate = $derived(getTemplate(templateType || 'blank'));
 	let editableData = $state({ ...nodeData });
+	let customFields = $state<TemplateField[]>([]);
 
 	// Reset data when node changes
 	$effect(() => {
 		if (nodeId && nodeData) {
 			editableData = { ...nodeData };
+			// Load custom fields from node data
+			customFields = nodeData.customFields || [];
 		}
 	});
 
 	function handleSave() {
-		onSave(nodeId, { nodeData: editableData });
+		// Include custom fields in the saved data
+		const dataToSave = {
+			...editableData,
+			customFields: customFields
+		};
+		onSave(nodeId, { nodeData: dataToSave });
 	}
 
 	function handleDelete() {
@@ -98,6 +108,18 @@
 				{#each template.fields as field}
 					<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} mode="edit" />
 				{/each}
+				
+				{#each customFields as field}
+					<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} mode="edit" />
+				{/each}
+				
+				<CustomFieldManager bind:customFields bind:nodeData={editableData} />
+				
+				<FieldVisibilityManager 
+					templateFields={template.fields} 
+					bind:customFields 
+					bind:nodeData={editableData} 
+				/>
 			</div>
 		</div>
 
