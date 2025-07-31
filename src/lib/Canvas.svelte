@@ -12,9 +12,12 @@
 	} from '@xyflow/svelte';
 	import UniversalNode from './UniversalNode.svelte';
 	import { NodesService } from './services/NodesService';
+	import { ProjectsService } from './services/ProjectsService';
 	import CreateNodeModal from './CreateNodeModal.svelte';
 	import EditPanel from './EditPanel.svelte';
 	import '@xyflow/svelte/dist/style.css';
+
+	let { projectSlug } = $props<{ projectSlug?: string }>();
 
 	const nodeTypes = {
 		universal: UniversalNode
@@ -24,6 +27,7 @@
 	let nodes = $state.raw<Node[]>([]);
 	let edges = $state.raw<Edge[]>([]);
 	let nodesService: NodesService;
+	let projectsService: ProjectsService;
 	let showCreateModal = $state(false);
 	let createPosition = $state({ x: 0, y: 0 });
 	let saveTimeout: number;
@@ -56,15 +60,27 @@
 
 	// Auto-save positions when nodes change (e.g., after dragging)
 	$effect(() => {
-		if (nodesService && nodes.length > 0) {
+		if (nodesService) {
 			clearTimeout(saveTimeout);
 			saveTimeout = setTimeout(() => {
 				nodesService.saveToStorage(nodes, edges);
+				// Update project node count if we have a project
+				if (projectSlug && projectsService) {
+					projectsService.updateNodeCount(projectSlug, nodes.length);
+				}
 			}, 500);
 		}
 	});
 
+	// Separate effect for immediate node count updates
+	$effect(() => {
+		if (projectSlug && projectsService && nodesService) {
+			projectsService.updateNodeCount(projectSlug, nodes.length);
+		}
+	});
+
 	onMount(() => {
+		projectsService = new ProjectsService();
 		nodesService = new NodesService(
 			(newNodes) => {
 				nodes = newNodes;
@@ -73,7 +89,8 @@
 			(newEdges) => {
 				edges = newEdges;
 			},
-			() => edges
+			() => edges,
+			projectSlug
 		);
 
 		nodesService.loadFromStorage();

@@ -1,10 +1,5 @@
 <script lang="ts">
-	import Canvas from '$lib/Canvas.svelte';
-	import { SvelteFlowProvider } from '@xyflow/svelte';
+	import Browser from '$lib/Browser.svelte';
 </script>
 
-<div class="h-screen w-full">
-	<SvelteFlowProvider>
-		<Canvas />
-	</SvelteFlowProvider>
-</div>
+<Browser />

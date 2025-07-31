@@ -2,14 +2,19 @@ import type { Node, Edge } from '@xyflow/svelte';
 import { getTemplate } from '../templates';
 
 export class NodesService {
-	private storageKey = 'things-canvas-data';
+	private storageKey: string;
 
 	constructor(
 		private setNodes: (nodes: Node[]) => void,
 		private getNodes: () => Node[],
 		private setEdges: (edges: Edge[]) => void,
-		private getEdges: () => Edge[]
-	) {}
+		private getEdges: () => Edge[],
+		projectSlug?: string
+	) {
+		this.storageKey = projectSlug 
+			? `things-canvas-data-${projectSlug}` 
+			: 'things-canvas-data';
+	}
 
 	addNode(templateType: string, position: { x: number; y: number }) {
 		const template = getTemplate(templateType);
