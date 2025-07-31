@@ -4,11 +4,13 @@
 	let {
 		field,
 		value = $bindable(),
-		readonly = false
+		readonly = false,
+		mode = 'display'
 	} = $props<{
 		field: TemplateField;
 		value: any;
 		readonly?: boolean;
+		mode?: 'display' | 'edit';
 	}>();
 
 	let showTagInput = $state(false);
@@ -66,7 +68,7 @@
 	</label>
 
 	{#if field.type === 'text'}
-		{#if readonly}
+		{#if readonly || mode === 'display'}
 			<div class="py-1 text-zinc-100">
 				{value || '-'}
 			</div>
@@ -79,7 +81,7 @@
 			/>
 		{/if}
 	{:else if field.type === 'textarea'}
-		{#if readonly}
+		{#if readonly || mode === 'display'}
 			<div class="py-1 whitespace-pre-wrap text-zinc-100">
 				{value || '-'}
 			</div>
@@ -107,7 +109,7 @@
 					{/each}
 				{/if}
 
-				{#if !readonly}
+				{#if !readonly && mode === 'edit'}
 					<div class="relative">
 						<button
 							type="button"
@@ -133,7 +135,7 @@
 		</div>
 	{:else if field.type === 'status'}
 		<div class="space-y-2">
-			{#if readonly}
+			{#if readonly || mode === 'display'}
 				{#if value}
 					<span
 						class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {getStatusColor(
@@ -163,7 +165,18 @@
 			{/if}
 		</div>
 	{:else if field.type === 'link'}
-		{#if readonly}
+		{#if mode === 'display'}
+			{#if value}
+				<button
+					onclick={() => window.open(value, '_blank')}
+					class="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+				>
+					{field.buttonText || 'Open Link'}
+				</button>
+			{:else}
+				<div class="py-1 text-zinc-400">No link set</div>
+			{/if}
+		{:else if readonly}
 			{#if value}
 				<a
 					href={value}
@@ -185,7 +198,7 @@
 			/>
 		{/if}
 	{:else if field.type === 'date'}
-		{#if readonly}
+		{#if readonly || mode === 'display'}
 			<div class="py-1 text-zinc-100">
 				{value ? new Date(value).toLocaleDateString() : '-'}
 			</div>
@@ -197,7 +210,18 @@
 			/>
 		{/if}
 	{:else if field.type === 'button'}
-		{#if readonly}
+		{#if mode === 'display'}
+			{#if value}
+				<button
+					onclick={() => window.open(value, '_blank')}
+					class="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+				>
+					{field.buttonText || 'Open'}
+				</button>
+			{:else}
+				<div class="py-1 text-zinc-400">No URL set</div>
+			{/if}
+		{:else if readonly}
 			{#if value}
 				<button
 					onclick={() => window.open(value, '_blank')}
@@ -208,47 +232,13 @@
 			{:else}
 				<div class="py-1 text-zinc-100">-</div>
 			{/if}
-		{:else if value && !editingButton}
-			<div class="flex gap-2">
-				<button
-					onclick={() => window.open(value, '_blank')}
-					class="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-700 focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
-				>
-					{field.buttonText || 'Open'}
-				</button>
-				<button
-					onclick={() => (editingButton = true)}
-					class="rounded p-2 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
-					aria-label="Edit URL"
-				>
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-						/>
-					</svg>
-				</button>
-			</div>
 		{:else}
-			<div class="flex gap-2">
-				<input
-					type="url"
-					bind:value
-					placeholder="Enter URL..."
-					class="flex-1 rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
-				/>
-				<button
-					onclick={() => {
-						editingButton = false;
-					}}
-					class="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-500 focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-					disabled={!value}
-				>
-					Done
-				</button>
-			</div>
+			<input
+				type="url"
+				bind:value
+				placeholder="Enter URL..."
+				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+			/>
 		{/if}
 	{/if}
 </div>

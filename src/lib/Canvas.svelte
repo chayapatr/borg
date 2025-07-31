@@ -27,7 +27,7 @@
 	let showCreateModal = $state(false);
 	let createPosition = $state({ x: 0, y: 0 });
 	let saveTimeout: number;
-	
+
 	// Edit panel state
 	let showEditPanel = $state(false);
 	let editNodeId = $state('');
@@ -39,7 +39,9 @@
 
 	// Helper function to get viewport center position
 	function getViewportCenterPosition() {
-		const flowWrapper = document.querySelector('.svelte-flow') || document.querySelector('[data-testid="rf__wrapper"]');
+		const flowWrapper =
+			document.querySelector('.svelte-flow') ||
+			document.querySelector('[data-testid="rf__wrapper"]');
 		if (flowWrapper) {
 			const rect = flowWrapper.getBoundingClientRect();
 			const screenCenter = {
@@ -80,7 +82,8 @@
 		if (nodes.length === 0) {
 			// Use a small delay to ensure the Svelte Flow component is fully mounted
 			setTimeout(() => {
-				if (nodes.length === 0) { // Double-check in case nodes were loaded from storage
+				if (nodes.length === 0) {
+					// Double-check in case nodes were loaded from storage
 					const initialPosition = getViewportCenterPosition();
 					nodesService.addNode('project', initialPosition);
 				}
@@ -116,35 +119,36 @@
 		const target = event.target as HTMLElement;
 		// Check if clicking on the background pane (not on nodes, controls, etc.)
 		// Use more specific targeting to avoid duplicate triggers
-		if (target.classList.contains('svelte-flow__pane') || 
+		if (
+			target.classList.contains('svelte-flow__pane') ||
 			target.classList.contains('react-flow__pane') ||
-			(target.closest('.svelte-flow') && 
-			 !target.closest('.svelte-flow__node') && 
-			 !target.closest('.svelte-flow__controls') && 
-			 !target.closest('.svelte-flow__minimap') &&
-			 target === target.closest('.svelte-flow')?.querySelector('.svelte-flow__renderer'))) {
-			
+			(target.closest('.svelte-flow') &&
+				!target.closest('.svelte-flow__node') &&
+				!target.closest('.svelte-flow__controls') &&
+				!target.closest('.svelte-flow__minimap') &&
+				target === target.closest('.svelte-flow')?.querySelector('.svelte-flow__renderer'))
+		) {
 			// Prevent multiple rapid clicks
 			if (showCreateModal) return;
-			
+
 			// Get the center of the viewport
-			createPosition = getViewportCenterPosition();
-			showCreateModal = true;
+			// createPosition = getViewportCenterPosition();
+			// showCreateModal = true;
 		}
 	}
 
 	function handleCreateNode(templateType: string) {
 		// Prevent duplicate node creation if modal is already closing
 		if (!showCreateModal) return;
-		
+
 		nodesService.addNode(templateType, createPosition);
 		showCreateModal = false;
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === '/' && !showCreateModal) {
+		if (event.key === '/' && !showCreateModal && !showEditPanel) {
 			event.preventDefault();
-			
+
 			// Get the center of the viewport
 			createPosition = getViewportCenterPosition();
 			showCreateModal = true;
@@ -192,6 +196,7 @@
 		colorMode="dark"
 		nodesDraggable={true}
 		nodesConnectable={true}
+		deleteKey={null}
 	>
 		<Background />
 		<Controls />

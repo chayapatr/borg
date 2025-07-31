@@ -96,7 +96,7 @@
 		<div class="flex-1 overflow-y-auto p-4">
 			<div class="space-y-4">
 				{#each template.fields as field}
-					<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} />
+					<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} mode="edit" />
 				{/each}
 			</div>
 		</div>

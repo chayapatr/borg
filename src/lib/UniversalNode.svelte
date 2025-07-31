@@ -68,7 +68,7 @@
 		<!-- Node Content -->
 		<div class="space-y-3">
 			{#each template.fields as field}
-				<FieldRenderer {field} value={nodeData[field.id]} readonly={true} />
+				<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" />
 			{/each}
 		</div>
 
