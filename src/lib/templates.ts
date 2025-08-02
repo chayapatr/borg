@@ -26,7 +26,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 	project: {
 		id: 'project',
 		name: 'Project',
-		color: '#3b82f6',
+		color: '#52525b',
 		fields: [
 			{
 				id: 'title',
@@ -56,10 +56,43 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 		]
 	},
 
+	subproject: {
+		id: 'subproject',
+		name: 'Subproject',
+		color: '#52525b',
+		fields: [
+			{
+				id: 'title',
+				label: 'Subproject Name',
+				type: 'text',
+				placeholder: 'Enter subproject name...',
+				required: true
+			},
+			{
+				id: 'collaborators',
+				label: 'Collaborators',
+				type: 'people-selector',
+				placeholder: 'Add collaborators...'
+			},
+			{
+				id: 'status',
+				label: 'Status',
+				type: 'status',
+				options: ['To Do', 'Doing', 'Done']
+			},
+			{
+				id: 'website',
+				label: 'Website',
+				type: 'link',
+				placeholder: 'https://...'
+			}
+		]
+	},
+
 	paper: {
 		id: 'paper',
 		name: 'Paper',
-		color: '#10b981',
+		color: '#52525b',
 		fields: [
 			{
 				id: 'title',
@@ -86,7 +119,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 	code: {
 		id: 'code',
 		name: 'Code Repository',
-		color: '#f59e0b',
+		color: '#52525b',
 		fields: [
 			{
 				id: 'title',
@@ -94,6 +127,12 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				type: 'text',
 				placeholder: 'Enter repo name...',
 				required: true
+			},
+			{
+				id: 'status',
+				label: 'Status',
+				type: 'status',
+				options: ['To Do', 'Doing', 'Done']
 			},
 			{
 				id: 'github',
@@ -107,13 +146,19 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 	time: {
 		id: 'time',
 		name: 'Timeline Event',
-		color: '#8b5cf6',
+		color: '#52525b',
 		fields: [
 			{
 				id: 'event',
 				label: 'Timeline Event',
 				type: 'timeline-selector',
 				placeholder: 'Select or create timeline event...'
+			},
+			{
+				id: 'status',
+				label: 'Status',
+				type: 'status',
+				options: ['To Do', 'Doing', 'Done']
 			},
 			{
 				id: 'notes',
@@ -127,7 +172,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 	note: {
 		id: 'note',
 		name: 'Note',
-		color: '#ef4444',
+		color: '#52525b',
 		fields: [
 			{
 				id: 'title',
@@ -143,6 +188,12 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				placeholder: 'Write your notes here...'
 			},
 			{
+				id: 'status',
+				label: 'Status',
+				type: 'status',
+				options: ['To Do', 'Doing', 'Done']
+			},
+			{
 				id: 'tags',
 				label: 'Tags',
 				type: 'tags',
@@ -154,8 +205,21 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 	storage: {
 		id: 'storage',
 		name: 'Storage',
-		color: '#06b6d4',
+		color: '#52525b',
 		fields: [
+			{
+				id: 'title',
+				label: 'Storage Name',
+				type: 'text',
+				placeholder: 'Enter storage name...',
+				required: true
+			},
+			{
+				id: 'status',
+				label: 'Status',
+				type: 'status',
+				options: ['To Do', 'Doing', 'Done']
+			},
 			{
 				id: 'drive',
 				label: '',

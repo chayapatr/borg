@@ -40,8 +40,8 @@
 	}
 
 	let allFields = $derived([
-		...templateFields.map(f => ({ ...f, isCustom: false })),
-		...customFields.map(f => ({ ...f, isCustom: true }))
+		...templateFields.filter(f => f.id !== 'status').map(f => ({ ...f, isCustom: false })),
+		...customFields.filter(f => f.id !== 'status').map(f => ({ ...f, isCustom: true }))
 	]);
 </script>
 

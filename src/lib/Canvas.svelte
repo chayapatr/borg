@@ -79,6 +79,17 @@
 		}
 	});
 
+	// Effect to sync project node when project data might have changed
+	$effect(() => {
+		if (projectSlug && projectsService && nodes.length > 0) {
+			const interval = setInterval(() => {
+				syncProjectNode();
+			}, 1000); // Check every second for project data changes
+
+			return () => clearInterval(interval);
+		}
+	});
+
 	onMount(() => {
 		projectsService = new ProjectsService();
 		nodesService = new NodesService(
@@ -95,16 +106,19 @@
 
 		nodesService.loadFromStorage();
 
-		// Add initial project node if none exist
+		// Add initial project node if none exist, or sync existing project node
 		if (nodes.length === 0) {
 			// Use a small delay to ensure the Svelte Flow component is fully mounted
 			setTimeout(() => {
 				if (nodes.length === 0) {
 					// Double-check in case nodes were loaded from storage
 					const initialPosition = getViewportCenterPosition();
-					nodesService.addNode('project', initialPosition);
+					createSyncedProjectNode(initialPosition);
 				}
 			}, 100);
+		} else {
+			// Sync existing project node with project data
+			syncProjectNode();
 		}
 
 		// Listen for node events
@@ -189,12 +203,118 @@
 
 	function handleEditPanelSave(nodeId: string, data: any) {
 		nodesService.updateNode(nodeId, data);
+		
+		// If this is a project node, sync changes back to project metadata
+		const node = nodes.find(n => n.id === nodeId);
+		if (node && node.data.templateType === 'project' && projectSlug && projectsService) {
+			const nodeData = data.nodeData;
+			const updates: any = {};
+			
+			// Sync title, status, and collaborators back to project metadata
+			if (nodeData.title !== undefined) {
+				updates.title = nodeData.title;
+			}
+			if (nodeData.status !== undefined) {
+				updates.status = nodeData.status;
+			}
+			if (nodeData.collaborators !== undefined) {
+				updates.collaborators = nodeData.collaborators;
+			}
+			
+			if (Object.keys(updates).length > 0) {
+				projectsService.updateProject(projectSlug, updates);
+			}
+		}
+		
 		showEditPanel = false;
 	}
 
 	function handleEditPanelDelete(nodeId: string) {
 		nodesService.deleteNode(nodeId);
 		showEditPanel = false;
+	}
+
+	function createSyncedProjectNode(position: { x: number; y: number }) {
+		if (!projectSlug || !projectsService) {
+			nodesService.addNode('project', position);
+			return;
+		}
+
+		const project = projectsService.getProject(projectSlug);
+		if (!project) {
+			nodesService.addNode('project', position);
+			return;
+		}
+
+		// Create project node with synced data
+		const id = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+		const nodeData = {
+			title: project.title,
+			status: project.status,
+			collaborators: project.collaborators || [],
+			website: ''
+		};
+
+		const newNode = {
+			id,
+			type: 'universal',
+			position: { ...position },
+			data: {
+				templateType: 'project',
+				nodeData
+			}
+		};
+
+		const currentNodes = nodes;
+		const updatedNodes = [...currentNodes, newNode];
+		nodesService.setNodes(updatedNodes);
+		nodesService.saveToStorage(updatedNodes, edges);
+	}
+
+	function syncProjectNode() {
+		if (!projectSlug || !projectsService) return;
+
+		const project = projectsService.getProject(projectSlug);
+		if (!project) return;
+
+		// Find ALL project nodes and sync them
+		const projectNodes = nodes.filter(node => 
+			node.data.templateType === 'project'
+		);
+
+		if (projectNodes.length > 0) {
+			let hasUpdates = false;
+			const updatedNodes = nodes.map(node => {
+				if (node.data.templateType === 'project') {
+					const currentTitle = node.data.nodeData?.title;
+					const currentStatus = node.data.nodeData?.status;
+					
+					// Only update if title or status has changed
+					if (currentTitle !== project.title || currentStatus !== project.status) {
+						hasUpdates = true;
+						return {
+							...node,
+							data: {
+								...node.data,
+								nodeData: {
+									...node.data.nodeData,
+									title: project.title,
+									status: project.status,
+									collaborators: project.collaborators || []
+								}
+							}
+						};
+					}
+				}
+				return node;
+			});
+			
+			if (hasUpdates) {
+				nodesService.setNodes(updatedNodes);
+				nodesService.saveToStorage(updatedNodes, edges);
+			}
+		}
 	}
 </script>
 

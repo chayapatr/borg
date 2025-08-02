@@ -19,7 +19,7 @@
 	<div class="flex w-64 flex-col border-r border-zinc-800 bg-zinc-900">
 		<!-- Header -->
 		<div class="border-b border-zinc-800 p-6">
-			<h1 class="text-xl font-semibold text-zinc-100">Things</h1>
+			<h1 class="text-xl font-semibold text-zinc-100">🤖 Borg</h1>
 			<!-- <p class="mt-1 text-sm text-zinc-400">MIT Media Lab</p> -->
 		</div>
 

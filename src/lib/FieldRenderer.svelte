@@ -206,7 +206,26 @@
 	{:else if field.type === 'date'}
 		{#if readonly || mode === 'display'}
 			<div class="py-1 text-zinc-100">
-				{value ? new Date(value).toLocaleDateString() : '-'}
+				{#if value}
+					{@const targetDate = new Date(value)}
+					{@const now = new Date()}
+					{#if targetDate > now}
+						{@const timeDiff = targetDate.getTime() - now.getTime()}
+						{@const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24))}
+						<div class="space-y-1">
+							<div class="text-yellow-400 font-medium">
+								{days} day{days !== 1 ? 's' : ''} remaining
+							</div>
+							<div class="text-sm text-zinc-400">
+								{targetDate.toLocaleDateString()}
+							</div>
+						</div>
+					{:else}
+						{targetDate.toLocaleDateString()}
+					{/if}
+				{:else}
+					-
+				{/if}
 			</div>
 		{:else}
 			<input

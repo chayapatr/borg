@@ -23,6 +23,7 @@
 	let template: NodeTemplate = $derived(getTemplate(templateType || 'blank'));
 	let editableData = $state({ ...nodeData });
 	let customFields = $state<TemplateField[]>([]);
+	let isProjectMetadata = $derived(templateType === 'project');
 
 	// Reset data when node changes
 	$effect(() => {
@@ -43,6 +44,12 @@
 	}
 
 	function handleDelete() {
+		// Additional safety check for project nodes
+		if (templateType === 'project') {
+			alert('Project nodes cannot be deleted as they sync with workspace metadata.');
+			return;
+		}
+		
 		if (confirm('Are you sure you want to delete this node?')) {
 			onDelete(nodeId);
 			isOpen = false;
@@ -106,7 +113,12 @@
 		<div class="flex-1 overflow-y-auto p-4">
 			<div class="space-y-4">
 				{#each template.fields as field}
-					<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} mode="edit" />
+					<div>
+						<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} mode="edit" />
+						{#if isProjectMetadata && (field.id === 'title' || field.id === 'status')}
+							<p class="mt-1 text-xs text-zinc-500">Changes will sync with project metadata</p>
+						{/if}
+					</div>
 				{/each}
 				
 				{#each customFields as field}
@@ -127,16 +139,18 @@
 		<div class="flex gap-2 border-t border-zinc-700 p-4">
 			<button
 				onclick={handleSave}
-				class="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+				class="{templateType === 'project' ? 'w-full' : 'flex-1'} rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 			>
 				Save Changes
 			</button>
-			<button
-				onclick={handleDelete}
-				class="rounded-lg border border-red-600 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-600/10 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
-			>
-				Delete
-			</button>
+			{#if templateType !== 'project'}
+				<button
+					onclick={handleDelete}
+					class="rounded-lg border border-red-600 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-600/10 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+				>
+					Delete
+				</button>
+			{/if}
 		</div>
 	</div>
 {/if}

@@ -83,8 +83,6 @@
 			</div>
 			<div class="flex items-center gap-2 text-sm text-zinc-500">
 				<span class="capitalize">{project.status}</span>
-				<span>•</span>
-				<span>{project.nodeCount || 0} nodes</span>
 			</div>
 		</div>
 

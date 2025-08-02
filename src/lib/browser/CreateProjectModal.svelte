@@ -3,13 +3,11 @@
 		onCreate,
 		onClose
 	} = $props<{
-		onCreate: (data: { title: string; description?: string; status?: string }) => void;
+		onCreate: (data: { title: string }) => void;
 		onClose: () => void;
 	}>();
 
 	let title = $state('');
-	let description = $state('');
-	let status = $state('active');
 
 	function handleSubmit(event: Event) {
 		event.preventDefault();
@@ -17,9 +15,7 @@
 		if (!title.trim()) return;
 
 		onCreate({
-			title: title.trim(),
-			description: description.trim() || undefined,
-			status
+			title: title.trim()
 		});
 	}
 
@@ -50,7 +46,7 @@
 		<form onsubmit={handleSubmit} class="space-y-4">
 			<div>
 				<label for="title" class="mb-1 block text-sm font-medium text-zinc-300">
-					Project Title
+					Project Name
 				</label>
 				<input
 					id="title"
@@ -61,34 +57,6 @@
 					class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
 					autofocus
 				/>
-			</div>
-
-			<div>
-				<label for="description" class="mb-1 block text-sm font-medium text-zinc-300">
-					Description
-				</label>
-				<textarea
-					id="description"
-					bind:value={description}
-					placeholder="Brief description of the project"
-					rows="3"
-					class="w-full resize-none rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
-				></textarea>
-			</div>
-
-			<div>
-				<label for="status" class="mb-1 block text-sm font-medium text-zinc-300">
-					Status
-				</label>
-				<select
-					id="status"
-					bind:value={status}
-					class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 focus:border-blue-500 focus:outline-none"
-				>
-					<option value="planning">Planning</option>
-					<option value="active">Active</option>
-					<option value="archived">Archived</option>
-				</select>
 			</div>
 
 			<div class="flex gap-3 pt-4">
