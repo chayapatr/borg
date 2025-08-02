@@ -129,7 +129,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="min-w-64 cursor-pointer rounded-lg border bg-zinc-900 p-4 shadow-lg transition-colors"
+		class="min-w-64 cursor-pointer rounded-lg border bg-zinc-900 p-4 shadow-lg transition-colors relative"
 		style="border-color: {borderColor};"
 		onclick={handleNodeClick}
 	>
@@ -152,41 +152,36 @@
 			{/if}
 		</div>
 
+		<!-- Add task button when no tasks (bottom right corner) -->
+		{#if !hasActiveTasks}
+			<button
+				onclick={(event) => handleAddTask(event)}
+				class="absolute -bottom-2 -right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-zinc-400 transition-colors hover:bg-zinc-600 hover:text-zinc-300 border border-zinc-600 shadow-sm"
+			>
+				<Plus class="h-3 w-3" />
+			</button>
+		{/if}
+
 		<!-- Connection Handles -->
 		<Handle type="target" position={Position.Left} class="!bg-zinc-600" />
 		<Handle type="source" position={Position.Right} class="!bg-zinc-600" />
 	</div>
 
-	<!-- Tasks Section (Outside clickable area) -->
+	<!-- Tasks Section (Stacked to main node) -->
 	{#if hasActiveTasks}
-		<div class="mt-2">
-			<!-- Show person pills in a node-like container -->
-			<div class="min-w-64 rounded-lg border border-zinc-700 bg-zinc-800/50 p-3 shadow">
-				<div class="flex flex-wrap items-center gap-2">
-					{#each personTaskCounts as personTaskCount}
-						<TaskPill {personTaskCount} onclick={handleTaskPillClick} />
-					{/each}
-					<button
-						onclick={(event) => handleAddTask(event)}
-						class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-zinc-400 transition-colors hover:bg-zinc-600 hover:text-zinc-300"
-					>
-						<Plus class="h-4 w-4" />
-					</button>
-				</div>
-			</div>
-		</div>
-	{:else}
-		<!-- No tasks: Show add button as a stacked node -->
-		<div class="mt-2">
-			<button
-				onclick={(event) => handleAddTask(event)}
-				class="min-w-64 w-full rounded-lg border border-dashed border-zinc-600 bg-zinc-800/30 p-3 shadow transition-all hover:border-zinc-500 hover:bg-zinc-800/50"
-			>
-				<div class="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-zinc-300">
+		<!-- Show person pills in a stacked container -->
+		<div class="min-w-64 rounded-b-lg rounded-t-none border border-t-0 border-zinc-700 bg-zinc-800/50 p-3 shadow -mt-2 pt-5">
+			<div class="flex flex-wrap items-center gap-2">
+				{#each personTaskCounts as personTaskCount}
+					<TaskPill {personTaskCount} onclick={handleTaskPillClick} />
+				{/each}
+				<button
+					onclick={(event) => handleAddTask(event)}
+					class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-zinc-400 transition-colors hover:bg-zinc-600 hover:text-zinc-300"
+				>
 					<Plus class="h-4 w-4" />
-					Add task
-				</div>
-			</button>
+				</button>
+			</div>
 		</div>
 	{/if}
 </div>

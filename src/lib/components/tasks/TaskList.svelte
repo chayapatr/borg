@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check, Calendar, StickyNote, Edit, Trash2, RotateCcw } from '@lucide/svelte';
+	import { Check, Calendar, StickyNote, Edit, Trash2 } from '@lucide/svelte';
 	import type { Task } from '../../types/task';
 	import { PeopleService } from '../../services/PeopleService';
 	import { TaskService } from '../../services/TaskService';
@@ -84,15 +84,6 @@
 							>
 								<Edit class="h-3 w-3" />
 							</button>
-							{#if isResolved}
-								<button
-									onclick={() => handleUnresolveTask(task.id)}
-									class="rounded p-1 text-zinc-500 hover:text-yellow-400 hover:bg-zinc-700"
-									title="Unresolve task"
-								>
-									<RotateCcw class="h-3 w-3" />
-								</button>
-							{/if}
 							<button
 								onclick={() => handleDeleteTask(task.id)}
 								class="rounded p-1 text-zinc-500 hover:text-rose-400 hover:bg-zinc-700"
