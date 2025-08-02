@@ -11,8 +11,8 @@
 		type Connection
 	} from '@xyflow/svelte';
 	import UniversalNode from './UniversalNode.svelte';
-	import { NodesService } from './services/NodesService';
-	import { ProjectsService } from './services/ProjectsService';
+	import { NodesService } from '../services/NodesService';
+	import { ProjectsService } from '../services/ProjectsService';
 	import CreateNodeModal from './CreateNodeModal.svelte';
 	import EditPanel from './EditPanel.svelte';
 	import '@xyflow/svelte/dist/style.css';

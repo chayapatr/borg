@@ -45,7 +45,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'status',
 				label: 'Status',
 				type: 'status',
-				options: ['Planning', 'Active', 'On Hold', 'Completed']
+				options: ['To Do', 'Doing', 'Done']
 			},
 			{
 				id: 'website',
@@ -105,7 +105,13 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'status',
 				label: 'Status',
 				type: 'status',
-				options: ['Draft', 'In Review', 'Under Revision', 'Accepted', 'Published']
+				options: ['To Do', 'Doing', 'Done']
+			},
+			{
+				id: 'publicationStatus',
+				label: 'Publication Status',
+				type: 'status',
+				options: ['Draft', 'In Review', 'Accepted', 'Published']
 			},
 			{
 				id: 'overleaf',

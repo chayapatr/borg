@@ -1,10 +1,11 @@
 <script lang="ts">
-	import Canvas from '$lib/Canvas.svelte';
+	import Canvas from '$lib/components/Canvas.svelte';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { ProjectsService } from '$lib/services/ProjectsService';
 	import { goto } from '$app/navigation';
+	import { ChevronLeft } from '@lucide/svelte';
 
 	const projectSlug = $derived($page.params.slug);
 	let projectsService: ProjectsService;
@@ -68,9 +69,7 @@
 					onclick={handleBackToBrowser}
 					class="flex items-center gap-2 text-zinc-400 hover:text-zinc-300 transition-colors"
 				>
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-					</svg>
+					<ChevronLeft class="w-4 h-4" />
 					Back to Projects
 				</button>
 				<div class="h-6 w-px bg-zinc-700"></div>

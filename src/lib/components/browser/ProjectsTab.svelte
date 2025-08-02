@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { ProjectsService } from '../services/ProjectsService';
+	import { ProjectsService } from '../../services/ProjectsService';
 	import CreateProjectModal from './CreateProjectModal.svelte';
+	import { Plus, FolderOpen, Trash2 } from '@lucide/svelte';
 
 	let projectsService: ProjectsService;
 	let projects = $state<any[]>([]);
@@ -67,9 +68,7 @@
 				onclick={() => (showCreateModal = true)}
 				class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors"
 			>
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-				</svg>
+				<Plus class="w-4 h-4" />
 				New Project
 			</button>
 		</div>
@@ -80,9 +79,7 @@
 		{#if projects.length === 0}
 			<div class="flex flex-col items-center justify-center h-64 text-center">
 				<div class="w-16 h-16 bg-zinc-800 rounded-lg flex items-center justify-center mb-4">
-					<svg class="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-					</svg>
+					<FolderOpen class="w-8 h-8 text-zinc-600" />
 				</div>
 				<h3 class="text-lg font-medium text-zinc-300 mb-2">No projects yet</h3>
 				<p class="text-zinc-500 mb-4">Create your first project to get started</p>
@@ -104,9 +101,7 @@
 					>
 						<div class="flex items-start justify-between mb-4">
 							<div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-								<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-								</svg>
+								<FolderOpen class="w-5 h-5 text-white" />
 							</div>
 							<div class="flex items-center gap-2">
 								<div class="text-xs text-zinc-500">
@@ -117,14 +112,7 @@
 									aria-label="Delete project"
 									class="rounded p-1 text-zinc-500 hover:bg-red-500/30 hover:text-red-400 transition-colors"
 								>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-										/>
-									</svg>
+									<Trash2 class="w-4 h-4" />
 								</button>
 							</div>
 						</div>

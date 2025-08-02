@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TimelineService, timelineTemplates } from '../services/TimelineService';
+	import { TimelineService, timelineTemplates } from '../../services/TimelineService';
 	import FieldRenderer from '../FieldRenderer.svelte';
 
 	let {

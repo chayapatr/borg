@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { getTemplate, type NodeTemplate, type TemplateField } from './templates';
+	import { getTemplate, type NodeTemplate, type TemplateField } from '../templates';
 	import FieldRenderer from './FieldRenderer.svelte';
 	import CustomFieldManager from './CustomFieldManager.svelte';
 	import FieldVisibilityManager from './FieldVisibilityManager.svelte';
+	import { X } from '@lucide/svelte';
 
 	let {
 		nodeId,
@@ -98,14 +99,7 @@
 				aria-label="Close panel"
 				class="rounded p-1 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
 			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M6 18L18 6M6 6l12 12"
-					/>
-				</svg>
+				<X class="h-5 w-5" />
 			</button>
 		</div>
 

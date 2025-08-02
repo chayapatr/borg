@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { PeopleService, type Person } from '../services/PeopleService';
+	import { PeopleService, type Person } from '../../services/PeopleService';
 	import AddPersonModal from './AddPersonModal.svelte';
 
 	let peopleService: PeopleService;

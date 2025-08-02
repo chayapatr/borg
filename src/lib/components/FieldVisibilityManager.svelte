@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Eye, EyeOff } from '@lucide/svelte';
-	import type { TemplateField } from './templates';
+	import type { TemplateField } from '../templates';
 
 	let {
 		templateFields,

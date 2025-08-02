@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import { getTemplate, type NodeTemplate } from './templates';
+	import { getTemplate, type NodeTemplate } from '../templates';
 	import FieldRenderer from './FieldRenderer.svelte';
+	import { Trash2, CircleDashed, Hand, CheckCircle } from '@lucide/svelte';
 
 	let { data, id } = $props<{ data: any; id: string }>();
 
@@ -15,6 +16,15 @@
 		if (status === 'Doing') return '#3b82f6'; // blue-500 - active, engaged
 		if (status === 'Done') return '#22c55e'; // green-500 - success, completion
 		return '#3f3f46'; // zinc-700 - default
+	});
+
+	// Determine status icon and color
+	let statusIcon = $derived.by(() => {
+		const status = nodeData.status;
+		if (status === 'To Do') return { component: CircleDashed, color: '#8b5cf6' };
+		if (status === 'Doing') return { component: Hand, color: '#3b82f6' };
+		if (status === 'Done') return { component: CheckCircle, color: '#22c55e' };
+		return null; // No icon if status is not set
 	});
 
 	function handleNodeClick() {
@@ -52,6 +62,10 @@
 	<!-- Node Header -->
 	<div class="mb-2 flex items-center justify-between">
 		<div class="flex items-center gap-2">
+			{#if statusIcon}
+				{@const StatusIconComponent = statusIcon.component}
+				<StatusIconComponent class="h-5 w-5" style="color: {statusIcon.color};" />
+			{/if}
 			<span
 				class="rounded-md border border-zinc-700 bg-zinc-900 px-1 py-0.5 text-sm font-medium text-white"
 				>{template.name}</span
@@ -65,14 +79,7 @@
 					aria-label="Delete node"
 					class="rounded p-1 text-zinc-500 hover:bg-red-500/30 hover:text-zinc-300"
 				>
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-						/>
-					</svg>
+					<Trash2 class="h-4 w-4" />
 				</button>
 			{/if}
 		</div>
@@ -80,7 +87,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="min-w-64 cursor-pointer rounded-lg border bg-zinc-900 p-4 shadow-lg transition-all hover:brightness-110"
+		class="min-w-64 cursor-pointer rounded-lg border bg-zinc-900 p-4 shadow-lg transition-colors"
 		style="border-color: {borderColor};"
 		onclick={handleNodeClick}
 	>

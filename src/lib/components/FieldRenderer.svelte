@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { TemplateField } from './templates';
-	import { PeopleService } from './services/PeopleService';
-	import { TimelineService } from './services/TimelineService';
+	import type { TemplateField } from '../templates';
+	import { PeopleService } from '../services/PeopleService';
+	import { TimelineService } from '../services/TimelineService';
 
 	let {
 		field,
@@ -50,18 +50,16 @@
 
 	function getStatusColor(status: string): string {
 		const statusColors: Record<string, string> = {
-			// Project statuses
-			Planning: 'bg-yellow-500/20 text-yellow-400',
-			Active: 'bg-green-500/20 text-green-400',
-			'On Hold': 'bg-orange-500/20 text-orange-400',
-			Completed: 'bg-blue-500/20 text-blue-400',
+			// Universal statuses (To Do/Doing/Done)
+			'To Do': 'bg-purple-500/20 text-purple-400',
+			'Doing': 'bg-blue-500/20 text-blue-400',
+			'Done': 'bg-green-500/20 text-green-400',
 
-			// Paper statuses
-			Draft: 'bg-gray-500/20 text-gray-400',
+			// Publication statuses for papers
+			'Draft': 'bg-gray-500/20 text-gray-400',
 			'In Review': 'bg-yellow-500/20 text-yellow-400',
-			'Under Revision': 'bg-orange-500/20 text-orange-400',
-			Accepted: 'bg-green-500/20 text-green-400',
-			Published: 'bg-blue-500/20 text-blue-400'
+			'Accepted': 'bg-green-500/20 text-green-400',
+			'Published': 'bg-blue-500/20 text-blue-400'
 		};
 
 		return statusColors[status] || 'bg-zinc-500/20 text-zinc-400';
@@ -213,7 +211,7 @@
 						{@const timeDiff = targetDate.getTime() - now.getTime()}
 						{@const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24))}
 						<div class="space-y-1">
-							<div class="text-yellow-400 font-medium">
+							<div class="font-medium text-yellow-400">
 								{days} day{days !== 1 ? 's' : ''} remaining
 							</div>
 							<div class="text-sm text-zinc-400">
@@ -272,16 +270,18 @@
 					{#each value as personId}
 						{@const person = peopleService.getPerson(personId)}
 						{#if person}
-							<span class="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2 py-1 text-xs text-white">
+							<span
+								class="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2 py-1 text-xs text-white"
+							>
 								{person.name}
 								{#if mode === 'edit'}
-									<button 
+									<button
 										onclick={() => {
-											value = value.filter(id => id !== personId);
-										}} 
+											value = value.filter((id) => id !== personId);
+										}}
 										class="hover:text-red-300"
-									> 
-										× 
+									>
+										×
 									</button>
 								{/if}
 							</span>
@@ -290,7 +290,9 @@
 				{/if}
 
 				{#if mode === 'edit'}
-					{@const availablePeople = peopleService.getAllPeople().filter(p => !value?.includes(p.id))}
+					{@const availablePeople = peopleService
+						.getAllPeople()
+						.filter((p) => !value?.includes(p.id))}
 					{#if availablePeople.length > 0}
 						<select
 							value=""
@@ -321,7 +323,9 @@
 					<div class="py-1 text-zinc-100">
 						<div class="font-medium">{event.title}</div>
 						<div class="text-sm text-zinc-400">
-							{new Date(event.date).toLocaleDateString()} • {timelineService.getTemplate(event.templateType).name}
+							{new Date(event.date).toLocaleDateString()} • {timelineService.getTemplate(
+								event.templateType
+							).name}
 						</div>
 					</div>
 				{:else}

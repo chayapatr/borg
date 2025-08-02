@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Plus, X } from '@lucide/svelte';
-	import type { TemplateField } from './templates';
+	import type { TemplateField } from '../templates';
 
 	let {
 		customFields = $bindable(),

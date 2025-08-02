@@ -1,5 +1,15 @@
 <script lang="ts">
-	import { nodeTemplates } from './templates';
+	import { nodeTemplates } from '../templates';
+	import { 
+		FolderOpen, 
+		GitBranch, 
+		FileText, 
+		Code, 
+		Calendar, 
+		StickyNote, 
+		HardDrive, 
+		Square 
+	} from '@lucide/svelte';
 
 	let { position, onCreate, onClose } = $props<{
 		position: { x: number; y: number };
@@ -33,6 +43,29 @@
 			onClose();
 		}
 	}
+
+	function getIconComponent(templateId: string) {
+		switch (templateId) {
+			case 'project':
+				return FolderOpen;
+			case 'subproject':
+				return GitBranch;
+			case 'paper':
+				return FileText;
+			case 'code':
+				return Code;
+			case 'time':
+				return Calendar;
+			case 'note':
+				return StickyNote;
+			case 'storage':
+				return HardDrive;
+			case 'blank':
+				return Square;
+			default:
+				return Square;
+		}
+	}
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -47,16 +80,14 @@
 		<h2 class="mb-4 text-lg font-semibold text-zinc-100">Create New Node</h2>
 
 		<div class="grid grid-cols-2 gap-3">
-			{#each Object.values(nodeTemplates) as template}
+			{#each Object.values(nodeTemplates).filter(template => template.id !== 'project') as template}
+				{@const IconComponent = getIconComponent(template.id)}
 				<button
 					onclick={() => handleCreateNode(template.id)}
 					disabled={isCreating}
 					class="focus:ring-opacity-50 flex items-center space-x-3 rounded-lg border border-zinc-700 p-4 text-left transition-all hover:border-zinc-500 hover:bg-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
 				>
-					<div
-						class="h-3 w-3 flex-shrink-0 rounded-full"
-						style="background-color: {template.color};"
-					></div>
+					<IconComponent class="h-5 w-5 flex-shrink-0 text-zinc-400" />
 					<span class="font-medium text-zinc-200">{template.name}</span>
 				</button>
 			{/each}

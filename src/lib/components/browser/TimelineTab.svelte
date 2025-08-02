@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TimelineService, type TimelineEvent } from '../services/TimelineService';
+	import { TimelineService, type TimelineEvent } from '../../services/TimelineService';
 	import AddTimelineEventModal from './AddTimelineEventModal.svelte';
 
 	let timelineService: TimelineService;
