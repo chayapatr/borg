@@ -4,16 +4,25 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { ProjectsService } from '$lib/services/ProjectsService';
+	import { TaskService } from '$lib/services/TaskService';
+	import { PeopleService } from '$lib/services/PeopleService';
 	import { goto } from '$app/navigation';
-	import { ChevronLeft } from '@lucide/svelte';
+	import { ChevronLeft, CheckSquare } from '@lucide/svelte';
+	import type { TaskWithContext } from '$lib/types/task';
+	import TaskSidebar from '$lib/components/tasks/TaskSidebar.svelte';
 
 	const projectSlug = $derived($page.params.slug);
 	let projectsService: ProjectsService;
+	let taskService: TaskService;
 	let project = $state<any>(null);
 	let loading = $state(true);
+	let statusCounts = $state({ todo: 0, doing: 0, done: 0 });
+	let showTaskSidebar = $state(false);
+	let projectTasks = $state<TaskWithContext[]>([]);
 
 	onMount(async () => {
 		projectsService = new ProjectsService();
+		taskService = new TaskService();
 		loadProject();
 	});
 
@@ -26,10 +35,24 @@
 			return;
 		}
 		
+		updateStatusCounts();
+		loadProjectTasks();
 		loading = false;
 	}
 
-	// Refresh project data periodically to show updated node count
+	function loadProjectTasks() {
+		if (projectSlug && taskService) {
+			projectTasks = taskService.getProjectTasks(projectSlug);
+		}
+	}
+	
+	function updateStatusCounts() {
+		if (projectSlug && projectsService) {
+			statusCounts = projectsService.getProjectStatusCounts(projectSlug);
+		}
+	}
+
+	// Refresh project data periodically to show updated node count and status counts
 	$effect(() => {
 		if (projectSlug && projectsService && !loading) {
 			const interval = setInterval(() => {
@@ -37,6 +60,8 @@
 				if (updatedProject) {
 					project = updatedProject;
 				}
+				updateStatusCounts();
+				loadProjectTasks();
 			}, 2000);
 
 			return () => clearInterval(interval);
@@ -80,16 +105,59 @@
 					{/if}
 				</div>
 			</div>
-			<div class="flex items-center gap-2 text-sm text-zinc-500">
-				<span class="capitalize">{project.status}</span>
+			<div class="flex items-center gap-4">
+				<!-- Status Counts -->
+				<div class="flex items-center gap-3">
+					<div class="flex items-center gap-1">
+						<span class="text-xs text-zinc-400">To Do</span>
+						<span class="rounded-full bg-purple-500/20 px-2 py-1 text-xs text-purple-400">{statusCounts.todo}</span>
+					</div>
+					<div class="flex items-center gap-1">
+						<span class="text-xs text-zinc-400">Doing</span>
+						<span class="rounded-full bg-blue-500/20 px-2 py-1 text-xs text-blue-400">{statusCounts.doing}</span>
+					</div>
+					<div class="flex items-center gap-1">
+						<span class="text-xs text-zinc-400">Done</span>
+						<span class="rounded-full bg-green-500/20 px-2 py-1 text-xs text-green-400">{statusCounts.done}</span>
+					</div>
+				</div>
+				
+				<div class="h-4 w-px bg-zinc-700"></div>
+				
+				<button
+					onclick={() => showTaskSidebar = !showTaskSidebar}
+					class="flex items-center gap-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:text-zinc-100 transition-colors"
+				>
+					<CheckSquare class="h-4 w-4" />
+					Tasks ({projectTasks.filter(t => !t.resolvedAt).length})
+				</button>
+				
+				<div class="h-4 w-px bg-zinc-700"></div>
+				
+				<div class="text-sm text-zinc-500">
+					<span class="capitalize">{project.status}</span>
+				</div>
 			</div>
 		</div>
 
-		<!-- Canvas -->
-		<div class="flex-1">
-			<SvelteFlowProvider>
-				<Canvas {projectSlug} />
-			</SvelteFlowProvider>
+		<!-- Canvas and Sidebar Container -->
+		<div class="flex flex-1">
+			<!-- Canvas -->
+			<div class="flex-1">
+				<SvelteFlowProvider>
+					<Canvas {projectSlug} />
+				</SvelteFlowProvider>
+			</div>
+
+			<!-- Task Sidebar -->
+			{#if showTaskSidebar}
+				<TaskSidebar
+					{projectSlug}
+					{projectTasks}
+					onClose={() => showTaskSidebar = false}
+					onTasksUpdated={loadProjectTasks}
+				/>
+			{/if}
 		</div>
 	</div>
 {/if}

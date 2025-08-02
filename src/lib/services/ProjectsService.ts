@@ -87,6 +87,48 @@ export class ProjectsService {
 		this.updateProject(slug, { nodeCount: count });
 	}
 
+	getGlobalStatusCounts(): { todo: number; doing: number; done: number } {
+		const projects = this.getAllProjects();
+		const counts = { todo: 0, doing: 0, done: 0 };
+		
+		projects.forEach(project => {
+			const projectCounts = this.getProjectStatusCounts(project.slug);
+			counts.todo += projectCounts.todo;
+			counts.doing += projectCounts.doing;
+			counts.done += projectCounts.done;
+		});
+		
+		return counts;
+	}
+
+	getProjectStatusCounts(slug: string): { todo: number; doing: number; done: number } {
+		try {
+			const storageKey = `things-canvas-data-${slug}`;
+			const stored = localStorage.getItem(storageKey);
+			if (!stored) return { todo: 0, doing: 0, done: 0 };
+			
+			const data = JSON.parse(stored);
+			const nodes = data.nodes || [];
+			const counts = { todo: 0, doing: 0, done: 0 };
+			
+			nodes.forEach((node: { data?: { nodeData?: { status?: string } } }) => {
+				const status = node.data?.nodeData?.status?.toLowerCase();
+				if (status === 'to do') {
+					counts.todo++;
+				} else if (status === 'doing') {
+					counts.doing++;
+				} else if (status === 'done') {
+					counts.done++;
+				}
+			});
+			
+			return counts;
+		} catch (error) {
+			console.error('Failed to get project status counts:', error);
+			return { todo: 0, doing: 0, done: 0 };
+		}
+	}
+
 	private generateSlug(title: string): string {
 		const baseSlug = title
 			.toLowerCase()

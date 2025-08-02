@@ -5,9 +5,12 @@
 	import CreateProjectModal from './CreateProjectModal.svelte';
 	import { Plus, FolderOpen, Trash2 } from '@lucide/svelte';
 
+	let { onCountsUpdate = () => {} } = $props<{ onCountsUpdate?: () => void }>();
+
 	let projectsService: ProjectsService;
 	let projects = $state<any[]>([]);
 	let showCreateModal = $state(false);
+	let projectCounts = $state<Record<string, { todo: number; doing: number; done: number }>>({});
 
 	onMount(() => {
 		projectsService = new ProjectsService();
@@ -16,6 +19,16 @@
 
 	function loadProjects() {
 		projects = projectsService.getAllProjects();
+		updateProjectCounts();
+	}
+	
+	function updateProjectCounts() {
+		const counts: Record<string, { todo: number; doing: number; done: number }> = {};
+		projects.forEach(project => {
+			counts[project.slug] = projectsService.getProjectStatusCounts(project.slug);
+		});
+		projectCounts = counts;
+		onCountsUpdate(); // Notify parent to update global counts
 	}
 
 	// Listen for project updates when returning from project pages
@@ -48,7 +61,7 @@
 		if (confirm(`Are you sure you want to delete the project "${title}"? This action cannot be undone.`)) {
 			const success = projectsService.deleteProject(slug);
 			if (success) {
-				projects = projectsService.getAllProjects();
+				loadProjects(); // This will also update counts
 			}
 		}
 	}
@@ -119,6 +132,24 @@
 						
 						<h3 class="font-semibold text-zinc-100 mb-2 line-clamp-2">{project.title}</h3>
 						<p class="text-sm text-zinc-400 mb-4 line-clamp-3">{project.description || 'No description'}</p>
+						
+						<!-- Status Counts -->
+						{#if projectCounts[project.slug]}
+							<div class="flex items-center gap-2 mb-3">
+								<div class="flex items-center gap-1">
+									<span class="w-2 h-2 bg-purple-500 rounded-full"></span>
+									<span class="text-xs text-zinc-400">{projectCounts[project.slug].todo}</span>
+								</div>
+								<div class="flex items-center gap-1">
+									<span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+									<span class="text-xs text-zinc-400">{projectCounts[project.slug].doing}</span>
+								</div>
+								<div class="flex items-center gap-1">
+									<span class="w-2 h-2 bg-green-500 rounded-full"></span>
+									<span class="text-xs text-zinc-400">{projectCounts[project.slug].done}</span>
+								</div>
+							</div>
+						{/if}
 						
 						<div class="flex justify-end text-xs text-zinc-500">
 							<span class="capitalize">{project.status || 'active'}</span>

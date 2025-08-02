@@ -36,7 +36,8 @@ export class NodesService {
 			position: { ...position }, // Ensure clean position object
 			data: {
 				templateType,
-				nodeData
+				nodeData,
+				tasks: [] // Initialize empty tasks array
 			}
 		};
 
@@ -73,6 +74,31 @@ export class NodesService {
 		this.saveToStorage(this.getNodes(), updatedEdges);
 	}
 
+	deleteEdge(edgeId: string) {
+		const updatedEdges = this.getEdges().filter((edge) => edge.id !== edgeId);
+		this.setEdges(updatedEdges);
+		this.saveToStorage(this.getNodes(), updatedEdges);
+	}
+
+	getStatusCounts(): { todo: number; doing: number; done: number } {
+		const nodes = this.getNodes();
+		const counts = { todo: 0, doing: 0, done: 0 };
+		
+		nodes.forEach(node => {
+			const status = node.data?.nodeData?.status?.toLowerCase();
+			if (status === 'to do') {
+				counts.todo++;
+			} else if (status === 'doing') {
+				counts.doing++;
+			} else if (status === 'done') {
+				counts.done++;
+			}
+		});
+		
+		return counts;
+	}
+
+
 	saveToStorage(nodes: Node[], edges: Edge[]) {
 		try {
 			const data = { nodes, edges };
@@ -88,7 +114,15 @@ export class NodesService {
 			if (stored) {
 				const data = JSON.parse(stored);
 				if (data.nodes) {
-					this.setNodes(data.nodes);
+					// Ensure backward compatibility - add tasks array if missing
+					const nodesWithTasks = data.nodes.map((node: any) => ({
+						...node,
+						data: {
+							...node.data,
+							tasks: node.data.tasks || []
+						}
+					}));
+					this.setNodes(nodesWithTasks);
 				}
 				if (data.edges) {
 					this.setEdges(data.edges);

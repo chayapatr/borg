@@ -1,15 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { PeopleService, type Person } from '../../services/PeopleService';
+	import { TaskService } from '../../services/TaskService';
 	import AddPersonModal from './AddPersonModal.svelte';
+	import type { TaskWithContext } from '../../types/task';
 
 	let peopleService: PeopleService;
+	let taskService: TaskService;
 	let people = $state<Person[]>([]);
 	let showAddModal = $state(false);
 	let searchQuery = $state('');
+	let personTasks = $state<Map<string, TaskWithContext[]>>(new Map());
 
 	onMount(() => {
 		peopleService = new PeopleService();
+		taskService = new TaskService();
 		loadPeople();
 
 		// Listen for visibility changes to refresh data
@@ -28,6 +33,16 @@
 
 	function loadPeople() {
 		people = peopleService.getAllPeople();
+		loadPersonTasks();
+	}
+
+	function loadPersonTasks() {
+		const taskMap = new Map<string, TaskWithContext[]>();
+		people.forEach(person => {
+			const tasks = taskService.getPersonTasks(person.id);
+			taskMap.set(person.id, tasks);
+		});
+		personTasks = taskMap;
 	}
 
 	function handleAddPerson(personData: { name: string; email?: string }) {
@@ -137,6 +152,8 @@
 		{:else}
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each filteredPeople as person}
+					{@const tasks = personTasks.get(person.id) || []}
+					{@const activeTaskCount = tasks.filter(t => !t.resolvedAt).length}
 					<div
 						class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition-colors hover:border-zinc-700"
 					>
@@ -156,7 +173,7 @@
 							</div>
 							<button
 								onclick={() => handleDeletePerson(person.id)}
-								class="text-zinc-500 transition-colors hover:text-red-400"
+								class="text-zinc-500 transition-colors hover:text-rose-400"
 								aria-label="Delete person"
 							>
 								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,6 +186,28 @@
 								</svg>
 							</button>
 						</div>
+
+						<!-- Tasks Section -->
+						{#if activeTaskCount > 0}
+							<div class="mb-3 rounded-lg bg-zinc-800/50 p-3">
+								<div class="mb-2 flex items-center justify-between">
+									<span class="text-sm font-medium text-zinc-300">Active Tasks</span>
+									<span class="rounded-full bg-rose-500/20 px-2 py-1 text-xs text-rose-400">{activeTaskCount}</span>
+								</div>
+								<div class="space-y-1">
+									{#each tasks.filter(t => !t.resolvedAt).slice(0, 3) as task}
+										<div class="text-xs text-zinc-400">
+											<span class="font-medium text-zinc-300">{task.projectTitle || 'Unknown'}</span>: {task.title}
+										</div>
+									{/each}
+									{#if activeTaskCount > 3}
+										<div class="text-xs text-zinc-500">
+											+{activeTaskCount - 3} more...
+										</div>
+									{/if}
+								</div>
+							</div>
+						{/if}
 
 						<div class="text-xs text-zinc-500">
 							Added {formatDate(person.createdAt)}

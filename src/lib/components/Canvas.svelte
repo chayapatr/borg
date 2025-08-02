@@ -15,6 +15,9 @@
 	import { ProjectsService } from '../services/ProjectsService';
 	import CreateNodeModal from './CreateNodeModal.svelte';
 	import EditPanel from './EditPanel.svelte';
+	import NodeTaskSidebar from './tasks/NodeTaskSidebar.svelte';
+import AddTaskModal from './tasks/AddTaskModal.svelte';
+	import type { Task } from '../types/task';
 	import '@xyflow/svelte/dist/style.css';
 
 	let { projectSlug } = $props<{ projectSlug?: string }>();
@@ -37,6 +40,16 @@
 	let editNodeId = $state('');
 	let editNodeData = $state({});
 	let editTemplateType = $state('');
+
+	// Node task sidebar state
+	let showNodeTaskSidebar = $state(false);
+	let taskSidebarNodeId = $state('');
+	let taskSidebarNodeTitle = $state('');
+	let taskSidebarTasks = $state<Task[]>([]);
+
+	// Add task modal state
+	let showAddTaskModal = $state(false);
+	let addTaskNodeId = $state('');
 
 	// Get Svelte Flow helpers
 	const { screenToFlowPosition, getViewport } = useSvelteFlow();
@@ -133,16 +146,36 @@
 			editNodeData = event.detail.nodeData;
 			editTemplateType = event.detail.templateType;
 			showEditPanel = true;
+			// Close task sidebar if open to avoid conflicts
+			showNodeTaskSidebar = false;
+		};
+
+		const handleNodeTasksOpenEvent = (event: CustomEvent) => {
+			taskSidebarNodeId = event.detail.nodeId;
+			taskSidebarNodeTitle = event.detail.nodeTitle;
+			taskSidebarTasks = event.detail.tasks;
+			showNodeTaskSidebar = true;
+			// Close edit panel if open to avoid conflicts
+			showEditPanel = false;
+		};
+
+		const handleAddTaskEvent = (event: CustomEvent) => {
+			addTaskNodeId = event.detail.nodeId;
+			showAddTaskModal = true;
 		};
 
 		document.addEventListener('nodeDelete', handleNodeDeleteEvent as EventListener);
 		document.addEventListener('nodeUpdate', handleNodeUpdateEvent as EventListener);
 		document.addEventListener('nodeEdit', handleNodeEditEvent as EventListener);
+		document.addEventListener('nodeTasksOpen', handleNodeTasksOpenEvent as EventListener);
+		document.addEventListener('addTask', handleAddTaskEvent as EventListener);
 
 		return () => {
 			document.removeEventListener('nodeDelete', handleNodeDeleteEvent as EventListener);
 			document.removeEventListener('nodeUpdate', handleNodeUpdateEvent as EventListener);
 			document.removeEventListener('nodeEdit', handleNodeEditEvent as EventListener);
+			document.removeEventListener('nodeTasksOpen', handleNodeTasksOpenEvent as EventListener);
+			document.removeEventListener('addTask', handleAddTaskEvent as EventListener);
 		};
 	});
 
@@ -197,6 +230,23 @@
 		nodesService.addEdge(edge);
 	}
 
+
+	async function handleBeforeDelete({ nodes: nodesToDelete, edges: edgesToDelete }: { nodes: Node[], edges: Edge[] }) {
+		// Prevent node deletion by returning false if any nodes would be deleted
+		if (nodesToDelete.length > 0) {
+			return false; // This should prevent the deletion
+		}
+		// Allow edge deletion
+		return true;
+	}
+
+	function handleDelete({ nodes: nodesToDelete, edges: edgesToDelete }: { nodes: Node[], edges: Edge[] }) {
+		// This should only be called for edges now due to onbeforedelete
+		edgesToDelete.forEach(edge => {
+			nodesService.deleteEdge(edge.id);
+		});
+	}
+
 	function handleNodeDelete(nodeId: string) {
 		nodesService.deleteNode(nodeId);
 	}
@@ -233,6 +283,33 @@
 		nodesService.deleteNode(nodeId);
 		showEditPanel = false;
 	}
+
+	function handleNodeTasksUpdated() {
+		// Reload the entire nodes array from storage to get the latest task data
+		nodesService.loadFromStorage();
+		
+		// Then refresh the task sidebar data
+		const node = nodes.find(n => n.id === taskSidebarNodeId);
+		if (node && node.data && Array.isArray(node.data.tasks)) {
+			taskSidebarTasks = [...node.data.tasks]; // Create new array to trigger reactivity
+		}
+	}
+
+	function handleAddTaskComplete() {
+		showAddTaskModal = false;
+		// Reload nodes to reflect the new task
+		nodesService.loadFromStorage();
+	}
+
+	// Effect to keep task sidebar in sync with node data changes
+	$effect(() => {
+		if (showNodeTaskSidebar && taskSidebarNodeId) {
+			const node = nodes.find(n => n.id === taskSidebarNodeId);
+			if (node && node.data && Array.isArray(node.data.tasks)) {
+				taskSidebarTasks = [...node.data.tasks]; // Sync tasks when nodes change
+			}
+		}
+	});
 
 	function createSyncedProjectNode(position: { x: number; y: number }) {
 		if (!projectSlug || !projectsService) {
@@ -322,23 +399,55 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <svelte:window on:keydown={handleKeyDown} />
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="h-full w-full bg-zinc-950" onclick={handleCanvasClick}>
-	<SvelteFlow
-		bind:nodes
-		bind:edges
-		{nodeTypes}
-		onconnect={handleConnect}
-		colorMode="dark"
-		nodesDraggable={true}
-		nodesConnectable={true}
-		deleteKey={null}
-	>
-		<Background />
-		<Controls />
-		<MiniMap />
-	</SvelteFlow>
+<!-- Canvas and Sidebar Container -->
+<div class="h-full w-full flex bg-zinc-950">
+	<!-- Canvas -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="flex-1" onclick={handleCanvasClick}>
+		<SvelteFlow
+			bind:nodes
+			bind:edges
+			{nodeTypes}
+			onconnect={handleConnect}
+			onbeforedelete={handleBeforeDelete}
+			ondelete={handleDelete}
+			colorMode="dark"
+			nodesDraggable={true}
+			nodesConnectable={true}
+			deleteKey={['Delete', 'Backspace']}
+			nodesDeletable={false}
+			edgesDeletable={true}
+		>
+			<Background />
+			<Controls />
+			<MiniMap />
+		</SvelteFlow>
+	</div>
+
+	<!-- Edit Sidebar -->
+	{#if showEditPanel}
+		<EditPanel
+			nodeId={editNodeId}
+			nodeData={editNodeData}
+			templateType={editTemplateType}
+			bind:isOpen={showEditPanel}
+			onSave={handleEditPanelSave}
+			onDelete={handleEditPanelDelete}
+		/>
+	{/if}
+
+	<!-- Node Task Sidebar -->
+	{#if showNodeTaskSidebar}
+		<NodeTaskSidebar
+			nodeId={taskSidebarNodeId}
+			nodeTitle={taskSidebarNodeTitle}
+			{projectSlug}
+			tasks={taskSidebarTasks}
+			onClose={() => showNodeTaskSidebar = false}
+			onTasksUpdated={handleNodeTasksUpdated}
+		/>
+	{/if}
 </div>
 
 {#if showCreateModal}
@@ -349,11 +458,11 @@
 	/>
 {/if}
 
-<EditPanel
-	nodeId={editNodeId}
-	nodeData={editNodeData}
-	templateType={editTemplateType}
-	bind:isOpen={showEditPanel}
-	onSave={handleEditPanelSave}
-	onDelete={handleEditPanelDelete}
-/>
+{#if showAddTaskModal}
+	<AddTaskModal
+		nodeId={addTaskNodeId}
+		{projectSlug}
+		onClose={() => (showAddTaskModal = false)}
+		onTaskAdded={handleAddTaskComplete}
+	/>
+{/if}

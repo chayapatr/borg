@@ -2,12 +2,33 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { getTemplate, type NodeTemplate } from '../templates';
 	import FieldRenderer from './FieldRenderer.svelte';
-	import { Trash2, CircleDashed, Hand, CheckCircle } from '@lucide/svelte';
+	import { Trash2, CircleDashed, Hand, CheckCircle, Plus } from '@lucide/svelte';
+	import TaskPill from './tasks/TaskPill.svelte';
+	import { TaskService } from '../services/TaskService';
+	import type { Task } from '../types/task';
 
 	let { data, id } = $props<{ data: any; id: string }>();
 
 	let template: NodeTemplate = $derived(getTemplate(data.templateType || 'blank'));
 	let nodeData = $derived(data.nodeData || {});
+
+	// Task-related state
+	const taskService = new TaskService();
+	let tasks = $derived(data.tasks || []);
+
+	// Get person task counts for this node from local tasks data
+	let activeTasks = $derived(tasks.filter((task) => !task.resolvedAt));
+	let personTaskCounts = $derived.by(() => {
+		const counts = new Map<string, number>();
+		activeTasks.forEach((task) => {
+			counts.set(task.assignee, (counts.get(task.assignee) || 0) + 1);
+		});
+		return Array.from(counts.entries()).map(([personId, count]) => ({
+			personId,
+			count
+		}));
+	});
+	let hasActiveTasks = $derived(activeTasks.length > 0);
 
 	// Determine border color based on status
 	let borderColor = $derived.by(() => {
@@ -53,6 +74,27 @@
 			const event = new CustomEvent('nodeDelete', { detail: { nodeId: id } });
 			document.dispatchEvent(event);
 		}
+	}
+
+	function handleAddTask(event: MouseEvent) {
+		event.stopPropagation();
+		// Dispatch event to open add task modal at Canvas level
+		const customEvent = new CustomEvent('addTask', {
+			detail: { nodeId: id }
+		});
+		document.dispatchEvent(customEvent);
+	}
+
+	function handleTaskPillClick() {
+		// Dispatch event to open task sidebar at Canvas level
+		const customEvent = new CustomEvent('nodeTasksOpen', {
+			detail: {
+				nodeId: id,
+				nodeTitle: nodeData.title || 'Untitled',
+				tasks: tasks
+			}
+		});
+		document.dispatchEvent(customEvent);
 	}
 </script>
 
@@ -114,4 +156,37 @@
 		<Handle type="target" position={Position.Left} class="!bg-zinc-600" />
 		<Handle type="source" position={Position.Right} class="!bg-zinc-600" />
 	</div>
+
+	<!-- Tasks Section (Outside clickable area) -->
+	{#if hasActiveTasks}
+		<div class="mt-2">
+			<!-- Show person pills in a node-like container -->
+			<div class="min-w-64 rounded-lg border border-zinc-700 bg-zinc-800/50 p-3 shadow">
+				<div class="flex flex-wrap items-center gap-2">
+					{#each personTaskCounts as personTaskCount}
+						<TaskPill {personTaskCount} onclick={handleTaskPillClick} />
+					{/each}
+					<button
+						onclick={(event) => handleAddTask(event)}
+						class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-zinc-400 transition-colors hover:bg-zinc-600 hover:text-zinc-300"
+					>
+						<Plus class="h-4 w-4" />
+					</button>
+				</div>
+			</div>
+		</div>
+	{:else}
+		<!-- No tasks: Show add button as a stacked node -->
+		<div class="mt-2">
+			<button
+				onclick={(event) => handleAddTask(event)}
+				class="min-w-64 w-full rounded-lg border border-dashed border-zinc-600 bg-zinc-800/30 p-3 shadow transition-all hover:border-zinc-500 hover:bg-zinc-800/50"
+			>
+				<div class="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-zinc-300">
+					<Plus class="h-4 w-4" />
+					Add task
+				</div>
+			</button>
+		</div>
+	{/if}
 </div>

@@ -50,7 +50,7 @@
 			alert('Project nodes cannot be deleted as they sync with workspace metadata.');
 			return;
 		}
-		
+
 		if (confirm('Are you sure you want to delete this node?')) {
 			onDelete(nodeId);
 			isOpen = false;
@@ -75,32 +75,28 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 {#if isOpen}
-	<!-- Backdrop -->
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-40" onclick={handleClose}></div>
-
 	<!-- Panel -->
-	<div
-		class="fixed top-2 right-2 bottom-2 z-50 flex w-96 flex-col rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl"
-	>
+	<div class="flex w-96 flex-col border-l border-zinc-800 bg-zinc-900 shadow-2xl">
 		<!-- Header -->
-		<div class="flex items-center justify-between border-b border-zinc-700 p-4">
-			<div class="flex items-center gap-2">
-				<span
-					class="rounded-md border bg-zinc-800 px-2 py-1 text-sm font-medium text-white"
-					style="border-color: {template.color};"
+		<div class="border-b border-zinc-800 p-4">
+			<div class="flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<!-- <h3 class="font-semibold text-zinc-100">Edit {template.name}</h3> -->
+					<span
+						class="rounded-md border bg-zinc-800 px-2 py-1 text-xs font-medium text-zinc-400"
+						style="border-color: {template.color};"
+					>
+						{template.name}
+					</span>
+				</div>
+				<button
+					onclick={handleClose}
+					aria-label="Close panel"
+					class="rounded-lg p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300"
 				>
-					{template.name}
-				</span>
+					<X class="h-5 w-5" />
+				</button>
 			</div>
-			<button
-				onclick={handleClose}
-				aria-label="Close panel"
-				class="rounded p-1 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
-			>
-				<X class="h-5 w-5" />
-			</button>
 		</div>
 
 		<!-- Content -->
@@ -108,32 +104,39 @@
 			<div class="space-y-4">
 				{#each template.fields as field}
 					<div>
-						<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} mode="edit" />
+						<FieldRenderer
+							{field}
+							bind:value={editableData[field.id]}
+							readonly={false}
+							mode="edit"
+						/>
 						{#if isProjectMetadata && (field.id === 'title' || field.id === 'status')}
 							<p class="mt-1 text-xs text-zinc-500">Changes will sync with project metadata</p>
 						{/if}
 					</div>
 				{/each}
-				
+
 				{#each customFields as field}
 					<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} mode="edit" />
 				{/each}
-				
+
 				<CustomFieldManager bind:customFields bind:nodeData={editableData} />
-				
-				<FieldVisibilityManager 
-					templateFields={template.fields} 
-					bind:customFields 
-					bind:nodeData={editableData} 
+
+				<FieldVisibilityManager
+					templateFields={template.fields}
+					bind:customFields
+					bind:nodeData={editableData}
 				/>
 			</div>
 		</div>
 
 		<!-- Footer -->
-		<div class="flex gap-2 border-t border-zinc-700 p-4">
+		<div class="flex gap-2 border-t border-zinc-800 p-4">
 			<button
 				onclick={handleSave}
-				class="{templateType === 'project' ? 'w-full' : 'flex-1'} rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+				class="{templateType === 'project'
+					? 'w-full'
+					: 'flex-1'} rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 			>
 				Save Changes
 			</button>
