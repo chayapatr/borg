@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { X, Plus } from '@lucide/svelte';
-	import { TaskService } from '../../services/local/TaskService';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { ITaskService } from '../../services/interfaces';
 	import type { Task } from '../../types/task';
 	import TaskList from './TaskList.svelte';
 
@@ -15,7 +16,10 @@
 
 	let { nodeId, nodeTitle, projectSlug, tasks, onClose, onTasksUpdated }: Props = $props();
 
-	const taskService = new TaskService();
+	const taskService: ITaskService = ServiceFactory.createTaskService();
+	
+	// Since we removed the completed field, all tasks are considered active
+	const activeTasks = $derived(tasks);
 </script>
 
 <div class="w-80 border-l border-zinc-800 bg-zinc-900 flex flex-col">
@@ -35,7 +39,7 @@
 		</div>
 		<div class="mt-3 flex items-center justify-between">
 			<div class="text-sm text-zinc-400">
-				{tasks.length} tasks
+				{activeTasks.length} active tasks
 			</div>
 			<button
 				onclick={() => {
@@ -54,12 +58,12 @@
 
 	<!-- Task List -->
 	<div class="flex-1 overflow-auto p-4">
-		{#if tasks.length === 0}
+		{#if activeTasks.length === 0}
 			<div class="text-center py-8">
 				<div class="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-4">
 					<Plus class="h-6 w-6 text-zinc-600" />
 				</div>
-				<h4 class="text-lg font-medium text-zinc-300 mb-2">No tasks yet</h4>
+				<h4 class="text-lg font-medium text-zinc-300 mb-2">No active tasks</h4>
 				<p class="text-sm text-zinc-500 mb-4">Add your first task to get started</p>
 				<button
 					onclick={() => {
@@ -75,7 +79,7 @@
 			</div>
 		{:else}
 			<div class="space-y-4">
-				<TaskList {tasks} {nodeId} {projectSlug} {onTasksUpdated} />
+				<TaskList tasks={activeTasks} {nodeId} {projectSlug} {onTasksUpdated} />
 			</div>
 		{/if}
 	</div>

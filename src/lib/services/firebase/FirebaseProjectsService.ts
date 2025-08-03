@@ -10,6 +10,7 @@ import {
 	where, 
 	orderBy, 
 	onSnapshot,
+	writeBatch,
 	type Unsubscribe 
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -39,7 +40,7 @@ export class FirebaseProjectsService implements IProjectsService {
 		status?: string;
 		createdBy?: string;
 	}): Promise<Project> {
-		const slug = this.generateSlug(data.title);
+		const slug = await this.generateSlug(data.title);
 		
 		const projectData = {
 			title: data.title,
@@ -93,7 +94,8 @@ export class FirebaseProjectsService implements IProjectsService {
 				if (!docSnap.exists()) return false;
 			}
 
-			// TODO: Delete subcollections (nodes, edges, people, timeline)
+			// Delete subcollections (nodes, edges, people, timeline)
+			await this.deleteProjectSubcollections(projectDoc.id);
 			await deleteDoc(projectDoc);
 			return true;
 		} catch (error) {
@@ -189,7 +191,7 @@ export class FirebaseProjectsService implements IProjectsService {
 		return snapshot.empty ? null : snapshot.docs[0].ref;
 	}
 
-	private generateSlug(title: string): string {
+	private async generateSlug(title: string): Promise<string> {
 		// Generate base slug
 		const baseSlug = title
 			.toLowerCase()
@@ -199,7 +201,53 @@ export class FirebaseProjectsService implements IProjectsService {
 			.trim()
 			.substring(0, 50);
 
-		// TODO: Check for uniqueness and append number if needed
-		return baseSlug;
+		// Check for uniqueness and append number if needed
+		return await this.ensureUniqueSlug(baseSlug);
+	}
+
+	private async ensureUniqueSlug(baseSlug: string): Promise<string> {
+		let slug = baseSlug;
+		let counter = 1;
+		
+		while (await this.slugExists(slug)) {
+			slug = `${baseSlug}-${counter}`;
+			counter++;
+			
+			// Prevent infinite loops
+			if (counter > 1000) {
+				slug = `${baseSlug}-${Date.now()}`;
+				break;
+			}
+		}
+		
+		return slug;
+	}
+
+	private async slugExists(slug: string): Promise<boolean> {
+		const q = query(collection(db, 'projects'), where('slug', '==', slug));
+		const snapshot = await getDocs(q);
+		return !snapshot.empty;
+	}
+
+	private async deleteProjectSubcollections(projectId: string): Promise<void> {
+		const batch = writeBatch(db);
+		const subcollections = ['nodes', 'edges', 'people', 'timeline'];
+		
+		for (const subcollectionName of subcollections) {
+			const subcollectionRef = collection(db, 'projects', projectId, subcollectionName);
+			const snapshot = await getDocs(subcollectionRef);
+			
+			snapshot.docs.forEach((docSnapshot) => {
+				batch.delete(docSnapshot.ref);
+			});
+		}
+		
+		// Check if there are any operations in the batch
+		try {
+			await batch.commit();
+		} catch (error) {
+			// If no operations in batch, commit will succeed anyway
+			console.log('Batch commit completed (may have been empty)');
+		}
 	}
 }

@@ -14,6 +14,8 @@ import { db } from '../../firebase/config';
 import type { TimelineEvent, TimelineTemplate } from '../local/TimelineService';
 import { getTimelineTemplate, timelineTemplates } from '../local/TimelineService';
 import type { ITimelineService } from '../interfaces';
+import { get } from 'svelte/store';
+import { authStore } from '../../stores/authStore';
 
 export class FirebaseTimelineService implements ITimelineService {
 	private projectId?: string;
@@ -23,9 +25,14 @@ export class FirebaseTimelineService implements ITimelineService {
 	}
 
 	async getAllEvents(): Promise<TimelineEvent[]> {
+		const userId = get(authStore).user?.uid;
+		if (!this.projectId && !userId) {
+			throw new Error('User must be authenticated to access timeline');
+		}
+		
 		const collectionPath = this.projectId 
 			? `projects/${this.projectId}/timeline`
-			: 'timeline';
+			: `users/${userId}/timeline`;
 			
 		const q = query(collection(db, collectionPath), orderBy('date', 'asc'));
 		const snapshot = await getDocs(q);
@@ -56,9 +63,14 @@ export class FirebaseTimelineService implements ITimelineService {
 			}
 		});
 
+		const userId = get(authStore).user?.uid;
+		if (!this.projectId && !userId) {
+			throw new Error('User must be authenticated to create timeline events');
+		}
+		
 		const collectionPath = this.projectId 
 			? `projects/${this.projectId}/timeline`
-			: 'timeline';
+			: `users/${userId}/timeline`;
 		
 		const eventDoc = {
 			templateType,
@@ -67,7 +79,7 @@ export class FirebaseTimelineService implements ITimelineService {
 			eventData: initializedData,
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
-			createdBy: 'current-user' // TODO: Get from auth context
+			createdBy: get(authStore).user?.uid || 'anonymous'
 		};
 
 		const docRef = await addDoc(collection(db, collectionPath), eventDoc);
@@ -79,9 +91,10 @@ export class FirebaseTimelineService implements ITimelineService {
 	}
 
 	async updateEvent(id: string, updates: Partial<TimelineEvent>): Promise<TimelineEvent | null> {
+		const userId = get(authStore).user?.uid;
 		const collectionPath = this.projectId 
 			? `projects/${this.projectId}/timeline`
-			: 'timeline';
+			: `users/${userId}/timeline`;
 			
 		const eventRef = doc(db, collectionPath, id);
 		
@@ -127,9 +140,10 @@ export class FirebaseTimelineService implements ITimelineService {
 	}
 
 	subscribeToEvents(callback: (events: TimelineEvent[]) => void): Unsubscribe {
+		const userId = get(authStore).user?.uid;
 		const collectionPath = this.projectId 
 			? `projects/${this.projectId}/timeline`
-			: 'timeline';
+			: `users/${userId}/timeline`;
 			
 		const q = query(collection(db, collectionPath), orderBy('date', 'asc'));
 		

@@ -15,7 +15,7 @@
 
 	// Task-related state
 	const taskService: ITaskService = ServiceFactory.createTaskService();
-	
+
 	// Get tasks for this node from TaskService instead of embedded data
 	let tasks = $state<Task[]>([]);
 	let personTaskCounts = $state<Array<{ personId: string; count: number }>>([]);
@@ -24,38 +24,41 @@
 	// Load tasks when component mounts or data changes
 	$effect(() => {
 		(async () => {
-		// Get project slug from data if available, otherwise extract from URL
-		const projectSlug = data.projectSlug || (() => {
-			if (typeof window !== 'undefined') {
-				const currentPath = window.location.pathname;
-				const pathParts = currentPath.split('/');
-				return pathParts[2]; // /project/[slug]/...
-			}
-			return null;
-		})();
-		
-		const nodeTasksResult = projectSlug ? 
-			taskService.getNodeTasks(id, projectSlug) : 
-			taskService.getNodeTasks(id);
-		
-		const nodeTasks = nodeTasksResult instanceof Promise ? await nodeTasksResult : nodeTasksResult;
-		
-		// Debug log to see what's happening
-		if (nodeTasks.length > 0) {
-			console.log(`Node ${id} has ${nodeTasks.length} tasks:`, nodeTasks);
-		}
-		
-		tasks = nodeTasks;
+			// Get project slug from data if available, otherwise extract from URL
+			const projectSlug =
+				data.projectSlug ||
+				(() => {
+					if (typeof window !== 'undefined') {
+						const currentPath = window.location.pathname;
+						const pathParts = currentPath.split('/');
+						return pathParts[2]; // /project/[slug]/...
+					}
+					return null;
+				})();
 
-		// Update person task counts
-		const counts = new Map<string, number>();
-		nodeTasks.forEach((task) => {
-			counts.set(task.assignee, (counts.get(task.assignee) || 0) + 1);
-		});
-		personTaskCounts = Array.from(counts.entries()).map(([personId, count]) => ({
-			personId,
-			count
-		}));
+			const nodeTasksResult = projectSlug
+				? taskService.getNodeTasks(id, projectSlug)
+				: taskService.getNodeTasks(id);
+
+			const nodeTasks =
+				nodeTasksResult instanceof Promise ? await nodeTasksResult : nodeTasksResult;
+
+			// Debug log to see what's happening
+			if (nodeTasks.length > 0) {
+				console.log(`Node ${id} has ${nodeTasks.length} tasks:`, nodeTasks);
+			}
+
+			tasks = nodeTasks;
+
+			// Update person task counts
+			const counts = new Map<string, number>();
+			nodeTasks.forEach((task) => {
+				counts.set(task.assignee, (counts.get(task.assignee) || 0) + 1);
+			});
+			personTaskCounts = Array.from(counts.entries()).map(([personId, count]) => ({
+				personId,
+				count
+			}));
 		})();
 	});
 
@@ -137,8 +140,7 @@
 				{@const StatusIconComponent = statusIcon.component}
 				<StatusIconComponent class="h-5 w-5" style="color: {statusIcon.color};" />
 			{/if}
-			<span
-				class="rounded-md border border-zinc-700 bg-zinc-900 px-1 py-0.5 text-sm font-medium text-white"
+			<span class="rounded-md border border-zinc-700 bg-white px-1 py-0.5 text-sm font-medium"
 				>{template.name}</span
 			>
 		</div>
@@ -158,7 +160,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="min-w-64 cursor-pointer rounded-lg border bg-zinc-900 p-4 shadow-lg transition-colors relative"
+		class="box-shadow-black relative min-w-64 cursor-pointer rounded-lg border bg-white p-4 transition-colors"
 		style="border-color: {borderColor};"
 		onclick={handleNodeClick}
 	>
@@ -185,7 +187,7 @@
 		{#if !hasTasks}
 			<button
 				onclick={(event) => handleAddTask(event)}
-				class="absolute -bottom-2 -right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-zinc-400 transition-colors hover:bg-zinc-600 hover:text-zinc-300 border border-zinc-600 shadow-sm"
+				class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-zinc-600 bg-zinc-700 text-zinc-400 shadow-sm transition-colors hover:bg-zinc-600 hover:text-zinc-300"
 			>
 				<Plus class="h-3 w-3" />
 			</button>
@@ -199,7 +201,9 @@
 	<!-- Tasks Section (Stacked to main node) -->
 	{#if hasTasks}
 		<!-- Show person pills in a stacked container -->
-		<div class="min-w-64 rounded-b-lg rounded-t-none border border-t-0 border-zinc-700 bg-zinc-800/50 p-3 shadow -mt-2 pt-5">
+		<div
+			class="-mt-2 min-w-64 rounded-t-none rounded-b-lg border border-t-0 border-black bg-zinc-700 p-3 pt-5 shadow"
+		>
 			<div class="flex flex-wrap items-center gap-2">
 				{#each personTaskCounts as personTaskCount}
 					<TaskPill {personTaskCount} onclick={handleTaskPillClick} />

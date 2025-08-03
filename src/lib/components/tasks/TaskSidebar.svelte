@@ -13,6 +13,15 @@
 	let { projectSlug, projectTasks, onClose }: Props = $props();
 
 	const peopleService = ServiceFactory.createPeopleService();
+	let allPeople = $state<any[]>([]);
+
+	// Load all people once for efficient lookup
+	$effect(() => {
+		(async () => {
+			const result = peopleService.getAllPeople();
+			allPeople = result instanceof Promise ? await result : result;
+		})();
+	});
 
 </script>
 
@@ -64,10 +73,10 @@
 						
 						<div class="space-y-2">
 							{#each nodeTasks as task}
-								{@const person = peopleService.getPerson(task.assignee)}
+								{@const person = allPeople.find(p => p.id === task.assignee)}
 								<div class="rounded bg-zinc-900/50 p-3">
 									<p class="text-sm text-zinc-200 mb-1">{task.title}</p>
-									<p class="text-xs text-zinc-500">{person?.name || 'Unknown'}</p>
+									<p class="text-xs text-zinc-500">{person?.name || (task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}</p>
 									{#if task.dueDate}
 										<p class="text-xs text-zinc-500">Due: {new Date(task.dueDate).toLocaleDateString()}</p>
 									{/if}

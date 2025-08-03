@@ -29,16 +29,16 @@ export class PeopleService {
 		console.log('Migrating people to new schema...');
 		const oldStorageKey = 'things-people';
 		const oldPeople = this.getOldPeople(oldStorageKey);
-		
+
 		// Migrate to global people index
 		if (oldPeople.length > 0) {
-			const globalPeople: GlobalPerson[] = oldPeople.map(person => ({
+			const globalPeople: GlobalPerson[] = oldPeople.map((person) => ({
 				...person,
 				lastUsedAt: person.updatedAt,
 				usageCount: 1
 			}));
 			this.saveGlobalPeople(globalPeople);
-			
+
 			// Clear old storage
 			localStorage.removeItem(oldStorageKey);
 		}
@@ -110,12 +110,12 @@ export class PeopleService {
 		if (projectSlug) {
 			// Look in specific project
 			const projectPeople = this.getProjectPeople(projectSlug);
-			return projectPeople.find(p => p.id === personId) || null;
+			return projectPeople.find((p) => p.id === personId) || null;
 		}
 
 		// Look in global index
 		const globalPeople = this.getGlobalPeople();
-		const globalPerson = globalPeople.find(p => p.id === personId);
+		const globalPerson = globalPeople.find((p) => p.id === personId);
 		if (globalPerson) {
 			return {
 				id: globalPerson.id,
@@ -134,9 +134,8 @@ export class PeopleService {
 		const projectPeople = this.getProjectPeople(projectSlug);
 
 		// Check if person already exists in this project
-		const existingPerson = projectPeople.find(p => 
-			p.name.toLowerCase() === data.name.toLowerCase() && 
-			p.email === data.email
+		const existingPerson = projectPeople.find(
+			(p) => p.name.toLowerCase() === data.name.toLowerCase() && p.email === data.email
 		);
 		if (existingPerson) {
 			return existingPerson;
@@ -162,9 +161,13 @@ export class PeopleService {
 	}
 
 	// Update person in a specific project
-	updatePersonInProject(projectSlug: string, personId: string, updates: Partial<Person>): Person | null {
+	updatePersonInProject(
+		projectSlug: string,
+		personId: string,
+		updates: Partial<Person>
+	): Person | null {
 		const projectPeople = this.getProjectPeople(projectSlug);
-		const index = projectPeople.findIndex(p => p.id === personId);
+		const index = projectPeople.findIndex((p) => p.id === personId);
 
 		if (index === -1) return null;
 
@@ -185,7 +188,7 @@ export class PeopleService {
 	// Delete person from a specific project
 	deletePersonFromProject(projectSlug: string, personId: string): boolean {
 		const projectPeople = this.getProjectPeople(projectSlug);
-		const filtered = projectPeople.filter(p => p.id !== personId);
+		const filtered = projectPeople.filter((p) => p.id !== personId);
 
 		if (filtered.length === projectPeople.length) return false;
 
@@ -211,9 +214,10 @@ export class PeopleService {
 		const lowercaseQuery = query.toLowerCase();
 
 		return people
-			.filter(person =>
-				person.name.toLowerCase().includes(lowercaseQuery) ||
-				person.email?.toLowerCase().includes(lowercaseQuery)
+			.filter(
+				(person) =>
+					person.name.toLowerCase().includes(lowercaseQuery) ||
+					person.email?.toLowerCase().includes(lowercaseQuery)
 			)
 			.sort((a, b) => b.usageCount - a.usageCount) // Sort by usage
 			.slice(0, 10); // Limit results
@@ -222,9 +226,8 @@ export class PeopleService {
 	// Update global people index when person is used
 	private updateGlobalPeopleIndex(person: Person): void {
 		const globalPeople = this.getGlobalPeople();
-		const existingIndex = globalPeople.findIndex(p => 
-			p.name.toLowerCase() === person.name.toLowerCase() && 
-			p.email === person.email
+		const existingIndex = globalPeople.findIndex(
+			(p) => p.name.toLowerCase() === person.name.toLowerCase() && p.email === person.email
 		);
 
 		if (existingIndex >= 0) {
@@ -255,7 +258,7 @@ export class PeopleService {
 		// This is now inefficient but kept for backward compatibility
 		// In the new schema, you should use getProjectPeople() or getGlobalPeople()
 		const globalPeople = this.getGlobalPeople();
-		return globalPeople.map(gp => ({
+		return globalPeople.map((gp) => ({
 			id: gp.id,
 			name: gp.name,
 			email: gp.email,
@@ -268,7 +271,7 @@ export class PeopleService {
 	addPerson(data: { name: string; email?: string }): Person {
 		// This method is deprecated - use addPersonToProject instead
 		console.warn('PeopleService.addPerson() is deprecated. Use addPersonToProject() instead.');
-		
+
 		// For backward compatibility, add to a default "global" project
 		return this.addPersonToProject('global', data);
 	}
@@ -276,8 +279,10 @@ export class PeopleService {
 	// Legacy method for backward compatibility
 	updatePerson(id: string, updates: Partial<Person>): Person | null {
 		// This method is deprecated - use updatePersonInProject instead
-		console.warn('PeopleService.updatePerson() is deprecated. Use updatePersonInProject() instead.');
-		
+		console.warn(
+			'PeopleService.updatePerson() is deprecated. Use updatePersonInProject() instead.'
+		);
+
 		// Try to update in default "global" project
 		return this.updatePersonInProject('global', id, updates);
 	}
@@ -285,8 +290,10 @@ export class PeopleService {
 	// Legacy method for backward compatibility
 	deletePerson(id: string): boolean {
 		// This method is deprecated - use deletePersonFromProject instead
-		console.warn('PeopleService.deletePerson() is deprecated. Use deletePersonFromProject() instead.');
-		
+		console.warn(
+			'PeopleService.deletePerson() is deprecated. Use deletePersonFromProject() instead.'
+		);
+
 		// Try to delete from default "global" project
 		return this.deletePersonFromProject('global', id);
 	}
@@ -294,10 +301,12 @@ export class PeopleService {
 	// Legacy method for backward compatibility
 	searchPeople(query: string): Person[] {
 		// This method is deprecated - use searchProjectPeople or searchGlobalPeople instead
-		console.warn('PeopleService.searchPeople() is deprecated. Use searchProjectPeople() or searchGlobalPeople() instead.');
-		
+		console.warn(
+			'PeopleService.searchPeople() is deprecated. Use searchProjectPeople() or searchGlobalPeople() instead.'
+		);
+
 		const globalResults = this.searchGlobalPeople(query);
-		return globalResults.map(gp => ({
+		return globalResults.map((gp) => ({
 			id: gp.id,
 			name: gp.name,
 			email: gp.email,

@@ -117,6 +117,7 @@ export class TaskService {
 			dueDate: storedTask.dueDate,
 			notes: storedTask.notes,
 			createdAt: storedTask.createdAt,
+			completed: storedTask.completed || false,
 			projectSlug: storedTask.projectSlug,
 			projectTitle: storedTask.projectTitle,
 			nodeId: storedTask.nodeId,
@@ -166,14 +167,14 @@ export class TaskService {
 	getPersonTasks(personId: string): TaskWithContext[] {
 		const storedTasks = this.getAllStoredTasks();
 		return storedTasks
-			.filter(task => task.assignee === personId)
+			.filter(task => task.assignee === personId && !task.completed)
 			.map(task => this.toTaskWithContext(task));
 	}
 
 	// Get tasks for specific node
 	getNodeTasks(nodeId: string, projectSlug?: string): Task[] {
 		const storedTasks = this.getAllStoredTasks();
-		let filteredTasks = storedTasks.filter(task => task.nodeId === nodeId);
+		let filteredTasks = storedTasks.filter(task => task.nodeId === nodeId && !task.completed);
 		
 		if (projectSlug) {
 			filteredTasks = filteredTasks.filter(task => task.projectSlug === projectSlug);
@@ -185,7 +186,8 @@ export class TaskService {
 			assignee: task.assignee,
 			dueDate: task.dueDate,
 			notes: task.notes,
-			createdAt: task.createdAt
+			createdAt: task.createdAt,
+			completed: task.completed || false
 		}));
 	}
 
@@ -230,7 +232,8 @@ export class TaskService {
 		const newTask: Task = {
 			...task,
 			id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-			createdAt: new Date().toISOString()
+			createdAt: new Date().toISOString(),
+			completed: task.completed || false
 		};
 
 		const storedTask = this.toStoredTask(newTask, projectSlug, nodeId);

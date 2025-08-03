@@ -15,14 +15,17 @@ import { db } from '../../firebase/config';
 import type { Node, Edge } from '@xyflow/svelte';
 import type { INodesService } from '../interfaces/INodesService';
 import { getTemplate } from '../../templates';
+import { get } from 'svelte/store';
+import { authStore } from '../../stores/authStore';
 
 export class FirebaseNodesService implements INodesService {
 	private projectId: string;
 	private setNodes: (nodes: Node[]) => void;
-	private getNodes: () => Node[];
+	private getNodesCallback: () => Node[];
 	private setEdges: (edges: Edge[]) => void;
-	private getEdges: () => Edge[];
+	private getEdgesCallback: () => Edge[];
 	private projectSlug?: string;
+	private isUpdatingPositions = false;
 
 	constructor(
 		projectId: string,
@@ -34,15 +37,14 @@ export class FirebaseNodesService implements INodesService {
 	) {
 		this.projectId = projectId;
 		this.setNodes = setNodes;
-		this.getNodes = getNodes;
+		this.getNodesCallback = getNodes;
 		this.setEdges = setEdges;
-		this.getEdges = getEdges;
+		this.getEdgesCallback = getEdges;
 		this.projectSlug = projectSlug;
 	}
 
 	async addNode(templateType: string, position: { x: number; y: number }): Promise<Node> {
 		const template = getTemplate(templateType);
-		const id = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 		// Initialize default data based on template
 		const nodeDataFields: Record<string, any> = {};
@@ -54,55 +56,94 @@ export class FirebaseNodesService implements INodesService {
 			}
 		});
 
+		// Save to Firestore first to get the real document ID
+		const nodeDoc = {
+			type: 'universal',
+			position: { ...position },
+			templateType: templateType,
+			nodeData: nodeDataFields,
+			projectSlug: this.projectSlug,
+			status: nodeDataFields.status || null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			createdBy: get(authStore).user?.uid || 'anonymous'
+		};
+
+		const docRef = await addDoc(collection(db, 'projects', this.projectId, 'nodes'), nodeDoc);
+
+		// Create the node with the Firestore-generated ID
 		const newNode: Node = {
-			id,
+			id: docRef.id,
 			type: 'universal',
 			position: { ...position },
 			data: {
+				id: docRef.id,
 				templateType: templateType,
 				nodeData: nodeDataFields,
 				projectSlug: this.projectSlug
 			}
 		};
 
-		// Save to Firestore
-		const nodeDoc = {
-			id: newNode.id,
-			type: newNode.type,
-			position: newNode.position,
-			data: this.filterUndefinedValues(newNode.data),
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString()
-		};
-
-		await addDoc(collection(db, 'projects', this.projectId, 'nodes'), nodeDoc);
-
-		// Update local state
-		const currentNodes = this.getNodes();
-		const updatedNodes = [...currentNodes, newNode];
-		this.setNodes(updatedNodes);
+		// Don't update local state here - the Firebase subscription will handle it
+		// This prevents duplicate entries when the subscription receives the new node
 
 		return newNode;
 	}
 
 	async updateNode(nodeId: string, updates: any, userId?: string): Promise<boolean> {
 		try {
+			console.log('FirebaseNodesService.updateNode called:', { nodeId, updates, userId });
+			
 			const nodeRef = doc(db, 'projects', this.projectId, 'nodes', nodeId);
 			
+			// Convert Node data structure to Firestore structure
+			const firestoreUpdates: any = {};
+			
+			if (updates.position) {
+				firestoreUpdates.position = updates.position;
+			}
+			
+			// Handle direct nodeData updates (from EditPanel)
+			if (updates.nodeData) {
+				firestoreUpdates.nodeData = updates.nodeData;
+				// Update denormalized status field
+				if (updates.nodeData.status) {
+					firestoreUpdates.status = updates.nodeData.status;
+				}
+			}
+			
+			// Handle nested data structure updates (from other sources)
+			if (updates.data) {
+				if (updates.data.templateType) {
+					firestoreUpdates.templateType = updates.data.templateType;
+				}
+				if (updates.data.nodeData) {
+					firestoreUpdates.nodeData = updates.data.nodeData;
+					// Update denormalized status field
+					if (updates.data.nodeData.status) {
+						firestoreUpdates.status = updates.data.nodeData.status;
+					}
+				}
+				if (updates.data.projectSlug) {
+					firestoreUpdates.projectSlug = updates.data.projectSlug;
+				}
+			}
+
 			// Filter out undefined values recursively
-			const filteredUpdates = this.filterUndefinedValues(updates);
+			const filteredUpdates = this.filterUndefinedValues(firestoreUpdates);
+			
+			console.log('Firestore updates:', filteredUpdates);
 
 			await updateDoc(nodeRef, {
 				...filteredUpdates,
-				updatedAt: new Date().toISOString(),
-				...(userId && { updatedBy: userId })
+				updatedAt: new Date(),
+				...(userId && { lastEditBy: userId, lastEditAt: new Date() })
 			});
 
-			// Update local state
-			const updatedNodes = this.getNodes().map((node) =>
-				node.id === nodeId ? { ...node, ...updates } : node
-			);
-			this.setNodes(updatedNodes);
+			console.log('Node updated successfully in Firestore');
+
+			// Note: We don't update local state here because the subscription will handle it
+			// The subscription in Canvas will receive the updated data and update the nodes
 
 			return true;
 		} catch (error) {
@@ -117,15 +158,8 @@ export class FirebaseNodesService implements INodesService {
 			const nodeRef = doc(db, 'projects', this.projectId, 'nodes', nodeId);
 			await deleteDoc(nodeRef);
 
-			// Update local state
-			const updatedNodes = this.getNodes().filter((node) => node.id !== nodeId);
-			this.setNodes(updatedNodes);
-
-			// Also remove any edges connected to this node
-			const updatedEdges = this.getEdges().filter(
-				(edge) => edge.source !== nodeId && edge.target !== nodeId
-			);
-			this.setEdges(updatedEdges);
+			// Don't update local state here - the Firebase subscription will handle node removal
+			// But we do need to clean up connected edges
 
 			// Delete connected edges from Firestore
 			const edgesCollection = collection(db, 'projects', this.projectId, 'edges');
@@ -155,10 +189,15 @@ export class FirebaseNodesService implements INodesService {
 			return snapshot.docs.map(doc => {
 				const data = doc.data();
 				return {
-					id: data.id,
+					id: doc.id, // Use the Firestore document ID
 					type: data.type,
 					position: data.position,
-					data: data.data
+					data: {
+						id: doc.id,
+						templateType: data.templateType,
+						nodeData: data.nodeData,
+						projectSlug: data.projectSlug
+					}
 				} as Node;
 			});
 		} catch (error) {
@@ -177,9 +216,8 @@ export class FirebaseNodesService implements INodesService {
 
 		await addDoc(collection(db, 'projects', this.projectId, 'edges'), edgeDoc);
 
-		// Update local state
-		const updatedEdges = [...this.getEdges(), edgeData];
-		this.setEdges(updatedEdges);
+		// Don't update local state here - the Firebase subscription will handle it
+		// This prevents duplicate entries when the subscription receives the new edge
 
 		return edgeData;
 	}
@@ -195,9 +233,7 @@ export class FirebaseNodesService implements INodesService {
 				await deleteDoc(edgeDoc.ref);
 			}
 
-			// Update local state
-			const updatedEdges = this.getEdges().filter((edge) => edge.id !== edgeId);
-			this.setEdges(updatedEdges);
+			// Don't update local state here - the Firebase subscription will handle edge removal
 
 			return true;
 		} catch (error) {
@@ -210,7 +246,10 @@ export class FirebaseNodesService implements INodesService {
 		try {
 			const edgesCollection = collection(db, 'projects', this.projectId, 'edges');
 			const snapshot = await getDocs(edgesCollection);
-			return snapshot.docs.map(doc => doc.data() as Edge);
+			return snapshot.docs.map(doc => ({
+				...doc.data(),
+				id: doc.id // Use the Firestore document ID
+			} as Edge));
 		} catch (error) {
 			console.error('Failed to get edges:', error);
 			return [];
@@ -219,34 +258,70 @@ export class FirebaseNodesService implements INodesService {
 
 	async saveBatch(nodes: Node[], edges: Edge[]): Promise<void> {
 		try {
+			console.log('FirebaseNodesService.saveBatch called with', nodes.length, 'nodes and', edges.length, 'edges');
+			console.log('Project ID:', this.projectId);
+			
+			// Flag for logging purposes - no longer preventing subscription updates
+			this.isUpdatingPositions = true;
+			
 			const batch = writeBatch(db);
 
-			// Save all nodes
-			nodes.forEach(node => {
-				const nodeDoc = {
-					id: node.id,
-					type: node.type,
+			// Update existing nodes (especially positions)
+			for (const node of nodes) {
+				if (!node.id || !node.position) {
+					console.warn('Skipping node with invalid ID or position:', { id: node.id, position: node.position });
+					continue;
+				}
+				
+				console.log('Updating node in batch:', node.id, 'position:', node.position);
+				console.log('Document path:', `projects/${this.projectId}/nodes/${node.id}`);
+				
+				// Reference the existing document by its ID
+				const nodeRef = doc(db, 'projects', this.projectId, 'nodes', node.id);
+				
+				// Use set with merge to update position - more robust than update
+				batch.set(nodeRef, {
 					position: node.position,
-					data: this.filterUndefinedValues(node.data),
-					updatedAt: new Date().toISOString()
-				};
-				const nodeRef = doc(collection(db, 'projects', this.projectId, 'nodes'));
-				batch.set(nodeRef, nodeDoc);
-			});
+					updatedAt: new Date()
+				}, { merge: true });
+				console.log('Added position update to batch for node:', node.id);
+			}
 
-			// Save all edges
+			// Update existing edges
 			edges.forEach(edge => {
-				const edgeDoc = this.filterUndefinedValues({
-					...edge,
-					updatedAt: new Date().toISOString()
-				});
-				const edgeRef = doc(collection(db, 'projects', this.projectId, 'edges'));
-				batch.set(edgeRef, edgeDoc);
+				if (edge.id) {
+					console.log('Updating edge in batch:', edge.id);
+					
+					// Reference the existing document by its ID
+					const edgeRef = doc(db, 'projects', this.projectId, 'edges', edge.id);
+					
+					// Use set with merge to update edge - more robust than update
+					batch.set(edgeRef, {
+						source: edge.source,
+						target: edge.target,
+						type: edge.type,
+						style: edge.style,
+						updatedAt: new Date()
+					}, { merge: true });
+				}
 			});
 
 			await batch.commit();
+			console.log('Batch save completed successfully - positions should be updated in Firestore');
+			
+			// Clear the flag after a delay to allow Firestore to propagate changes
+			setTimeout(() => {
+				this.isUpdatingPositions = false;
+			}, 1000);
 		} catch (error) {
-			console.error('Failed to save batch:', error);
+			console.error('Failed to save batch - positions not updated in Firestore:', error);
+			console.error('Error details:', {
+				projectId: this.projectId,
+				nodeCount: nodes.length,
+				edgeCount: edges.length,
+				error: error.message
+			});
+			this.isUpdatingPositions = false;
 		}
 	}
 
@@ -270,22 +345,40 @@ export class FirebaseNodesService implements INodesService {
 	}
 
 	subscribeToNodes(callback: (nodes: Node[]) => void): () => void {
+		console.log('Setting up Firebase nodes subscription for project:', this.projectId);
+		
 		const nodesCollection = collection(db, 'projects', this.projectId, 'nodes');
 		const q = query(nodesCollection, orderBy('updatedAt', 'desc'));
 
 		const unsubscribe = onSnapshot(q, (snapshot) => {
+			console.log('Firebase nodes subscription received update:', snapshot.docs.length, 'nodes');
+			
+			// Don't skip subscription updates during position updates to ensure positions are properly saved
+			// The position conflicts were causing nodes to lose their positions after drag operations
+			
 			const nodes = snapshot.docs.map(doc => {
 				const data = doc.data();
-				return {
-					id: data.id,
+				const node = {
+					id: doc.id, // Use the Firestore document ID
 					type: data.type,
 					position: data.position,
-					data: data.data
+					data: {
+						id: doc.id,
+						templateType: data.templateType,
+						nodeData: data.nodeData,
+						projectSlug: data.projectSlug
+					}
 				} as Node;
+				
+				console.log('Mapped node:', node);
+				return node;
 			});
 			
-			this.setNodes(nodes);
+			// Only call the callback - don't update local state directly
+			// The Canvas component will handle state updates through the callback
 			callback(nodes);
+		}, (error) => {
+			console.error('Firebase nodes subscription error:', error);
 		});
 
 		return unsubscribe;
@@ -296,9 +389,13 @@ export class FirebaseNodesService implements INodesService {
 		const q = query(edgesCollection, orderBy('updatedAt', 'desc'));
 
 		const unsubscribe = onSnapshot(q, (snapshot) => {
-			const edges = snapshot.docs.map(doc => doc.data() as Edge);
+			const edges = snapshot.docs.map(doc => ({
+				...doc.data(),
+				id: doc.id // Use the Firestore document ID
+			} as Edge));
 			
-			this.setEdges(edges);
+			// Only call the callback - don't update local state directly
+			// The Canvas component will handle state updates through the callback
 			callback(edges);
 		});
 
@@ -306,7 +403,7 @@ export class FirebaseNodesService implements INodesService {
 	}
 
 	getStatusCounts(): { todo: number; doing: number; done: number } {
-		const nodes = this.getNodes();
+		const nodes = this.getNodesCallback();
 		const counts = { todo: 0, doing: 0, done: 0 };
 		
 		nodes.forEach(node => {

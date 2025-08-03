@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Calendar, StickyNote, Edit, Trash2, Check } from '@lucide/svelte';
+	import { Calendar, StickyNote, Edit, Check } from '@lucide/svelte';
 	import type { Task } from '../../types/task';
-	import { PeopleService } from '../../services/local/PeopleService';
-	import { TaskService } from '../../services/local/TaskService';
-	import EditTaskModal from './EditTaskModal.svelte';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { IPeopleService, ITaskService } from '../../services/interfaces';
+	import TaskModal from './TaskModal.svelte';
 
 	interface Props {
 		tasks: Task[];
@@ -14,28 +14,31 @@
 
 	let { tasks, nodeId, projectSlug, onTasksUpdated }: Props = $props();
 
-	const peopleService = new PeopleService();
-	const taskService = new TaskService();
+	const peopleService: IPeopleService = ServiceFactory.createPeopleService();
+	const taskService: ITaskService = ServiceFactory.createTaskService();
 	
 	let editingTask = $state<Task | null>(null);
-	let completingTasks = $state<Set<string>>(new Set());
+	let allPeople = $state<any[]>([]);
 
-	function handleCompleteTask(taskId: string) {
-		// Add to completing set to trigger animation
-		completingTasks = new Set([...completingTasks, taskId]);
-		
-		// Wait for animation to complete before actually deleting
-		setTimeout(() => {
-			taskService.deleteTask(nodeId, taskId, projectSlug);
-			completingTasks = new Set([...completingTasks].filter(id => id !== taskId));
-			onTasksUpdated?.();
-		}, 500); // 500ms animation duration
-	}
+	// Load all people once for efficient lookup
+	$effect(() => {
+		(async () => {
+			const result = peopleService.getAllPeople();
+			allPeople = result instanceof Promise ? await result : result;
+		})();
+	});
 
-	function handleDeleteTask(taskId: string) {
-		if (confirm('Are you sure you want to delete this task?')) {
-			taskService.deleteTask(nodeId, taskId, projectSlug);
-			onTasksUpdated?.();
+	async function handleResolveTask(taskId: string) {
+		if (confirm('Are you sure you want to resolve (delete) this task?')) {
+			try {
+				console.log('Resolving task:', { taskId, nodeId, projectSlug });
+				const result = taskService.deleteTask(nodeId, taskId, projectSlug);
+				if (result instanceof Promise) await result;
+				onTasksUpdated?.();
+			} catch (error) {
+				console.error('Failed to resolve task:', error);
+				alert('Failed to resolve task. Please try again.');
+			}
 		}
 	}
 
@@ -54,22 +57,16 @@
 
 <div class="space-y-2">
 	{#each tasks as task}
-		{@const person = peopleService.getPerson(task.assignee)}
+		{@const person = allPeople.find(p => p.id === task.assignee)}
 		{@const overdue = task.dueDate && isOverdue(task.dueDate)}
-		{@const isCompleting = completingTasks.has(task.id)}
 		
-		<div class="group flex items-start gap-2 rounded-lg bg-zinc-800/50 p-3 transition-all duration-500 ease-out {isCompleting ? 'opacity-0 scale-95 translate-x-4' : 'opacity-100 scale-100 translate-x-0'}">
+		<div class="group flex items-start gap-2 rounded-lg bg-zinc-800/50 p-3">
 			<button
-				onclick={() => handleCompleteTask(task.id)}
-				class="mt-0.5 rounded-full border-2 p-1 transition-all duration-300 {isCompleting ? 'border-green-500 bg-green-500' : 'border-zinc-600 hover:border-green-500'}"
-				title="Mark as complete (delete)"
-				disabled={isCompleting}
+				onclick={() => handleResolveTask(task.id)}
+				class="mt-0.5 rounded-full border-2 border-zinc-600 hover:border-green-500 hover:bg-green-500 p-1 transition-all duration-200"
+				title="Resolve task (delete)"
 			>
-				{#if isCompleting}
-					<Check class="h-3 w-3 text-white" />
-				{:else}
-					<div class="h-3 w-3"></div>
-				{/if}
+				<Check class="h-3 w-3" />
 			</button>
 
 			<div class="flex-1 min-w-0">
@@ -77,7 +74,7 @@
 					<p class="text-sm text-zinc-100">{task.title}</p>
 					<div class="flex items-center gap-1">
 						<span class="text-xs text-zinc-400 whitespace-nowrap">
-							{person?.name || 'Unknown'}
+							{person?.name || (task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}
 						</span>
 						<div class="opacity-0 group-hover:opacity-100 flex items-center gap-1 ml-2 transition-opacity">
 							<button
@@ -86,13 +83,6 @@
 								title="Edit task"
 							>
 								<Edit class="h-3 w-3" />
-							</button>
-							<button
-								onclick={() => handleDeleteTask(task.id)}
-								class="rounded p-1 text-zinc-500 hover:text-rose-400 hover:bg-zinc-700"
-								title="Delete task"
-							>
-								<Trash2 class="h-3 w-3" />
 							</button>
 						</div>
 					</div>
@@ -120,9 +110,9 @@
 	{/each}
 </div>
 
-<!-- Edit Task Modal -->
+<!-- Task Modal -->
 {#if editingTask}
-	<EditTaskModal
+	<TaskModal
 		task={editingTask}
 		{nodeId}
 		{projectSlug}

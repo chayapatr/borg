@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { TemplateField } from '../templates';
-	import { PeopleService } from '../services/local/PeopleService';
-	import { TimelineService } from '../services/local/TimelineService';
+	import { ServiceFactory } from '../services/ServiceFactory';
 
 	let {
 		field,
@@ -16,11 +15,49 @@
 	}>();
 
 	// Services for synced data
-	const peopleService = new PeopleService();
-	const timelineService = new TimelineService();
+	const peopleService = ServiceFactory.createPeopleService();
+	const timelineService = ServiceFactory.createTimelineService();
 
 	let showTagInput = $state(false);
 	let editingButton = $state(false);
+	
+	// State for people data
+	let allPeople = $state<any[]>([]);
+	let peopleMap = $state<Map<string, any>>(new Map());
+	
+	// State for timeline data
+	let allEvents = $state<any[]>([]);
+	let eventsMap = $state<Map<string, any>>(new Map());
+
+	// Load people data reactively
+	$effect(() => {
+		(async () => {
+			const result = peopleService.getAllPeople();
+			const people = result instanceof Promise ? await result : result;
+			allPeople = people;
+			
+			// Create a map for quick lookup
+			const map = new Map();
+			people.forEach(person => map.set(person.id, person));
+			peopleMap = map;
+		})();
+	});
+	
+	// Load timeline data reactively
+	$effect(() => {
+		(async () => {
+			if (timelineService.getEventsSortedByDate) {
+				const result = timelineService.getEventsSortedByDate();
+				const events = result instanceof Promise ? await result : result;
+				allEvents = events;
+				
+				// Create a map for quick lookup
+				const map = new Map();
+				events.forEach(event => map.set(event.id, event));
+				eventsMap = map;
+			}
+		})();
+	});
 
 	function handleTagsInput(event: KeyboardEvent) {
 		if (event.key === 'Enter' && event.target) {
@@ -52,28 +89,28 @@
 		const statusColors: Record<string, string> = {
 			// Universal statuses (To Do/Doing/Done)
 			'To Do': 'bg-purple-500/20 text-purple-400',
-			'Doing': 'bg-blue-500/20 text-blue-400',
-			'Done': 'bg-green-500/20 text-green-400',
+			Doing: 'bg-blue-500/20 text-blue-400',
+			Done: 'bg-green-500/20 text-green-400',
 
 			// Publication statuses for papers
-			'Draft': 'bg-gray-500/20 text-gray-400',
+			Draft: 'bg-gray-500/20 text-gray-400',
 			'In Review': 'bg-yellow-500/20 text-yellow-400',
-			'Accepted': 'bg-green-500/20 text-green-400',
-			'Published': 'bg-blue-500/20 text-blue-400'
+			Accepted: 'bg-green-500/20 text-green-400',
+			Published: 'bg-blue-500/20 text-blue-400'
 		};
 
-		return statusColors[status] || 'bg-zinc-500/20 text-zinc-400';
+		return statusColors[status] || 'bg-zinc-500/20 text-zinc-600';
 	}
 </script>
 
 <div class="field-container">
-	<label class="mb-1 block text-sm font-medium text-zinc-300">
+	<label class="mb-1 block text-sm font-medium text-zinc-600">
 		{field.label}
 	</label>
 
 	{#if field.type === 'text'}
 		{#if readonly || mode === 'display'}
-			<div class="py-1 text-zinc-100">
+			<div class="py-1 text-black">
 				{value || '-'}
 			</div>
 		{:else}
@@ -81,12 +118,12 @@
 				type="text"
 				bind:value
 				placeholder={field.placeholder}
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
 			/>
 		{/if}
 	{:else if field.type === 'textarea'}
 		{#if readonly || mode === 'display'}
-			<div class="py-1 whitespace-pre-wrap text-zinc-100">
+			<div class="py-1 whitespace-pre-wrap text-black">
 				{value || '-'}
 			</div>
 		{:else}
@@ -94,7 +131,7 @@
 				bind:value
 				placeholder={field.placeholder}
 				rows="3"
-				class="w-full resize-none rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+				class="w-full resize-none rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
 			></textarea>
 		{/if}
 	{:else if field.type === 'tags'}
@@ -118,7 +155,7 @@
 						<button
 							type="button"
 							onclick={() => (showTagInput = !showTagInput)}
-							class="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
+							class="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-700"
 						>
 							<span>+</span>
 						</button>
@@ -129,7 +166,7 @@
 								placeholder={field.placeholder}
 								onkeydown={handleTagsInput}
 								onblur={() => (showTagInput = false)}
-								class="absolute top-0 left-0 z-10 w-32 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+								class="absolute top-0 left-0 z-10 w-32 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
 								autofocus
 							/>
 						{/if}
@@ -149,7 +186,7 @@
 						{value}
 					</span>
 				{:else}
-					<div class="py-1 text-zinc-100">-</div>
+					<div class="py-1 text-black">-</div>
 				{/if}
 			{:else}
 				<div class="flex flex-wrap gap-2">
@@ -160,7 +197,7 @@
 							class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors {value ===
 							option
 								? getStatusColor(option)
-								: 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}"
+								: 'bg-zinc-700 text-zinc-600 hover:bg-zinc-600'}"
 						>
 							{option}
 						</button>
@@ -178,7 +215,7 @@
 					{field.buttonText || 'Open Link'}
 				</button>
 			{:else}
-				<div class="py-1 text-zinc-400">No link set</div>
+				<div class="py-1 text-zinc-600">No link set</div>
 			{/if}
 		{:else if readonly}
 			{#if value}
@@ -191,19 +228,19 @@
 					{value}
 				</a>
 			{:else}
-				<div class="py-1 text-zinc-100">-</div>
+				<div class="py-1 text-black">-</div>
 			{/if}
 		{:else}
 			<input
 				type="url"
 				bind:value
 				placeholder={field.placeholder}
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
 			/>
 		{/if}
 	{:else if field.type === 'date'}
 		{#if readonly || mode === 'display'}
-			<div class="py-1 text-zinc-100">
+			<div class="py-1 text-black">
 				{#if value}
 					{@const targetDate = new Date(value)}
 					{@const now = new Date()}
@@ -214,7 +251,7 @@
 							<div class="font-medium text-yellow-400">
 								{days} day{days !== 1 ? 's' : ''} remaining
 							</div>
-							<div class="text-sm text-zinc-400">
+							<div class="text-sm text-zinc-600">
 								{targetDate.toLocaleDateString()}
 							</div>
 						</div>
@@ -229,7 +266,7 @@
 			<input
 				type="date"
 				bind:value
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black focus:border-blue-500 focus:outline-none"
 			/>
 		{/if}
 	{:else if field.type === 'button'}
@@ -242,7 +279,7 @@
 					{field.buttonText || 'Open'}
 				</button>
 			{:else}
-				<div class="py-1 text-zinc-400">No URL set</div>
+				<div class="py-1 text-zinc-600">No URL set</div>
 			{/if}
 		{:else if readonly}
 			{#if value}
@@ -253,14 +290,14 @@
 					{field.buttonText || 'Open'}
 				</button>
 			{:else}
-				<div class="py-1 text-zinc-100">-</div>
+				<div class="py-1 text-black">-</div>
 			{/if}
 		{:else}
 			<input
 				type="url"
 				bind:value
 				placeholder="Enter URL..."
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
 			/>
 		{/if}
 	{:else if field.type === 'people-selector'}
@@ -268,7 +305,7 @@
 			<div class="flex flex-wrap gap-1">
 				{#if value && Array.isArray(value) && value.length > 0}
 					{#each value as personId}
-						{@const person = peopleService.getPerson(personId)}
+						{@const person = peopleMap.get(personId)}
 						{#if person}
 							<span
 								class="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2 py-1 text-xs text-white"
@@ -290,9 +327,7 @@
 				{/if}
 
 				{#if mode === 'edit'}
-					{@const availablePeople = peopleService
-						.getAllPeople()
-						.filter((p) => !value?.includes(p.id))}
+					{@const availablePeople = allPeople.filter((p) => !value?.includes(p.id))}
 					{#if availablePeople.length > 0}
 						<select
 							value=""
@@ -304,7 +339,7 @@
 									target.value = '';
 								}
 							}}
-							class="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-100 focus:border-blue-500 focus:outline-none"
+							class="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-black focus:border-blue-500 focus:outline-none"
 						>
 							<option value="">Add person...</option>
 							{#each availablePeople as person}
@@ -318,33 +353,29 @@
 	{:else if field.type === 'timeline-selector'}
 		{#if mode === 'display'}
 			{#if value}
-				{@const event = timelineService.getEvent(value)}
+				{@const event = eventsMap.get(value)}
 				{#if event}
-					<div class="py-1 text-zinc-100">
+					<div class="py-1 text-black">
 						<div class="font-medium">{event.title}</div>
-						<div class="text-sm text-zinc-400">
-							{new Date(event.date).toLocaleDateString()} • {timelineService.getTemplate(
-								event.templateType
-							).name}
+						<div class="text-sm text-zinc-600">
+							{new Date(event.date).toLocaleDateString()} • {event.templateType || 'Event'}
 						</div>
 					</div>
 				{:else}
-					<div class="py-1 text-zinc-400">Event not found</div>
+					<div class="py-1 text-zinc-600">Event not found</div>
 				{/if}
 			{:else}
-				<div class="py-1 text-zinc-400">No event selected</div>
+				<div class="py-1 text-zinc-600">No event selected</div>
 			{/if}
 		{:else}
-			{@const events = timelineService.getEventsSortedByDate()}
 			<select
 				bind:value
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black focus:border-blue-500 focus:outline-none"
 			>
 				<option value="">Select timeline event...</option>
-				{#each events as event}
-					{@const template = timelineService.getTemplate(event.templateType)}
+				{#each allEvents as event}
 					<option value={event.id}>
-						{event.title} ({new Date(event.date).toLocaleDateString()}) - {template.name}
+						{event.title} ({new Date(event.date).toLocaleDateString()}) - {event.templateType || 'Event'}
 					</option>
 				{/each}
 			</select>

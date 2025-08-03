@@ -43,16 +43,16 @@
 	}
 </script>
 
-<div class="flex h-screen w-full bg-zinc-950">
+<div class="flex h-screen w-full bg-borg-white">
 	<!-- Sidebar -->
-	<div class="flex w-64 flex-col border-r border-zinc-800 bg-zinc-900">
+	<div class="flex w-64 flex-col border-r border-zinc-800 bg-borg-beige">
 		<!-- Header -->
-		<div class="border-b border-zinc-800 p-6">
-			<h1 class="text-xl font-semibold text-zinc-100">🛸 BORG</h1>
+		<div class="p-6">
+			<img src="BORG.svg" class="h-12" alt="" />
 			<!-- <p class="mt-1 text-sm text-zinc-400">MIT Media Lab</p> -->
 
 			<!-- Status Counts -->
-			<div class="mt-4 space-y-2">
+			<!-- <div class="mt-4 space-y-2">
 				<div class="flex items-center justify-between text-sm">
 					<span class="text-zinc-400">To Do</span>
 					<span class="rounded-full bg-purple-500/20 px-2 py-1 text-xs text-purple-400"
@@ -71,18 +71,18 @@
 						>{globalCounts.done}</span
 					>
 				</div>
-			</div>
+			</div> -->
 		</div>
 
 		<!-- Navigation Tabs -->
 		<nav class="flex-1 p-4">
-			<div class="space-y-2">
+			<div class="space-y-2 font-semibold">
 				<button
 					onclick={() => setActiveTab('projects')}
 					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
 					'projects'
-						? 'bg-zinc-800 text-zinc-100'
-						: 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'}"
+						? 'bg-black text-white '
+						: 'hover:bg-borg-orange hover:text-white'}"
 				>
 					<FolderOpen class="h-5 w-5" />
 					Projects
@@ -92,8 +92,8 @@
 					onclick={() => setActiveTab('people')}
 					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
 					'people'
-						? 'bg-zinc-800 text-zinc-100'
-						: 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'}"
+						? 'bg-black text-white '
+						: 'hover:bg-borg-orange hover:text-white'}"
 				>
 					<Users class="h-5 w-5" />
 					People
@@ -103,8 +103,8 @@
 					onclick={() => setActiveTab('timeline')}
 					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
 					'timeline'
-						? 'bg-zinc-800 text-zinc-100'
-						: 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'}"
+						? 'bg-black text-white '
+						: 'hover:bg-borg-orange hover:text-white'}"
 				>
 					<Calendar class="h-5 w-5" />
 					Timeline
@@ -114,8 +114,8 @@
 					onclick={() => setActiveTab('tasks')}
 					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
 					'tasks'
-						? 'bg-zinc-800 text-zinc-100'
-						: 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'}"
+						? 'bg-black text-white '
+						: 'hover:bg-borg-orange hover:text-white'}"
 				>
 					<CheckSquare class="h-5 w-5" />
 					Tasks

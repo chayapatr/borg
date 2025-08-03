@@ -16,9 +16,10 @@
 	import CreateNodeModal from './CreateNodeModal.svelte';
 	import EditPanel from './EditPanel.svelte';
 	import NodeTaskSidebar from './tasks/NodeTaskSidebar.svelte';
-	import AddTaskModal from './tasks/AddTaskModal.svelte';
+	import TaskModal from './tasks/TaskModal.svelte';
 	import type { Task } from '../types/task';
 	import '@xyflow/svelte/dist/style.css';
+	import './svelteflow.css';
 
 	let { projectSlug } = $props<{ projectSlug?: string }>();
 
@@ -34,7 +35,8 @@
 	let taskService: ITaskService;
 	let showCreateModal = $state(false);
 	let createPosition = $state({ x: 0, y: 0 });
-	let saveTimeout: number;
+	let saveTimeout: ReturnType<typeof setTimeout>;
+	let hasAttemptedProjectNodeCreation = false;
 
 	// Edit panel state
 	let showEditPanel = $state(false);
@@ -47,10 +49,12 @@
 	let taskSidebarNodeId = $state('');
 	let taskSidebarNodeTitle = $state('');
 	let taskSidebarTasks = $state<Task[]>([]);
+	let taskSubscriptionCleanup: (() => void) | null = null;
 
-	// Add task modal state
-	let showAddTaskModal = $state(false);
-	let addTaskNodeId = $state('');
+	// Task modal state
+	let showTaskModal = $state(false);
+	let taskModalNodeId = $state('');
+	let taskModalTask = $state<Task | undefined>(undefined); // undefined for add mode, Task for edit mode
 
 	// Get Svelte Flow helpers
 	const { screenToFlowPosition, getViewport } = useSvelteFlow();
@@ -108,54 +112,114 @@
 	onMount(() => {
 		projectsService = ServiceFactory.createProjectsService();
 		taskService = ServiceFactory.createTaskService();
-		nodesService = ServiceFactory.createNodesService(
-			'default-project', // TODO: Get actual project ID
-			(newNodes) => {
-				nodes = newNodes;
-			},
-			() => nodes,
-			(newEdges) => {
-				edges = newEdges;
-			},
-			() => edges,
-			projectSlug
-		);
 
-		// Load initial data - localStorage services use loadFromStorage, Firebase services handle this internally
-		if (nodesService.loadFromStorage) {
-			nodesService.loadFromStorage();
-		} else {
-			// For Firebase services, load nodes and edges
-			(async () => {
+		// Initialize services asynchronously to get actual project ID
+		(async () => {
+			// Get the actual project ID from project slug
+			let actualProjectId = 'default-project';
+			if (projectSlug && projectsService) {
 				try {
-					const nodeResults = nodesService.getNodes();
-					const edgeResults = nodesService.getEdges();
+					const project = projectsService.getProject
+						? await projectsService.getProject(projectSlug)
+						: projectsService.getProject(projectSlug);
 
-					const loadedNodes = nodeResults instanceof Promise ? await nodeResults : nodeResults;
-					const loadedEdges = edgeResults instanceof Promise ? await edgeResults : edgeResults;
-
-					nodes = loadedNodes;
-					edges = loadedEdges;
+					if (project) {
+						actualProjectId = project.id;
+					}
 				} catch (error) {
-					console.error('Failed to load nodes and edges:', error);
+					console.error('Failed to load project:', error);
 				}
-			})();
-		}
+			}
 
-		// Add initial project node if none exist, or sync existing project node
-		if (nodes.length === 0) {
-			// Use a small delay to ensure the Svelte Flow component is fully mounted
-			setTimeout(() => {
-				if (nodes.length === 0) {
-					// Double-check in case nodes were loaded from storage
-					const initialPosition = getViewportCenterPosition();
-					createSyncedProjectNode(initialPosition);
+			nodesService = ServiceFactory.createNodesService(
+				actualProjectId,
+				(newNodes) => {
+					nodes = newNodes;
+				},
+				() => nodes,
+				(newEdges) => {
+					edges = newEdges;
+				},
+				() => edges,
+				projectSlug
+			);
+
+			// Load initial data - localStorage services use loadFromStorage, Firebase services use subscriptions
+			if (nodesService.loadFromStorage) {
+				// localStorage service
+				nodesService.loadFromStorage();
+			} else {
+				// Firebase service - set up real-time subscriptions
+				console.log('Setting up Firebase subscriptions...');
+				console.log('nodesService methods:', {
+					subscribeToNodes: !!nodesService.subscribeToNodes,
+					subscribeToEdges: !!nodesService.subscribeToEdges
+				});
+
+				if (nodesService.subscribeToNodes && nodesService.subscribeToEdges) {
+					console.log('Setting up real-time subscriptions');
+					// Subscribe to real-time updates
+					const unsubscribeNodes = nodesService.subscribeToNodes((updatedNodes) => {
+						console.log('Canvas received nodes update:', updatedNodes.length, 'nodes');
+						nodes = updatedNodes;
+
+						// Check if we need to create initial project node
+						if (updatedNodes.length === 0 && !hasAttemptedProjectNodeCreation) {
+							hasAttemptedProjectNodeCreation = true;
+							console.log('No nodes found, creating initial project node');
+							setTimeout(() => {
+								const initialPosition = getViewportCenterPosition();
+								createSyncedProjectNode(initialPosition);
+							}, 100);
+						}
+					});
+
+					const unsubscribeEdges = nodesService.subscribeToEdges((updatedEdges) => {
+						console.log('Canvas received edges update:', updatedEdges.length, 'edges');
+						edges = updatedEdges;
+					});
+
+					// Clean up subscriptions on component destroy
+					return () => {
+						console.log('Cleaning up Firebase subscriptions');
+						unsubscribeNodes();
+						unsubscribeEdges();
+					};
+				} else {
+					// Fallback to manual loading if subscriptions not available
+					try {
+						const nodeResults = nodesService.getNodes();
+						const edgeResults = nodesService.getEdges();
+
+						const loadedNodes = nodeResults instanceof Promise ? await nodeResults : nodeResults;
+						const loadedEdges = edgeResults instanceof Promise ? await edgeResults : edgeResults;
+
+						nodes = loadedNodes;
+						edges = loadedEdges;
+					} catch (error) {
+						console.error('Failed to load nodes and edges:', error);
+					}
 				}
-			}, 100);
-		} else {
-			// Sync existing project node with project data
-			syncProjectNode();
-		}
+			}
+
+			// For localStorage services, handle initial project node creation
+			if (nodesService.loadFromStorage) {
+				// Add initial project node if none exist, or sync existing project node
+				if (nodes.length === 0) {
+					// Use a small delay to ensure the Svelte Flow component is fully mounted
+					setTimeout(() => {
+						if (nodes.length === 0) {
+							// Double-check in case nodes were loaded from storage
+							const initialPosition = getViewportCenterPosition();
+							createSyncedProjectNode(initialPosition);
+						}
+					}, 100);
+				} else {
+					// Sync existing project node with project data
+					syncProjectNode();
+				}
+			}
+		})();
 
 		// Listen for node events
 		const handleNodeDeleteEvent = (event: CustomEvent) => {
@@ -174,17 +238,37 @@
 		};
 
 		const handleNodeTasksOpenEvent = (event: CustomEvent) => {
+			// Clean up previous subscription if any
+			if (taskSubscriptionCleanup) {
+				taskSubscriptionCleanup();
+				taskSubscriptionCleanup = null;
+			}
+
 			taskSidebarNodeId = event.detail.nodeId;
 			taskSidebarNodeTitle = event.detail.nodeTitle;
 			taskSidebarTasks = event.detail.tasks;
 			showNodeTaskSidebar = true;
+			
+			// Set up real-time subscription if available
+			if (taskService.subscribeToNodeTasks) {
+				taskSubscriptionCleanup = taskService.subscribeToNodeTasks(
+					event.detail.nodeId,
+					(updatedTasks) => {
+						console.log('Real-time task update:', updatedTasks);
+						taskSidebarTasks = [...updatedTasks];
+					},
+					projectSlug
+				);
+			}
+			
 			// Close edit panel if open to avoid conflicts
 			showEditPanel = false;
 		};
 
 		const handleAddTaskEvent = (event: CustomEvent) => {
-			addTaskNodeId = event.detail.nodeId;
-			showAddTaskModal = true;
+			taskModalNodeId = event.detail.nodeId;
+			taskModalTask = undefined; // undefined = add mode
+			showTaskModal = true;
 		};
 
 		document.addEventListener('nodeDelete', handleNodeDeleteEvent as EventListener);
@@ -199,6 +283,12 @@
 			document.removeEventListener('nodeEdit', handleNodeEditEvent as EventListener);
 			document.removeEventListener('nodeTasksOpen', handleNodeTasksOpenEvent as EventListener);
 			document.removeEventListener('addTask', handleAddTaskEvent as EventListener);
+			
+			// Clean up task subscription
+			if (taskSubscriptionCleanup) {
+				taskSubscriptionCleanup();
+				taskSubscriptionCleanup = null;
+			}
 		};
 	});
 
@@ -226,9 +316,9 @@
 
 	function handleCreateNode(templateType: string) {
 		// Prevent duplicate node creation if modal is already closing
-		if (!showCreateModal) return;
+		if (!showCreateModal || !nodesService) return;
 
-		nodesService.addNode(templateType, createPosition);
+		(nodesService as any).addNode(templateType, createPosition);
 		showCreateModal = false;
 	}
 
@@ -286,6 +376,7 @@
 	}
 
 	function handleEditPanelSave(nodeId: string, data: any) {
+		console.log('Canvas.handleEditPanelSave called:', { nodeId, data });
 		nodesService.updateNode(nodeId, data);
 
 		// If this is a project node, sync changes back to project metadata
@@ -318,6 +409,44 @@
 		showEditPanel = false;
 	}
 
+	// Handle node drag stop to save position immediately
+	function handleNodeDragStop(event: any) {
+		console.log('Node drag stopped, saving positions...', event);
+		console.log('Current nodes state:', nodes.map(n => ({ id: n.id, position: n.position })));
+		
+		if (nodesService && nodesService.saveBatch) {
+			// Save positions immediately when drag stops
+			const result = nodesService.saveBatch(nodes, edges);
+			if (result instanceof Promise) {
+				result.then(() => {
+					console.log('Positions saved after drag');
+				}).catch(error => {
+					console.error('Failed to save positions after drag:', error);
+				});
+			}
+		}
+
+		// Also try to save individual node position if the dragged node is available
+		if (event && event.node) {
+			const draggedNode = event.node;
+			console.log('Dragged node:', draggedNode.id, 'new position:', draggedNode.position);
+			
+			// Update the node in the service individually
+			if (nodesService.updateNode) {
+				const updateResult = nodesService.updateNode(draggedNode.id, {
+					position: draggedNode.position
+				});
+				if (updateResult instanceof Promise) {
+					updateResult.then(() => {
+						console.log('Individual node position saved:', draggedNode.id);
+					}).catch(error => {
+						console.error('Failed to save individual node position:', error);
+					});
+				}
+			}
+		}
+	}
+
 	// Function to refresh task sidebar data and node display
 	async function handleTasksUpdated() {
 		// Always refresh node display to update task counts
@@ -342,92 +471,106 @@
 		}
 	}
 
-	// Handle add task completion
-	function handleAddTaskComplete() {
-		showAddTaskModal = false;
+	// Handle task modal completion
+	function handleTaskModalComplete() {
+		showTaskModal = false;
 		// Refresh task sidebar if it's open and refresh nodes
 		handleTasksUpdated();
 	}
 
-	function createSyncedProjectNode(position: { x: number; y: number }) {
-		if (!projectSlug || !projectsService) {
-			nodesService.addNode('project', position);
-			return;
-		}
-
-		const project = projectsService.getProject(projectSlug);
-		if (!project) {
-			nodesService.addNode('project', position);
-			return;
-		}
-
-		// Create project node with synced data
-		const id = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-		const nodeData = {
-			title: project.title,
-			status: project.status,
-			collaborators: project.collaborators || [],
-			website: ''
-		};
-
-		const newNode = {
-			id,
-			type: 'universal',
-			position: { ...position },
-			data: {
-				templateType: 'project',
-				nodeData
+	async function createSyncedProjectNode(position: { x: number; y: number }) {
+		if (!projectSlug || !projectsService || !nodesService) {
+			if (nodesService) {
+				const result = (nodesService as any).addNode('project', position);
+				if (result instanceof Promise) result.catch(console.error);
 			}
-		};
+			return;
+		}
 
-		const currentNodes = nodes;
-		const updatedNodes = [...currentNodes, newNode];
-		nodesService.setNodes(updatedNodes);
-		const result = nodesService.saveBatch(updatedNodes, edges);
-		if (result instanceof Promise) result.catch(console.error);
+		// Get project data
+		let project: any;
+		try {
+			const projectResult = projectsService.getProject(projectSlug);
+			project = projectResult instanceof Promise ? await projectResult : projectResult;
+		} catch (error) {
+			console.error('Failed to load project for node creation:', error);
+			if (nodesService) {
+				const result = (nodesService as any).addNode('project', position);
+				if (result instanceof Promise) result.catch(console.error);
+			}
+			return;
+		}
+
+		if (!project) {
+			if (nodesService) {
+				const result = (nodesService as any).addNode('project', position);
+				if (result instanceof Promise) result.catch(console.error);
+			}
+			return;
+		}
+
+		// Use the service's addNode method which properly handles Firebase
+		try {
+			const newNode = await (nodesService as any).addNode('project', position);
+
+			// Update the node with project data
+			const nodeData = {
+				title: project.title,
+				status: project.status,
+				collaborators: project.collaborators || [],
+				website: ''
+			};
+
+			// Update the node with the synced data
+			await nodesService.updateNode(newNode.id, {
+				data: {
+					...newNode.data,
+					nodeData
+				}
+			});
+		} catch (error) {
+			console.error('Failed to create synced project node:', error);
+		}
 	}
 
-	function syncProjectNode() {
+	async function syncProjectNode() {
 		if (!projectSlug || !projectsService) return;
 
-		const project = projectsService.getProject(projectSlug);
+		let project: any;
+		try {
+			const projectResult = projectsService.getProject(projectSlug);
+			project = projectResult instanceof Promise ? await projectResult : projectResult;
+		} catch (error) {
+			console.error('Failed to load project for sync:', error);
+			return;
+		}
+
 		if (!project) return;
 
 		// Find ALL project nodes and sync them
 		const projectNodes = nodes.filter((node) => node.data.templateType === 'project');
 
-		if (projectNodes.length > 0) {
-			let hasUpdates = false;
-			const updatedNodes = nodes.map((node) => {
-				if (node.data.templateType === 'project') {
-					const currentTitle = node.data.nodeData?.title;
-					const currentStatus = node.data.nodeData?.status;
+		for (const node of projectNodes) {
+			const currentTitle = (node.data.nodeData as any)?.title;
+			const currentStatus = (node.data.nodeData as any)?.status;
 
-					// Only update if title or status has changed
-					if (currentTitle !== project.title || currentStatus !== project.status) {
-						hasUpdates = true;
-						return {
-							...node,
-							data: {
-								...node.data,
-								nodeData: {
-									...node.data.nodeData,
-									title: project.title,
-									status: project.status,
-									collaborators: project.collaborators || []
-								}
+			// Only update if title or status has changed
+			if (currentTitle !== (project as any).title || currentStatus !== (project as any).status) {
+				try {
+					await nodesService.updateNode(node.id, {
+						data: {
+							...node.data,
+							nodeData: {
+								...(node.data.nodeData || {}),
+								title: (project as any).title,
+								status: (project as any).status,
+								collaborators: (project as any).collaborators || []
 							}
-						};
-					}
+						}
+					});
+				} catch (error) {
+					console.error(`Failed to sync project node ${node.id}:`, error);
 				}
-				return node;
-			});
-
-			if (hasUpdates) {
-				nodesService.setNodes(updatedNodes);
-				const result = nodesService.saveBatch(updatedNodes, edges);
-				if (result instanceof Promise) result.catch(console.error);
 			}
 		}
 	}
@@ -444,22 +587,21 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="flex-1" onclick={handleCanvasClick}>
 		<SvelteFlow
+			class="bg-black"
 			bind:nodes
 			bind:edges
 			{nodeTypes}
 			onconnect={handleConnect}
 			onbeforedelete={handleBeforeDelete}
 			ondelete={handleDelete}
-			colorMode="dark"
+			onnodedragstop={handleNodeDragStop}
 			nodesDraggable={true}
 			nodesConnectable={true}
 			deleteKey={['Delete', 'Backspace']}
-			nodesDeletable={false}
-			edgesDeletable={true}
 		>
 			<Background />
 			<Controls />
-			<MiniMap />
+			<MiniMap class="border border-black" />
 		</SvelteFlow>
 	</div>
 
@@ -482,7 +624,14 @@
 			nodeTitle={taskSidebarNodeTitle}
 			{projectSlug}
 			tasks={taskSidebarTasks}
-			onClose={() => (showNodeTaskSidebar = false)}
+			onClose={() => {
+				// Clean up subscription when closing
+				if (taskSubscriptionCleanup) {
+					taskSubscriptionCleanup();
+					taskSubscriptionCleanup = null;
+				}
+				showNodeTaskSidebar = false;
+			}}
 			onTasksUpdated={handleTasksUpdated}
 		/>
 	{/if}
@@ -496,11 +645,13 @@
 	/>
 {/if}
 
-{#if showAddTaskModal}
-	<AddTaskModal
-		nodeId={addTaskNodeId}
+{#if showTaskModal}
+	<TaskModal
+		nodeId={taskModalNodeId}
 		{projectSlug}
-		onClose={() => (showAddTaskModal = false)}
-		onTaskAdded={handleAddTaskComplete}
+		task={taskModalTask}
+		onClose={() => (showTaskModal = false)}
+		onTaskAdded={handleTaskModalComplete}
+		onTaskUpdated={handleTaskModalComplete}
 	/>
 {/if}

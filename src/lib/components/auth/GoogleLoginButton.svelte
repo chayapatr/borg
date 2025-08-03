@@ -8,7 +8,7 @@
 
 <button
 	{onclick}
-	class="flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-800 px-6 py-3 text-white transition-colors transition-transform hover:scale-105 hover:cursor-pointer"
+	class="flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-800 px-6 py-3 text-white transition-transform hover:scale-105 hover:cursor-pointer"
 >
 	<svg class="h-5 w-5" viewBox="0 0 24 24">
 		<path

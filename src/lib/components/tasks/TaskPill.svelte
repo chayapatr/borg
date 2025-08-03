@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PersonTaskCount } from '../../types/task';
-	import { PeopleService } from '../../services/local/PeopleService';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { IPeopleService } from '../../services/interfaces';
 
 	interface Props {
 		personTaskCount: PersonTaskCount;
@@ -9,12 +10,20 @@
 
 	let { personTaskCount, onclick }: Props = $props();
 
-	const peopleService = new PeopleService();
-	const person = $derived(peopleService.getPerson(personTaskCount.personId));
+	const peopleService: IPeopleService = ServiceFactory.createPeopleService();
+	let person = $state<any>(null);
+
+	// Load person data
+	$effect(() => {
+		(async () => {
+			const result = peopleService.getPerson(personTaskCount.personId);
+			person = result instanceof Promise ? await result : result;
+		})();
+	});
 </script>
 
 <button
-	class="inline-flex items-center gap-1 rounded-full bg-rose-500/20 px-2 py-1 text-xs font-medium text-rose-400 hover:bg-rose-500/30 transition-colors"
+	class="inline-flex items-center gap-1 rounded-full bg-rose-500/20 px-2 py-1 text-xs font-medium text-rose-400 transition-colors hover:bg-rose-500/30"
 	onclick={(event) => {
 		event.stopPropagation();
 		onclick?.();

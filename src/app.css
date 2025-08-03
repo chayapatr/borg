@@ -1,2 +1,23 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+
+@theme {
+	--color-borg-white: #f3f3f1;
+	--color-borg-orange: #e9492d;
+	--color-borg-violet: #4d17f5;
+	--color-borg-yellow: #ebd22f;
+	--color-borg-green: #1e8d42;
+	--color-borg-beige: #edede9;
+	--color-borg-purple: #8220fa;
+	--color-borg-blue: #5551fe;
+}
+
+@layer utilities {
+	.box-shadow-black {
+		box-shadow: 0.125rem 0.125rem 0 0px #000;
+	}
+}
+
+* {
+	font-family: 'Zed Mono Extended' !important;
+}

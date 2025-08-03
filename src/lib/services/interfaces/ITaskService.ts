@@ -16,4 +16,5 @@ export interface ITaskService {
 	// Real-time subscriptions (Firebase only)
 	subscribeToNodeTasks?(nodeId: string, callback: (tasks: Task[]) => void, projectSlug?: string): () => void;
 	subscribeToPersonTasks?(personId: string, callback: (tasks: TaskWithContext[]) => void, projectSlug?: string): () => void;
+	subscribeToProjectTasks?(projectSlug: string, callback: (tasks: TaskWithContext[]) => void): () => void;
 }
