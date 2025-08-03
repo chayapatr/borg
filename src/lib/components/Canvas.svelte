@@ -21,7 +21,10 @@
 	import '@xyflow/svelte/dist/style.css';
 	import './svelteflow.css';
 
-	let { projectSlug } = $props<{ projectSlug?: string }>();
+	let { projectSlug, onProjectUpdate } = $props<{ 
+		projectSlug?: string;
+		onProjectUpdate?: () => void;
+	}>();
 
 	const nodeTypes = {
 		universal: UniversalNode
@@ -403,6 +406,9 @@
 		console.log('Canvas.handleEditPanelSave called:', { nodeId, data });
 		nodesService.updateNode(nodeId, data);
 
+		// Check if status changed - if so, trigger project update to refresh status counts
+		const hasStatusChange = data.nodeData && data.nodeData.status !== undefined;
+
 		// If this is a project node, sync changes back to project metadata
 		const node = nodes.find((n) => n.id === nodeId);
 		if (node && node.data.templateType === 'project' && projectSlug && projectsService) {
@@ -423,6 +429,11 @@
 			if (Object.keys(updates).length > 0) {
 				projectsService.updateProject(projectSlug, updates);
 			}
+		}
+
+		// Notify parent component to refresh project data if status changed
+		if (hasStatusChange && onProjectUpdate) {
+			onProjectUpdate();
 		}
 
 		showEditPanel = false;

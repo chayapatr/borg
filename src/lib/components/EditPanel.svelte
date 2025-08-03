@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getTemplate, type NodeTemplate, type TemplateField } from '../templates';
+	import { getTemplate, getSuggestedFields, type NodeTemplate, type TemplateField } from '../templates';
 	import FieldRenderer from './FieldRenderer.svelte';
 	import CustomFieldManager from './CustomFieldManager.svelte';
 	import FieldVisibilityManager from './FieldVisibilityManager.svelte';
@@ -25,6 +25,7 @@
 	let editableData = $state({ ...nodeData });
 	let customFields = $state<TemplateField[]>([]);
 	let isProjectMetadata = $derived(templateType === 'project');
+	let suggestedFields = $derived(getSuggestedFields(templateType || 'blank'));
 
 	// Reset data when node changes
 	$effect(() => {
@@ -74,6 +75,28 @@
 			handleSave();
 		}
 	}
+
+	function addSuggestedField(suggestedField: TemplateField) {
+		// Check if field already exists in custom fields
+		const existsInCustom = customFields.some(field => field.id === suggestedField.id);
+		if (existsInCustom) return;
+
+		// Check if field already exists in template fields
+		const existsInTemplate = template.fields.some(field => field.id === suggestedField.id);
+		if (existsInTemplate) return;
+
+		// Add the suggested field to custom fields
+		customFields = [...customFields, { ...suggestedField, isCustom: true }];
+	}
+
+	// Get available suggested fields (not already added)
+	let availableSuggestedFields = $derived(
+		suggestedFields.filter(suggestedField => {
+			const existsInCustom = customFields.some(field => field.id === suggestedField.id);
+			const existsInTemplate = template.fields.some(field => field.id === suggestedField.id);
+			return !existsInCustom && !existsInTemplate;
+		})
+	);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -151,6 +174,25 @@
 				{#each customFields as field}
 					<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} mode="edit" nodeData={editableData} />
 				{/each}
+
+				<!-- Suggested Fields -->
+				{#if availableSuggestedFields.length > 0}
+					<div class="border-t border-zinc-200 pt-4">
+						<h4 class="mb-2 text-sm font-medium text-zinc-700">Suggested Fields</h4>
+						<div class="flex flex-wrap gap-2">
+							{#each availableSuggestedFields as suggestedField}
+								<button
+									type="button"
+									onclick={() => addSuggestedField(suggestedField)}
+									class="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+								>
+									<span>+</span>
+									{suggestedField.label}
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
 
 				<CustomFieldManager bind:customFields bind:nodeData={editableData} />
 

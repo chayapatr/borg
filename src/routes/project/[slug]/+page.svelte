@@ -102,6 +102,18 @@
 	function handleBackToBrowser() {
 		goto('/');
 	}
+
+	// Handle project update from Canvas component
+	async function handleProjectUpdate() {
+		// Refresh project data and status counts
+		if (projectSlug && projectsService) {
+			const updatedProject = await projectsService.getProject(projectSlug);
+			if (updatedProject) {
+				project = updatedProject;
+			}
+			await updateStatusCounts();
+		}
+	}
 </script>
 
 <svelte:head>
@@ -109,12 +121,12 @@
 </svelte:head>
 
 {#if loading}
-	<div class="flex h-screen w-full items-center justify-center bg-zinc-950">
+	<div class="flex h-screen w-full items-center justify-center bg-borg-beige">
 		<div class="text-center">
 			<div
 				class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"
 			></div>
-			<p class="text-zinc-400">Loading project...</p>
+			<p class="text-black">Loading project...</p>
 		</div>
 	</div>
 {:else if project}
@@ -183,7 +195,7 @@
 			<!-- Canvas -->
 			<div class="flex-1">
 				<SvelteFlowProvider>
-					<Canvas {projectSlug} />
+					<Canvas {projectSlug} onProjectUpdate={handleProjectUpdate} />
 				</SvelteFlowProvider>
 			</div>
 

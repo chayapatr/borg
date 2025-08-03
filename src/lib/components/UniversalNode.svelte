@@ -218,8 +218,8 @@
 			</div>
 		{/if}
 
-		<!-- Add task button when no tasks (bottom right corner) -->
-		{#if !hasTasks}
+		<!-- Add task button when no tasks (bottom right corner) - exclude post-it notes -->
+		{#if !hasTasks && template.id !== 'note'}
 			<button
 				onclick={(event) => handleAddTask(event)}
 				class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
@@ -233,8 +233,8 @@
 		<Handle type="source" position={Position.Right} class="!bg-zinc-600" />
 	</div>
 
-	<!-- Tasks Section (Stacked to main node) -->
-	{#if hasTasks}
+	<!-- Tasks Section (Stacked to main node) - exclude post-it notes -->
+	{#if hasTasks && template.id !== 'note'}
 		<!-- Show person pills in a stacked container -->
 		<div
 			class="-mt-2 min-w-64 rounded-t-none rounded-b-lg border border-t-0 border-black bg-borg-brown p-3 pt-5 shadow"

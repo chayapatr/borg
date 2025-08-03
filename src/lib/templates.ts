@@ -235,6 +235,56 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 	}
 };
 
+// Suggested custom fields for each template type
+export const suggestedCustomFields: Record<string, TemplateField[]> = {
+	code: [
+		{
+			id: 'github',
+			label: 'GitHub',
+			type: 'link',
+			placeholder: 'https://github.com/...'
+		}
+	],
+	paper: [
+		{
+			id: 'overleaf',
+			label: 'Overleaf',
+			type: 'link',
+			placeholder: 'https://overleaf.com/...'
+		},
+		{
+			id: 'arxiv',
+			label: 'ArXiv',
+			type: 'link',
+			placeholder: 'https://arxiv.org/...'
+		},
+		{
+			id: 'publisher',
+			label: 'Publisher',
+			type: 'link',
+			placeholder: 'https://...'
+		}
+	],
+	storage: [
+		{
+			id: 'google_drive',
+			label: 'Google Drive',
+			type: 'link',
+			placeholder: 'https://drive.google.com/...'
+		},
+		{
+			id: 'dropbox',
+			label: 'Dropbox',
+			type: 'link',
+			placeholder: 'https://dropbox.com/...'
+		}
+	]
+};
+
+export function getSuggestedFields(templateId: string): TemplateField[] {
+	return suggestedCustomFields[templateId] || [];
+}
+
 export function getTemplate(templateId: string): NodeTemplate {
 	return nodeTemplates[templateId] || nodeTemplates.blank;
 }

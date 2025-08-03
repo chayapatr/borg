@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { TemplateField } from '../templates';
 	import { ServiceFactory } from '../services/ServiceFactory';
+	import { HardDrive, Link, Archive, Globe } from '@lucide/svelte';
 
 	let {
 		field,
@@ -34,26 +35,36 @@
 	let eventsMap = $state<Map<string, any>>(new Map());
 
 	// Countdown calculation function
-	function calculateCountdown(targetDate: string): { days: number; hours: number; minutes: number; isOverdue: boolean } {
+	function calculateCountdown(targetDate: string): {
+		days: number;
+		hours: number;
+		minutes: number;
+		isOverdue: boolean;
+	} {
 		const now = new Date();
 		const target = new Date(targetDate);
 		const diffMs = target.getTime() - now.getTime();
-		
+
 		if (diffMs <= 0) {
 			return { days: 0, hours: 0, minutes: 0, isOverdue: true };
 		}
-		
+
 		const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 		const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 		const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-		
+
 		return { days, hours, minutes, isOverdue: false };
 	}
 
 	// Format countdown display
-	function formatCountdown(countdown: { days: number; hours: number; minutes: number; isOverdue: boolean }): string {
+	function formatCountdown(countdown: {
+		days: number;
+		hours: number;
+		minutes: number;
+		isOverdue: boolean;
+	}): string {
 		if (countdown.isOverdue) return 'Overdue';
-		
+
 		if (countdown.days > 0) {
 			return `${countdown.days}d ${countdown.hours}h ${countdown.minutes}m`;
 		} else if (countdown.hours > 0) {
@@ -66,13 +77,13 @@
 	// Update countdown every 30 seconds for live updates
 	let countdownRefreshKey = $state(0);
 	let countdownInterval: ReturnType<typeof setInterval>;
-	
+
 	$effect(() => {
 		// Start interval when component mounts
 		countdownInterval = setInterval(() => {
 			countdownRefreshKey++;
 		}, 30000); // Update every 30 seconds
-		
+
 		// Cleanup interval on unmount
 		return () => {
 			if (countdownInterval) {
@@ -145,13 +156,43 @@
 			Done: 'bg-green-400 text-black',
 
 			// Publication statuses for papers
-			Draft: 'bg-gray-500/20 text-gray-400',
-			'In Review': 'bg-yellow-500/20 text-yellow-400',
-			Accepted: 'bg-green-500/20 text-green-400',
-			Published: 'bg-borg-blue/20 text-blue-400'
+			Draft: 'bg-gray-300 text-black',
+			'In Review': 'bg-yellow-500 text-black',
+			Accepted: 'bg-green-500 text-black',
+			Published: 'bg-blue-400 text-black'
 		};
 
 		return statusColors[status] || 'bg-zinc-500/20 text-zinc-600';
+	}
+
+	// Function to get the appropriate icon for a field
+	function getFieldIcon(fieldLabel: string): { type: 'svg' | 'lucide'; path?: string; component?: any } {
+		const label = fieldLabel.toLowerCase();
+		
+		// Check for static SVG logos first
+		if (label.includes('github')) {
+			return { type: 'svg', path: '/github.svg' };
+		}
+		if (label.includes('google drive') || label.includes('drive')) {
+			return { type: 'svg', path: '/googledrive.svg' };
+		}
+		if (label.includes('overleaf')) {
+			return { type: 'svg', path: '/overleaf.svg' };
+		}
+		
+		// Fall back to Lucide icons
+		if (label.includes('arxiv') || label.includes('archive')) {
+			return { type: 'lucide', component: Archive };
+		}
+		if (label.includes('publisher') || label.includes('website')) {
+			return { type: 'lucide', component: Globe };
+		}
+		if (label.includes('dropbox') || label.includes('storage')) {
+			return { type: 'lucide', component: HardDrive };
+		}
+		
+		// Default to Link icon
+		return { type: 'lucide', component: Link };
 	}
 </script>
 
@@ -262,10 +303,17 @@
 	{:else if field.type === 'link'}
 		{#if mode === 'display'}
 			{#if value}
+				{@const icon = getFieldIcon(field.label)}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none flex items-center justify-center gap-2"
 				>
+					{#if icon.type === 'svg'}
+						<img src={icon.path} alt="" class="h-4 w-4" />
+					{:else if icon.component}
+						{@const IconComponent = icon.component}
+						<IconComponent class="h-4 w-4" />
+					{/if}
 					Open {field.label}
 				</button>
 			{:else}
@@ -326,10 +374,17 @@
 	{:else if field.type === 'button'}
 		{#if mode === 'display'}
 			{#if value}
+				{@const icon = getFieldIcon(field.label)}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none flex items-center justify-center gap-2"
 				>
+					{#if icon.type === 'svg'}
+						<img src={icon.path} alt="" class="h-4 w-4" />
+					{:else if icon.component}
+						{@const IconComponent = icon.component}
+						<IconComponent class="h-4 w-4" />
+					{/if}
 					Open {field.label}
 				</button>
 			{:else}
@@ -337,10 +392,17 @@
 			{/if}
 		{:else if readonly}
 			{#if value}
+				{@const icon = getFieldIcon(field.label)}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="w-full rounded-lg bg-zinc-600 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-500 focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="w-full rounded-lg bg-zinc-600 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-500 focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none flex items-center justify-center gap-2"
 				>
+					{#if icon.type === 'svg'}
+						<img src={icon.path} alt="" class="h-4 w-4" />
+					{:else if icon.component}
+						{@const IconComponent = icon.component}
+						<IconComponent class="h-4 w-4" />
+					{/if}
 					Open {field.label}
 				</button>
 			{:else}
@@ -362,7 +424,7 @@
 						{@const person = peopleMap.get(personId)}
 						{#if person}
 							<span
-								class="inline-flex items-center gap-1 rounded-full bg-black px-2 py-1 text-xs text-white"
+								class="inline-flex items-center gap-1 rounded-full bg-borg-blue px-2 py-1 text-xs text-white"
 							>
 								{person.name}
 								{#if mode === 'edit'}
@@ -411,10 +473,17 @@
 				{#if event}
 					{#if countdownOnly}
 						<!-- Countdown-only mode: large, centered display -->
-						{@const countdown = (() => { countdownRefreshKey; return calculateCountdown(event.date); })()}
+						{@const countdown = (() => {
+							countdownRefreshKey;
+							return calculateCountdown(event.date);
+						})()}
 						<div class="py-2 text-center">
-							<div class="text-lg font-bold text-black mb-2">{event.title}</div>
-							<div class="text-2xl font-mono font-bold {countdown.isOverdue ? 'text-red-600' : 'text-blue-600'}">
+							<div class="mb-2 text-lg font-bold text-black">{event.title}</div>
+							<div
+								class="font-mono text-2xl font-bold {countdown.isOverdue
+									? 'text-red-600'
+									: 'text-blue-600'}"
+							>
 								{#if countdown.isOverdue}
 									⚠️ OVERDUE
 								{:else}
@@ -456,7 +525,10 @@
 			{#if value}
 				<div class="py-1">
 					<div class="flex items-center space-x-2">
-						<div class="w-4 h-4 rounded border border-gray-300" style="background-color: {value}"></div>
+						<div
+							class="h-4 w-4 rounded border border-gray-300"
+							style="background-color: {value}"
+						></div>
 						<span class="text-sm text-zinc-600">{value}</span>
 					</div>
 				</div>
@@ -468,16 +540,18 @@
 				<input
 					type="color"
 					bind:value
-					class="w-full h-10 rounded border border-zinc-700 cursor-pointer"
+					class="h-10 w-full cursor-pointer rounded border border-zinc-700"
 					{readonly}
 				/>
 				<div class="grid grid-cols-6 gap-2">
 					{#each ['#fef08a', '#fde047', '#facc15', '#fed7d7', '#fbb6ce', '#ddd6fe', '#a5f3fc', '#bbf7d0', '#fed7aa', '#fecaca'] as color}
 						<button
 							type="button"
-							class="w-8 h-8 rounded border-2 border-gray-300 hover:border-gray-400 transition-colors"
+							class="h-8 w-8 rounded border-2 border-gray-300 transition-colors hover:border-gray-400"
 							style="background-color: {color}"
-							onclick={() => { value = color; }}
+							onclick={() => {
+								value = color;
+							}}
 						></button>
 					{/each}
 				</div>
