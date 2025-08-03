@@ -285,35 +285,23 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 		showEditPanel = false;
 	}
 
-	function handleNodeTasksUpdated() {
-		// Reload the entire nodes array from storage to get the latest task data
+	// Function to refresh task sidebar data and node display
+	function handleTasksUpdated() {
+		// Always refresh node display to update task counts
 		nodesService.loadFromStorage();
 		
-		// Then refresh the task sidebar data
-		const node = nodes.find(n => n.id === taskSidebarNodeId);
-		if (node && node.data && Array.isArray(node.data.tasks)) {
-			taskSidebarTasks = [...node.data.tasks]; // Create new array to trigger reactivity
-		}
-	}
-
-
-	// Function to refresh task sidebar data
-	function handleTasksUpdated() {
+		// If sidebar is open, refresh its tasks too
 		if (showNodeTaskSidebar && taskSidebarNodeId) {
-			// Refresh tasks from TaskService instead of node data
 			const taskService = new TaskService();
 			const updatedTasks = taskService.getNodeTasks(taskSidebarNodeId, projectSlug);
 			taskSidebarTasks = [...updatedTasks];
-			
-			// Also refresh the node display by triggering a re-render
-			nodesService.loadFromStorage();
 		}
 	}
 
 	// Handle add task completion
 	function handleAddTaskComplete() {
 		showAddTaskModal = false;
-		// Refresh task sidebar if it's open
+		// Refresh task sidebar if it's open and refresh nodes
 		handleTasksUpdated();
 	}
 
@@ -451,7 +439,7 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 			{projectSlug}
 			tasks={taskSidebarTasks}
 			onClose={() => showNodeTaskSidebar = false}
-			onTasksUpdated={handleNodeTasksUpdated}
+			onTasksUpdated={handleTasksUpdated}
 		/>
 	{/if}
 </div>
@@ -473,13 +461,3 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 	/>
 {/if}
 
-{#if showNodeTaskSidebar}
-	<NodeTaskSidebar
-		nodeId={taskSidebarNodeId}
-		nodeTitle={taskSidebarNodeTitle}
-		tasks={taskSidebarTasks}
-		{projectSlug}
-		onClose={() => (showNodeTaskSidebar = false)}
-		onTasksUpdated={handleTasksUpdated}
-	/>
-{/if}

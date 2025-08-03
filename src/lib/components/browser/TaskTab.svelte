@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Calendar, StickyNote, ExternalLink, CheckCircle } from '@lucide/svelte';
+	import { Calendar, StickyNote, ExternalLink, CheckCircle, Trash2 } from '@lucide/svelte';
 	import { TaskService } from '../../services/TaskService';
 	import { PeopleService } from '../../services/PeopleService';
 	import type { TaskWithContext } from '../../types/task';
@@ -11,7 +11,7 @@
 
 	let tasks = $state<TaskWithContext[]>([]);
 	let filteredTasks = $state<TaskWithContext[]>([]);
-	let filter = $state<'all' | 'active' | 'resolved'>('active');
+	let filter = $state<'all'>('all');
 	let searchQuery = $state('');
 
 	onMount(() => {
@@ -25,13 +25,6 @@
 
 	function applyFilters() {
 		let filtered = tasks;
-
-		// Filter by status
-		if (filter === 'active') {
-			filtered = filtered.filter(task => !task.resolvedAt);
-		} else if (filter === 'resolved') {
-			filtered = filtered.filter(task => task.resolvedAt);
-		}
 
 		// Filter by search query
 		if (searchQuery.trim()) {
@@ -65,17 +58,17 @@
 		}
 	}
 
-	function handleResolveTask(task: TaskWithContext) {
-		taskService.resolveTask(task.nodeId, task.id, task.projectSlug);
-		loadTasks();
+	function handleDeleteTask(task: TaskWithContext) {
+		if (confirm('Are you sure you want to delete this task?')) {
+			taskService.deleteTask(task.nodeId, task.id, task.projectSlug);
+			loadTasks();
+		}
 	}
 
 	// Get task stats
 	let taskStats = $derived({
 		total: tasks.length,
-		active: tasks.filter(t => !t.resolvedAt).length,
-		resolved: tasks.filter(t => t.resolvedAt).length,
-		overdue: tasks.filter(t => t.dueDate && !t.resolvedAt && isOverdue(t.dueDate)).length
+		overdue: tasks.filter(t => t.dueDate && isOverdue(t.dueDate)).length
 	});
 </script>
 
@@ -91,12 +84,8 @@
 			<!-- Stats -->
 			<div class="flex items-center gap-4">
 				<div class="flex items-center gap-1">
-					<span class="text-xs text-zinc-400">Active</span>
-					<span class="rounded-full bg-blue-500/20 px-2 py-1 text-xs text-blue-400">{taskStats.active}</span>
-				</div>
-				<div class="flex items-center gap-1">
-					<span class="text-xs text-zinc-400">Resolved</span>
-					<span class="rounded-full bg-green-500/20 px-2 py-1 text-xs text-green-400">{taskStats.resolved}</span>
+					<span class="text-xs text-zinc-400">Total</span>
+					<span class="rounded-full bg-blue-500/20 px-2 py-1 text-xs text-blue-400">{taskStats.total}</span>
 				</div>
 				{#if taskStats.overdue > 0}
 					<div class="flex items-center gap-1">
@@ -107,43 +96,14 @@
 			</div>
 		</div>
 
-		<!-- Filters -->
-		<div class="mt-4 flex items-center gap-4">
-			<div class="flex rounded-lg bg-zinc-800 p-1">
-				<button
-					onclick={() => filter = 'active'}
-					class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {filter === 'active'
-						? 'bg-zinc-700 text-zinc-100'
-						: 'text-zinc-400 hover:text-zinc-300'}"
-				>
-					Active
-				</button>
-				<button
-					onclick={() => filter = 'all'}
-					class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {filter === 'all'
-						? 'bg-zinc-700 text-zinc-100'
-						: 'text-zinc-400 hover:text-zinc-300'}"
-				>
-					All
-				</button>
-				<button
-					onclick={() => filter = 'resolved'}
-					class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {filter === 'resolved'
-						? 'bg-zinc-700 text-zinc-100'
-						: 'text-zinc-400 hover:text-zinc-300'}"
-				>
-					Resolved
-				</button>
-			</div>
-
-			<div class="flex-1">
-				<input
-					type="text"
-					placeholder="Search tasks..."
-					bind:value={searchQuery}
-					class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-				/>
-			</div>
+		<!-- Search -->
+		<div class="mt-4">
+			<input
+				type="text"
+				placeholder="Search tasks..."
+				bind:value={searchQuery}
+				class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+			/>
 		</div>
 	</div>
 
@@ -153,13 +113,9 @@
 			<div class="flex h-full items-center justify-center">
 				<div class="text-center">
 					<CheckCircle class="mx-auto h-12 w-12 text-zinc-600" />
-					<h3 class="mt-4 text-lg font-medium text-zinc-300">
-						{filter === 'resolved' ? 'No resolved tasks' : 'No active tasks'}
-					</h3>
+					<h3 class="mt-4 text-lg font-medium text-zinc-300">No tasks found</h3>
 					<p class="mt-2 text-sm text-zinc-500">
-						{filter === 'resolved' 
-							? 'Completed tasks will appear here' 
-							: 'Tasks will appear here when you add them to nodes'}
+						Tasks will appear here when you add them to nodes
 					</p>
 				</div>
 			</div>
@@ -167,27 +123,26 @@
 			<div class="space-y-1 p-4">
 				{#each filteredTasks as task}
 					{@const person = peopleService.getPerson(task.assignee)}
-					{@const isResolved = !!task.resolvedAt}
-					{@const overdue = task.dueDate && !isResolved && isOverdue(task.dueDate)}
+					{@const overdue = task.dueDate && isOverdue(task.dueDate)}
 					
 					<div class="group rounded-lg border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors">
 						<div class="flex items-start justify-between gap-3">
 							<div class="flex-1 min-w-0">
 								<!-- Task info -->
 								<div class="flex items-start justify-between gap-2 mb-2">
-									<h3 class="font-medium text-zinc-100 {isResolved ? 'line-through opacity-60' : ''}">{task.title}</h3>
+									<h3 class="font-medium text-zinc-100">{task.title}</h3>
 									<div class="flex items-center gap-2">
-										{#if !isResolved}
-											<button
-												onclick={() => handleResolveTask(task)}
-												class="opacity-0 group-hover:opacity-100 rounded-full border-2 border-zinc-600 hover:border-green-500 p-1 transition-all"
-											>
-												<CheckCircle class="h-4 w-4 text-zinc-400 hover:text-green-500" />
-											</button>
-										{/if}
+										<button
+											onclick={() => handleDeleteTask(task)}
+											class="opacity-0 group-hover:opacity-100 rounded-full border-2 border-zinc-600 hover:border-rose-500 p-1 transition-all"
+											title="Delete task"
+										>
+											<Trash2 class="h-4 w-4 text-zinc-400 hover:text-rose-500" />
+										</button>
 										<button
 											onclick={() => handleTaskClick(task)}
 											class="opacity-0 group-hover:opacity-100 rounded-full bg-zinc-800 hover:bg-zinc-700 p-1 transition-all"
+											title="Go to project"
 										>
 											<ExternalLink class="h-4 w-4 text-zinc-400 hover:text-zinc-300" />
 										</button>
@@ -219,12 +174,6 @@
 										<div class="flex items-center gap-1">
 											<StickyNote class="h-3 w-3" />
 											<span>Has notes</span>
-										</div>
-									{/if}
-
-									{#if isResolved && task.resolvedAt}
-										<div class="text-green-500">
-											Resolved {formatDate(task.resolvedAt)}
 										</div>
 									{/if}
 								</div>
