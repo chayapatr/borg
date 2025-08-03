@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { nodeTemplates } from '../templates';
-	import { 
-		FolderOpen, 
-		GitBranch, 
-		FileText, 
-		Code, 
-		Calendar, 
-		StickyNote, 
-		HardDrive, 
-		Square 
+	import {
+		FolderOpen,
+		GitBranch,
+		FileText,
+		Code,
+		Calendar,
+		StickyNote,
+		HardDrive,
+		Square
 	} from '@lucide/svelte';
 
 	let { position, onCreate, onClose } = $props<{
@@ -23,9 +23,9 @@
 		// Prevent double-clicks
 		if (isCreating) return;
 		isCreating = true;
-		
+
 		onCreate(templateType);
-		
+
 		// Reset after a short delay to allow for normal modal closure
 		setTimeout(() => {
 			isCreating = false;
@@ -73,33 +73,34 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+	class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 	onclick={handleBackdropClick}
 >
-	<div class="w-96 rounded-lg border border-zinc-700 bg-zinc-900 p-6 shadow-xl">
-		<h2 class="mb-4 text-lg font-semibold text-zinc-100">Create New Node</h2>
+	<div class="box-shadow-black w-96 rounded-lg border border-black bg-borg-beige p-6 shadow-xl">
+		<h2 class="mb-4 text-lg font-semibold text-black">Create New Node</h2>
 
 		<div class="grid grid-cols-2 gap-3">
-			{#each Object.values(nodeTemplates).filter(template => template.id !== 'project') as template}
+			{#each Object.values(nodeTemplates).filter((template) => template.id !== 'project' && template.id !== 'event') as template}
 				{@const IconComponent = getIconComponent(template.id)}
 				<button
 					onclick={() => handleCreateNode(template.id)}
 					disabled={isCreating}
-					class="focus:ring-opacity-50 flex items-center space-x-3 rounded-lg border border-zinc-700 p-4 text-left transition-all hover:border-zinc-500 hover:bg-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+					class="flex items-center space-x-3 rounded-lg border border-black bg-white p-4 text-left transition-all hover:bg-borg-brown focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
-					<IconComponent class="h-5 w-5 flex-shrink-0 text-zinc-400" />
-					<span class="font-medium text-zinc-200">{template.name}</span>
+					<IconComponent class="h-5 w-5 flex-shrink-0 text-black" />
+					<span class="font-medium text-black">{template.name}</span>
 				</button>
 			{/each}
 		</div>
 
 		<div class="mt-6 flex items-center justify-between">
-			<div class="text-xs text-zinc-400">
-				Press <kbd class="rounded bg-zinc-800 px-2 py-1">Escape</kbd> to cancel
+			<div class="text-xs text-zinc-600">
+				Press <kbd class="rounded border border-black bg-zinc-100 px-2 py-1 text-black">Escape</kbd>
+				to cancel
 			</div>
 			<button
 				onclick={onClose}
-				class="rounded bg-zinc-700 px-4 py-2 text-zinc-300 transition-colors hover:bg-zinc-600"
+				class="rounded border border-black bg-borg-brown px-4 py-2 text-black transition-colors hover:bg-zinc-300"
 			>
 				Cancel
 			</button>

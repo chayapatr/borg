@@ -405,8 +405,17 @@
 	}
 
 	function handleEditPanelDelete(nodeId: string) {
-		nodesService.deleteNode(nodeId);
-		showEditPanel = false;
+		console.log('Canvas.handleEditPanelDelete called for:', nodeId);
+		console.log('nodesService:', nodesService);
+		
+		try {
+			const result = nodesService.deleteNode(nodeId);
+			console.log('deleteNode result:', result);
+			showEditPanel = false;
+		} catch (error) {
+			console.error('Failed to delete node:', error);
+			alert('Failed to delete node. Check console for details.');
+		}
 	}
 
 	// Handle node drag stop to save position immediately

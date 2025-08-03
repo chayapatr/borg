@@ -9,6 +9,7 @@
 	let timelineService: ITimelineService;
 	let events = $state<TimelineEvent[]>([]);
 	let showAddModal = $state(false);
+	let editingEvent = $state<TimelineEvent | undefined>(undefined);
 
 	onMount(() => {
 		timelineService = ServiceFactory.createTimelineService();
@@ -25,6 +26,41 @@
 		if (result instanceof Promise) await result;
 		await loadEvents();
 		showAddModal = false;
+	}
+
+	async function handleUpdateEvent(id: string, templateType: string, eventData: Record<string, any>) {
+		// Filter out undefined values and separate top-level fields from eventData
+		const { title, date, ...dynamicEventData } = eventData;
+		
+		const updates = {
+			templateType,
+			title: title || 'Untitled Event',
+			date: date || new Date().toISOString().split('T')[0],
+			eventData: dynamicEventData
+		};
+		
+		// Remove any undefined values
+		Object.keys(updates).forEach(key => {
+			if ((updates as any)[key] === undefined) {
+				delete (updates as any)[key];
+			}
+		});
+		
+		const result = timelineService.updateEvent(id, updates);
+		if (result instanceof Promise) await result;
+		await loadEvents();
+		showAddModal = false;
+		editingEvent = undefined;
+	}
+
+	function handleEditEvent(event: TimelineEvent) {
+		editingEvent = event;
+		showAddModal = true;
+	}
+
+	function handleCloseModal() {
+		showAddModal = false;
+		editingEvent = undefined;
 	}
 
 	async function handleDeleteEvent(id: string) {
@@ -98,7 +134,7 @@
 	<div class="flex-1 overflow-y-auto p-6">
 		{#if events.length === 0}
 			<div class="flex h-64 flex-col items-center justify-center text-center">
-				<Fish class="h-8 w-8" />
+				<Fish class="mb-4 h-8 w-8" />
 
 				<h3 class="mb-2 text-xl font-medium text-black">No events yet</h3>
 				<p class="mb-4 text-zinc-500">Add your first conference, deadline, or event</p>
@@ -114,7 +150,16 @@
 				{#each events as event}
 					{@const template = getTemplateInfo(event.templateType)}
 					<div
-						class="box-shadow-black rounded-lg border border-black bg-white p-4 transition-colors"
+						class="box-shadow-black rounded-lg border border-black bg-white p-4 transition-colors cursor-pointer hover:bg-zinc-50"
+						role="button"
+						tabindex="0"
+						onclick={() => handleEditEvent(event)}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') {
+								e.preventDefault();
+								handleEditEvent(event);
+							}
+						}}
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex flex-1 items-start gap-3">
@@ -171,7 +216,10 @@
 								</div>
 							</div>
 							<button
-								onclick={() => handleDeleteEvent(event.id)}
+								onclick={(e) => {
+									e.stopPropagation();
+									handleDeleteEvent(event.id);
+								}}
 								class="ml-2 text-zinc-500 transition-colors hover:text-red-400"
 								aria-label="Delete event"
 							>
@@ -193,5 +241,10 @@
 </div>
 
 {#if showAddModal}
-	<AddTimelineEventModal onAdd={handleAddEvent} onClose={() => (showAddModal = false)} />
+	<AddTimelineEventModal 
+		onAdd={handleAddEvent} 
+		onUpdate={handleUpdateEvent}
+		onClose={handleCloseModal}
+		editingEvent={editingEvent}
+	/>
 {/if}

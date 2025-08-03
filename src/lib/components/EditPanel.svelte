@@ -45,6 +45,8 @@
 	}
 
 	function handleDelete() {
+		console.log('EditPanel.handleDelete called for:', { nodeId, templateType });
+		
 		// Additional safety check for project nodes
 		if (templateType === 'project') {
 			alert('Project nodes cannot be deleted as they sync with workspace metadata.');
@@ -52,8 +54,11 @@
 		}
 
 		if (confirm('Are you sure you want to delete this node?')) {
+			console.log('User confirmed deletion, calling onDelete:', nodeId);
 			onDelete(nodeId);
 			isOpen = false;
+		} else {
+			console.log('User cancelled deletion');
 		}
 	}
 

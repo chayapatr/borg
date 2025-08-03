@@ -26,13 +26,13 @@ export class FirebaseTimelineService implements ITimelineService {
 
 	async getAllEvents(): Promise<TimelineEvent[]> {
 		const userId = get(authStore).user?.uid;
-		if (!this.projectId && !userId) {
+		if (!userId) {
 			throw new Error('User must be authenticated to access timeline');
 		}
 		
 		const collectionPath = this.projectId 
 			? `projects/${this.projectId}/timeline`
-			: `users/${userId}/timeline`;
+			: 'timeline';
 			
 		const q = query(collection(db, collectionPath), orderBy('date', 'asc'));
 		const snapshot = await getDocs(q);
@@ -64,13 +64,13 @@ export class FirebaseTimelineService implements ITimelineService {
 		});
 
 		const userId = get(authStore).user?.uid;
-		if (!this.projectId && !userId) {
+		if (!userId) {
 			throw new Error('User must be authenticated to create timeline events');
 		}
 		
 		const collectionPath = this.projectId 
 			? `projects/${this.projectId}/timeline`
-			: `users/${userId}/timeline`;
+			: 'timeline';
 		
 		const eventDoc = {
 			templateType,
@@ -79,7 +79,8 @@ export class FirebaseTimelineService implements ITimelineService {
 			eventData: initializedData,
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
-			createdBy: get(authStore).user?.uid || 'anonymous'
+			createdBy: userId,
+			projectId: this.projectId || null
 		};
 
 		const docRef = await addDoc(collection(db, collectionPath), eventDoc);
@@ -92,9 +93,13 @@ export class FirebaseTimelineService implements ITimelineService {
 
 	async updateEvent(id: string, updates: Partial<TimelineEvent>): Promise<TimelineEvent | null> {
 		const userId = get(authStore).user?.uid;
+		if (!userId) {
+			throw new Error('User must be authenticated to update timeline events');
+		}
+		
 		const collectionPath = this.projectId 
 			? `projects/${this.projectId}/timeline`
-			: `users/${userId}/timeline`;
+			: 'timeline';
 			
 		const eventRef = doc(db, collectionPath, id);
 		
@@ -110,6 +115,11 @@ export class FirebaseTimelineService implements ITimelineService {
 
 	async deleteEvent(id: string): Promise<boolean> {
 		try {
+			const userId = get(authStore).user?.uid;
+			if (!userId) {
+				throw new Error('User must be authenticated to delete timeline events');
+			}
+			
 			const collectionPath = this.projectId 
 				? `projects/${this.projectId}/timeline`
 				: 'timeline';
@@ -141,9 +151,13 @@ export class FirebaseTimelineService implements ITimelineService {
 
 	subscribeToEvents(callback: (events: TimelineEvent[]) => void): Unsubscribe {
 		const userId = get(authStore).user?.uid;
+		if (!userId) {
+			throw new Error('User must be authenticated to subscribe to timeline events');
+		}
+		
 		const collectionPath = this.projectId 
 			? `projects/${this.projectId}/timeline`
-			: `users/${userId}/timeline`;
+			: 'timeline';
 			
 		const q = query(collection(db, collectionPath), orderBy('date', 'asc'));
 		

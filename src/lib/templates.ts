@@ -13,7 +13,16 @@ export interface CustomField extends TemplateField {
 export interface TemplateField {
 	id: string;
 	label: string;
-	type: 'text' | 'textarea' | 'tags' | 'status' | 'link' | 'date' | 'button' | 'people-selector' | 'timeline-selector';
+	type:
+		| 'text'
+		| 'textarea'
+		| 'tags'
+		| 'status'
+		| 'link'
+		| 'date'
+		| 'button'
+		| 'people-selector'
+		| 'timeline-selector';
 	placeholder?: string;
 	options?: string[];
 	required?: boolean;
@@ -124,7 +133,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 
 	code: {
 		id: 'code',
-		name: 'Code Repository',
+		name: 'Code',
 		color: '#52525b',
 		fields: [
 			{
@@ -151,7 +160,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 
 	time: {
 		id: 'time',
-		name: 'Timeline Event',
+		name: 'Event',
 		color: '#52525b',
 		fields: [
 			{

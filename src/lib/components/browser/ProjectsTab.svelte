@@ -79,7 +79,7 @@
 	<div class=" border-b bg-white px-6 py-4">
 		<div class="flex items-center justify-between">
 			<div>
-				<h2 class="rounded-md text-4xl font-semibold">🚀 PROJECTS</h2>
+				<h2 class="rounded-md text-4xl font-semibold">🏕️ PROJECTS</h2>
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
 			<button
@@ -97,17 +97,15 @@
 	<div class="flex-1 overflow-y-auto p-6">
 		{#if projects.length === 0}
 			<div class="flex h-64 flex-col items-center justify-center text-center">
-				<div class="mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-zinc-800">
-					<FolderOpen class="h-8 w-8 text-zinc-600" />
-				</div>
-				<h3 class="mb-2 text-lg font-medium text-zinc-300">No projects yet</h3>
+				<FolderOpen class="mb-4 h-8  w-8 text-black" />
+				<h3 class="mb-2 text-lg font-medium text-black">No projects yet</h3>
 				<p class="mb-4 text-zinc-500">Create your first project to get started</p>
-				<button
+				<!-- <button
 					onclick={() => (showCreateModal = true)}
-					class="rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-500"
+					class="rounded-lg bg-borg-violet px-4 py-2 text-white transition-colors hover:bg-black"
 				>
 					Create Project
-				</button>
+				</button> -->
 			</div>
 		{:else}
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

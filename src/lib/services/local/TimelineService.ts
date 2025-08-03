@@ -17,6 +17,8 @@ export interface TimelineEvent {
 	eventData: Record<string, any>; // Dynamic data based on template
 	createdAt: string;
 	updatedAt: string;
+	createdBy?: string; // User ID who created the event
+	projectId?: string | null; // Project ID if this is a project-specific event
 }
 
 // Timeline Templates
@@ -33,29 +35,6 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 			{ id: 'submissionDeadline', label: 'Submission Deadline', type: 'date' },
 			{ id: 'website', label: 'Website', type: 'link', placeholder: 'https://conference.org' },
 			{ id: 'organization', label: 'Organization', type: 'text', placeholder: 'ACM, IEEE, etc.' }
-		],
-		predefinedOptions: [
-			{
-				id: 'chi2024',
-				title: 'CHI 2024',
-				venue: 'Honolulu, Hawaii',
-				organization: 'ACM',
-				website: 'https://chi2024.acm.org'
-			},
-			{
-				id: 'neurips2024',
-				title: 'NeurIPS 2024',
-				venue: 'Vancouver, Canada',
-				organization: 'NeurIPS Foundation',
-				website: 'https://neurips.cc'
-			},
-			{
-				id: 'moco2024',
-				title: 'MOCO 2024',
-				venue: 'Utrecht, Netherlands',
-				organization: 'ACM',
-				website: 'https://moco.org'
-			}
 		]
 	},
 	grant: {
