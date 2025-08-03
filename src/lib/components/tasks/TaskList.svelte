@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Calendar, StickyNote, Edit, Trash2, Check } from '@lucide/svelte';
 	import type { Task } from '../../types/task';
-	import { PeopleService } from '../../services/PeopleService';
-	import { TaskService } from '../../services/TaskService';
+	import { PeopleService } from '../../services/local/PeopleService';
+	import { TaskService } from '../../services/local/TaskService';
 	import EditTaskModal from './EditTaskModal.svelte';
 
 	interface Props {

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { X } from '@lucide/svelte';
-	import { PeopleService } from '../../services/PeopleService';
-	import { TaskService } from '../../services/TaskService';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
+	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import type { Task } from '../../types/task';
 
 	interface Props {
@@ -13,16 +14,24 @@
 
 	let { nodeId, projectSlug, onClose, onTaskAdded }: Props = $props();
 
-	const peopleService = new PeopleService();
-	const taskService = new TaskService();
-	const people = $derived(peopleService.getAllPeople());
+	const peopleService: IPeopleService = ServiceFactory.createPeopleService();
+	const taskService: ITaskService = ServiceFactory.createTaskService();
+	let people = $state<any[]>([]);
+
+	// Load people on mount
+	$effect(() => {
+		(async () => {
+			const result = peopleService.getAllPeople();
+			people = result instanceof Promise ? await result : result;
+		})();
+	});
 
 	let title = $state('');
 	let assignee = $state('');
 	let dueDate = $state('');
 	let notes = $state('');
 
-	function handleSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		
 		if (!title.trim() || !assignee) return;
@@ -34,7 +43,8 @@
 			notes: notes.trim() || undefined
 		};
 
-		taskService.addTask(nodeId, taskData, projectSlug);
+		const result = taskService.addTask(nodeId, taskData, projectSlug);
+		if (result instanceof Promise) await result;
 		onTaskAdded?.();
 		onClose();
 	}

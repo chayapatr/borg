@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Calendar, StickyNote, ExternalLink, CheckCircle, Trash2 } from '@lucide/svelte';
-	import { TaskService } from '../../services/TaskService';
-	import { PeopleService } from '../../services/PeopleService';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { ITaskService } from '../../services/interfaces/ITaskService';
+	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
 	import type { TaskWithContext } from '../../types/task';
 	import { goto } from '$app/navigation';
 
-	const taskService = new TaskService();
-	const peopleService = new PeopleService();
+	const taskService: ITaskService = ServiceFactory.createTaskService();
+	const peopleService: IPeopleService = ServiceFactory.createPeopleService();
 
 	let tasks = $state<TaskWithContext[]>([]);
 	let filteredTasks = $state<TaskWithContext[]>([]);
@@ -18,23 +19,38 @@
 		loadTasks();
 	});
 
-	function loadTasks() {
-		tasks = taskService.getAllTasks();
+	async function loadTasks() {
+		const result = taskService.getAllTasks();
+		tasks = result instanceof Promise ? await result : result;
 		applyFilters();
 	}
 
-	function applyFilters() {
+	async function applyFilters() {
 		let filtered = tasks;
 
 		// Filter by search query
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
-			filtered = filtered.filter(task => 
-				task.title.toLowerCase().includes(query) ||
-				task.nodeTitle.toLowerCase().includes(query) ||
-				task.projectTitle?.toLowerCase().includes(query) ||
-				peopleService.getPerson(task.assignee)?.name.toLowerCase().includes(query)
-			);
+			const matchingTasks = [];
+			
+			for (const task of filtered) {
+				const titleMatch = task.title.toLowerCase().includes(query);
+				const nodeMatch = task.nodeTitle.toLowerCase().includes(query);
+				const projectMatch = task.projectTitle?.toLowerCase().includes(query);
+				
+				let personMatch = false;
+				if (task.assignee) {
+					const result = peopleService.getPerson(task.assignee);
+					const person = result instanceof Promise ? await result : result;
+					personMatch = person?.name.toLowerCase().includes(query) || false;
+				}
+				
+				if (titleMatch || nodeMatch || projectMatch || personMatch) {
+					matchingTasks.push(task);
+				}
+			}
+			
+			filtered = matchingTasks;
 		}
 
 		filteredTasks = filtered;
@@ -58,10 +74,11 @@
 		}
 	}
 
-	function handleDeleteTask(task: TaskWithContext) {
+	async function handleDeleteTask(task: TaskWithContext) {
 		if (confirm('Are you sure you want to delete this task?')) {
-			taskService.deleteTask(task.nodeId, task.id, task.projectSlug);
-			loadTasks();
+			const result = taskService.deleteTask(task.nodeId, task.id, task.projectSlug);
+			if (result instanceof Promise) await result;
+			await loadTasks();
 		}
 	}
 
@@ -122,7 +139,8 @@
 		{:else}
 			<div class="space-y-1 p-4">
 				{#each filteredTasks as task}
-					{@const person = peopleService.getPerson(task.assignee)}
+					{@const personResult = peopleService.getPerson(task.assignee)}
+					{#await personResult instanceof Promise ? personResult : Promise.resolve(personResult) then person}
 					{@const overdue = task.dueDate && isOverdue(task.dueDate)}
 					
 					<div class="group rounded-lg border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors">
@@ -180,6 +198,7 @@
 							</div>
 						</div>
 					</div>
+					{/await}
 				{/each}
 			</div>
 		{/if}

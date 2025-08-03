@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { X } from '@lucide/svelte';
-	import { PeopleService } from '../../services/PeopleService';
-	import { TaskService } from '../../services/TaskService';
+	import { PeopleService } from '../../services/local/PeopleService';
+	import { TaskService } from '../../services/local/TaskService';
 	import type { Task } from '../../types/task';
 
 	interface Props {

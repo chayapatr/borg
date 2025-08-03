@@ -1,32 +1,33 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { ProjectsService } from '../../services/ProjectsService';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { IProjectsService } from '../../services/interfaces';
 	import CreateProjectModal from './CreateProjectModal.svelte';
 	import { Plus, FolderOpen, Trash2 } from '@lucide/svelte';
 
 	let { onCountsUpdate = () => {} } = $props<{ onCountsUpdate?: () => void }>();
 
-	let projectsService: ProjectsService;
+	let projectsService: IProjectsService;
 	let projects = $state<any[]>([]);
 	let showCreateModal = $state(false);
 	let projectCounts = $state<Record<string, { todo: number; doing: number; done: number }>>({});
 
 	onMount(() => {
-		projectsService = new ProjectsService();
+		projectsService = ServiceFactory.createProjectsService();
 		loadProjects();
 	});
 
-	function loadProjects() {
-		projects = projectsService.getAllProjects();
-		updateProjectCounts();
+	async function loadProjects() {
+		projects = await projectsService.getAllProjects();
+		await updateProjectCounts();
 	}
 	
-	function updateProjectCounts() {
+	async function updateProjectCounts() {
 		const counts: Record<string, { todo: number; doing: number; done: number }> = {};
-		projects.forEach(project => {
-			counts[project.slug] = projectsService.getProjectStatusCounts(project.slug);
-		});
+		for (const project of projects) {
+			counts[project.slug] = await projectsService.getProjectStatusCounts(project.slug);
+		}
 		projectCounts = counts;
 		onCountsUpdate(); // Notify parent to update global counts
 	}
@@ -38,9 +39,9 @@
 		}
 	}
 
-	function handleCreateProject(projectData: any) {
-		const project = projectsService.createProject(projectData);
-		projects = projectsService.getAllProjects();
+	async function handleCreateProject(projectData: any) {
+		const project = await projectsService.createProject(projectData);
+		projects = await projectsService.getAllProjects();
 		showCreateModal = false;
 		
 		// Navigate to the new project
@@ -55,13 +56,13 @@
 		return new Date(dateString).toLocaleDateString();
 	}
 
-	function handleDeleteProject(event: MouseEvent, slug: string, title: string) {
+	async function handleDeleteProject(event: MouseEvent, slug: string, title: string) {
 		event.stopPropagation(); // Prevent opening the project
 		
 		if (confirm(`Are you sure you want to delete the project "${title}"? This action cannot be undone.`)) {
-			const success = projectsService.deleteProject(slug);
+			const success = await projectsService.deleteProject(slug);
 			if (success) {
-				loadProjects(); // This will also update counts
+				await loadProjects(); // This will also update counts
 			}
 		}
 	}

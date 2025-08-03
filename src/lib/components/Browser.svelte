@@ -5,16 +5,17 @@
 	import PeopleTab from './browser/PeopleTab.svelte';
 	import TimelineTab from './browser/TimelineTab.svelte';
 	import TaskTab from './browser/TaskTab.svelte';
-	import { ProjectsService } from '../services/ProjectsService';
+	import { ServiceFactory } from '../services/ServiceFactory';
+	import type { IProjectsService } from '../services/interfaces';
 
 	type Tab = 'projects' | 'people' | 'timeline' | 'tasks';
 
 	let activeTab = $state<Tab>('projects');
-	let projectsService: ProjectsService;
+	let projectsService: IProjectsService;
 	let globalCounts = $state({ todo: 0, doing: 0, done: 0 });
 
 	onMount(() => {
-		projectsService = new ProjectsService();
+		projectsService = ServiceFactory.createProjectsService();
 		updateGlobalCounts();
 
 		// Update counts when returning from project pages
@@ -35,9 +36,9 @@
 		activeTab = tab;
 	}
 
-	function updateGlobalCounts() {
+	async function updateGlobalCounts() {
 		if (projectsService) {
-			globalCounts = projectsService.getGlobalStatusCounts();
+			globalCounts = await projectsService.getGlobalStatusCounts();
 		}
 	}
 </script>

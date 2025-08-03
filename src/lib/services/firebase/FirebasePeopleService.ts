@@ -1,0 +1,275 @@
+import { 
+	collection, 
+	doc, 
+	addDoc, 
+	updateDoc, 
+	deleteDoc, 
+	getDocs, 
+	getDoc,
+	query, 
+	where,
+	orderBy,
+	onSnapshot,
+	increment,
+	type Unsubscribe 
+} from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { getAuth } from 'firebase/auth';
+import type { Person, GlobalPerson } from '../local/PeopleService';
+import type { IPeopleService } from '../interfaces/IPeopleService';
+
+export class FirebasePeopleService implements IPeopleService {
+	async getProjectPeople(projectSlug: string): Promise<Person[]> {
+		try {
+			// Get authenticated users from the users collection
+			const usersQuery = query(
+				collection(db, 'users'),
+				where('isApproved', '==', true),
+				orderBy('name', 'asc')
+			);
+			const usersSnapshot = await getDocs(usersQuery);
+			
+			const authenticatedPeople = usersSnapshot.docs.map(doc => {
+				const userData = doc.data();
+				return {
+					id: doc.id,
+					name: userData.name || userData.email || 'Unknown User',
+					email: userData.email,
+					createdAt: userData.createdAt || new Date().toISOString(),
+					updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString()
+				} as Person;
+			});
+
+			return authenticatedPeople;
+		} catch (error) {
+			console.error('Failed to get project people:', error);
+			return [];
+		}
+	}
+
+	async getGlobalPeople(): Promise<GlobalPerson[]> {
+		try {
+			// Get all authenticated users from the users collection
+			const usersQuery = query(
+				collection(db, 'users'),
+				where('isApproved', '==', true),
+				orderBy('lastLoginAt', 'desc')
+			);
+			const usersSnapshot = await getDocs(usersQuery);
+			
+			const authenticatedPeople = usersSnapshot.docs.map(doc => {
+				const userData = doc.data();
+				return {
+					id: doc.id,
+					name: userData.name || userData.email || 'Unknown User',
+					email: userData.email,
+					createdAt: userData.createdAt || new Date().toISOString(),
+					updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString(),
+					lastUsedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString(),
+					usageCount: 1 // Could be enhanced to track actual usage
+				} as GlobalPerson;
+			});
+
+			return authenticatedPeople;
+		} catch (error) {
+			console.error('Failed to get global people:', error);
+			return [];
+		}
+	}
+
+	async getPerson(personId: string, projectSlug?: string): Promise<Person | null> {
+		try {
+			// Look in users collection (authenticated users)
+			const userDocRef = doc(db, 'users', personId);
+			const userDocSnap = await getDoc(userDocRef);
+			if (userDocSnap.exists()) {
+				const userData = userDocSnap.data();
+				return {
+					id: userDocSnap.id,
+					name: userData.name || userData.email || 'Unknown User',
+					email: userData.email,
+					createdAt: userData.createdAt || new Date().toISOString(),
+					updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString()
+				};
+			}
+
+			return null;
+		} catch (error) {
+			console.error('Failed to get person:', error);
+			return null;
+		}
+	}
+
+	async addPersonToProject(projectSlug: string, data: { name: string; email?: string }): Promise<Person> {
+		// In Firebase mode, people are managed through authentication
+		// This method returns a user if they exist as an authenticated user
+		try {
+			if (data.email) {
+				// Try to find user by email
+				const usersQuery = query(
+					collection(db, 'users'),
+					where('email', '==', data.email),
+					where('isApproved', '==', true)
+				);
+				const snapshot = await getDocs(usersQuery);
+				
+				if (!snapshot.empty) {
+					const userData = snapshot.docs[0].data();
+					return {
+						id: snapshot.docs[0].id,
+						name: userData.name || userData.email || 'Unknown User',
+						email: userData.email,
+						createdAt: userData.createdAt || new Date().toISOString(),
+						updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString()
+					};
+				}
+			}
+
+			// If no authenticated user found, throw an error
+			throw new Error('User must be authenticated and approved to be added to projects. Please invite them to create an account first.');
+		} catch (error) {
+			console.error('Failed to add person to project:', error);
+			throw error;
+		}
+	}
+
+	async updatePersonInProject(projectSlug: string, personId: string, updates: Partial<Person>): Promise<Person | null> {
+		try {
+			// In Firebase mode, people data comes from the users collection
+			// Only allow updating name field, other fields are managed by authentication
+			const userDocRef = doc(db, 'users', personId);
+			
+			// Filter updates to only allow name changes
+			const allowedUpdates: any = {};
+			if (updates.name !== undefined) {
+				allowedUpdates.name = updates.name;
+			}
+
+			if (Object.keys(allowedUpdates).length > 0) {
+				await updateDoc(userDocRef, {
+					...allowedUpdates,
+					updatedAt: new Date().toISOString()
+				});
+			}
+
+			// Return updated person
+			return this.getPerson(personId);
+		} catch (error) {
+			console.error('Failed to update person in project:', error);
+			return null;
+		}
+	}
+
+	async deletePersonFromProject(projectSlug: string, personId: string): Promise<boolean> {
+		// In Firebase mode, people cannot be deleted as they are authenticated users
+		// This would require deactivating the user account, which is an admin operation
+		console.warn('Cannot delete authenticated users from projects. Consider deactivating the user account instead.');
+		return false;
+	}
+
+	async searchProjectPeople(projectSlug: string, query: string): Promise<Person[]> {
+		try {
+			// Search authenticated users
+			const people = await this.getProjectPeople(projectSlug);
+			const lowercaseQuery = query.toLowerCase();
+
+			return people.filter(
+				(person) =>
+					person.name.toLowerCase().includes(lowercaseQuery) ||
+					person.email?.toLowerCase().includes(lowercaseQuery)
+			);
+		} catch (error) {
+			console.error('Failed to search project people:', error);
+			return [];
+		}
+	}
+
+	async searchGlobalPeople(query: string): Promise<GlobalPerson[]> {
+		try {
+			// Firestore doesn't support full-text search, so we get all and filter
+			const people = await this.getGlobalPeople();
+			const lowercaseQuery = query.toLowerCase();
+
+			return people
+				.filter(person =>
+					person.name.toLowerCase().includes(lowercaseQuery) ||
+					person.email?.toLowerCase().includes(lowercaseQuery)
+				)
+				.sort((a, b) => b.usageCount - a.usageCount) // Sort by usage
+				.slice(0, 10); // Limit results
+		} catch (error) {
+			console.error('Failed to search global people:', error);
+			return [];
+		}
+	}
+
+	// Legacy methods for backward compatibility
+	async getAllPeople(): Promise<Person[]> {
+		try {
+			const globalPeople = await this.getGlobalPeople();
+			return globalPeople.map(gp => ({
+				id: gp.id,
+				name: gp.name,
+				email: gp.email,
+				createdAt: gp.createdAt,
+				updatedAt: gp.updatedAt
+			}));
+		} catch (error) {
+			console.error('Failed to get all people:', error);
+			return [];
+		}
+	}
+
+	async addPerson(data: { name: string; email?: string }): Promise<Person> {
+		console.warn('PeopleService.addPerson() is deprecated. Use addPersonToProject() instead.');
+		return this.addPersonToProject('global', data);
+	}
+
+	async updatePerson(id: string, updates: Partial<Person>): Promise<Person | null> {
+		console.warn('PeopleService.updatePerson() is deprecated. Use updatePersonInProject() instead.');
+		return this.updatePersonInProject('global', id, updates);
+	}
+
+	async deletePerson(id: string): Promise<boolean> {
+		console.warn('PeopleService.deletePerson() is deprecated. Use deletePersonFromProject() instead.');
+		return this.deletePersonFromProject('global', id);
+	}
+
+	async searchPeople(query: string): Promise<Person[]> {
+		console.warn('PeopleService.searchPeople() is deprecated. Use searchProjectPeople() or searchGlobalPeople() instead.');
+		const globalResults = await this.searchGlobalPeople(query);
+		return globalResults.map(gp => ({
+			id: gp.id,
+			name: gp.name,
+			email: gp.email,
+			createdAt: gp.createdAt,
+			updatedAt: gp.updatedAt
+		}));
+	}
+
+	subscribeToProjectPeople(projectSlug: string, callback: (people: Person[]) => void): () => void {
+		// Subscribe to authenticated users
+		const q = query(
+			collection(db, 'users'),
+			where('isApproved', '==', true),
+			orderBy('name', 'asc')
+		);
+
+		const unsubscribe = onSnapshot(q, (snapshot) => {
+			const people = snapshot.docs.map(doc => {
+				const userData = doc.data();
+				return {
+					id: doc.id,
+					name: userData.name || userData.email || 'Unknown User',
+					email: userData.email,
+					createdAt: userData.createdAt || new Date().toISOString(),
+					updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString()
+				} as Person;
+			});
+			callback(people);
+		});
+
+		return unsubscribe;
+	}
+
+}

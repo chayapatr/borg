@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/svelte';
-import { getTemplate } from '../templates';
+import { getTemplate } from '../../templates';
 import { ProjectsService } from './ProjectsService';
 
 export class NodesService {
@@ -19,7 +19,7 @@ export class NodesService {
 		this.projectsService = new ProjectsService();
 	}
 
-	addNode(templateType: string, position: { x: number; y: number }) {
+	addNode(templateType: string, position: { x: number; y: number }): Node {
 		const template = getTemplate(templateType);
 		const id = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -49,9 +49,11 @@ export class NodesService {
 		const updatedNodes = [...currentNodes, newNode];
 		this.setNodes(updatedNodes);
 		this.saveToStorage(updatedNodes, this.getEdges());
+		
+		return newNode;
 	}
 
-	updateNode(nodeId: string, data: any) {
+	updateNode(nodeId: string, data: any, userId?: string): boolean {
 		const oldNodes = this.getNodes();
 		const oldNode = oldNodes.find(n => n.id === nodeId);
 		const oldStatus = oldNode?.data?.nodeData?.status;
@@ -70,9 +72,11 @@ export class NodesService {
 		if (oldStatus !== newStatus && this.projectSlug) {
 			this.projectsService.invalidateStatusCache(this.projectSlug);
 		}
+		
+		return true;
 	}
 
-	deleteNode(nodeId: string) {
+	deleteNode(nodeId: string): boolean {
 		const updatedNodes = this.getNodes().filter((node) => node.id !== nodeId);
 		this.setNodes(updatedNodes);
 
@@ -82,18 +86,30 @@ export class NodesService {
 		);
 		this.setEdges(updatedEdges);
 		this.saveToStorage(updatedNodes, updatedEdges);
+		
+		return true;
 	}
 
-	addEdge(edge: Edge) {
+	addEdge(edge: Edge): Edge {
 		const updatedEdges = [...this.getEdges(), edge];
 		this.setEdges(updatedEdges);
 		this.saveToStorage(this.getNodes(), updatedEdges);
+		
+		return edge;
 	}
 
-	deleteEdge(edgeId: string) {
+	deleteEdge(edgeId: string): boolean {
 		const updatedEdges = this.getEdges().filter((edge) => edge.id !== edgeId);
 		this.setEdges(updatedEdges);
 		this.saveToStorage(this.getNodes(), updatedEdges);
+		
+		return true;
+	}
+
+	saveBatch(nodes: Node[], edges: Edge[]): void {
+		this.setNodes(nodes);
+		this.setEdges(edges);
+		this.saveToStorage(nodes, edges);
 	}
 
 	getStatusCounts(): { todo: number; doing: number; done: number } {

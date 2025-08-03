@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is approved
+    function isApprovedUser() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isApproved == true;
+    }
+
+    // Users can read/update their own profile, approved users can read others
+    match /users/{userId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || isApprovedUser());
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // All data accessible to approved users only
+    match /projects/{projectId} {
+      allow read, write, create, delete: if isApprovedUser();
+      
+      match /nodes/{nodeId} {
+        allow read, write, create, delete: if isApprovedUser();
+      }
+      
+      match /edges/{edgeId} {
+        allow read, write, create, delete: if isApprovedUser();
+      }
+      
+      match /people/{personId} {
+        allow read, write, create, delete: if isApprovedUser();
+      }
+      
+      match /timeline/{eventId} {
+        allow read, write, create, delete: if isApprovedUser();
+      }
+    }
+
+    // Global tasks collection
+    match /tasks/{taskId} {
+      allow read, write, create, delete: if isApprovedUser();
+    }
+
+    // Global people index (for autocomplete)
+    match /people/{personId} {
+      allow read, write, create, delete: if isApprovedUser();
+    }
+  }
+}

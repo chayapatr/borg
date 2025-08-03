@@ -3,17 +3,16 @@
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import { ProjectsService } from '$lib/services/ProjectsService';
-	import { TaskService } from '$lib/services/TaskService';
-	import { PeopleService } from '$lib/services/PeopleService';
+	import { ServiceFactory } from '$lib/services/ServiceFactory';
+	import type { IProjectsService, ITaskService } from '$lib/services/interfaces';
 	import { goto } from '$app/navigation';
 	import { ChevronLeft, CheckSquare } from '@lucide/svelte';
 	import type { TaskWithContext } from '$lib/types/task';
 	import TaskSidebar from '$lib/components/tasks/TaskSidebar.svelte';
 
 	const projectSlug = $derived($page.params.slug);
-	let projectsService: ProjectsService;
-	let taskService: TaskService;
+	let projectsService: IProjectsService;
+	let taskService: ITaskService;
 	let project = $state<any>(null);
 	let loading = $state(true);
 	let statusCounts = $state({ todo: 0, doing: 0, done: 0 });
@@ -21,13 +20,14 @@
 	let projectTasks = $state<TaskWithContext[]>([]);
 
 	onMount(async () => {
-		projectsService = new ProjectsService();
-		taskService = new TaskService();
+		projectsService = ServiceFactory.createProjectsService();
+		taskService = ServiceFactory.createTaskService();
 		loadProject();
 	});
 
-	function loadProject() {
-		project = projectsService.getProject(projectSlug);
+	async function loadProject() {
+		const projectResult = await projectsService.getProject(projectSlug);
+		project = projectResult;
 		
 		if (!project) {
 			// Project not found, redirect to home
@@ -35,33 +35,33 @@
 			return;
 		}
 		
-		updateStatusCounts();
-		loadProjectTasks();
+		await updateStatusCounts();
+		await loadProjectTasks();
 		loading = false;
 	}
 
-	function loadProjectTasks() {
+	async function loadProjectTasks() {
 		if (projectSlug && taskService) {
-			projectTasks = taskService.getProjectTasks(projectSlug);
+			projectTasks = await taskService.getProjectTasks(projectSlug);
 		}
 	}
 	
-	function updateStatusCounts() {
+	async function updateStatusCounts() {
 		if (projectSlug && projectsService) {
-			statusCounts = projectsService.getProjectStatusCounts(projectSlug);
+			statusCounts = await projectsService.getProjectStatusCounts(projectSlug);
 		}
 	}
 
 	// Refresh project data periodically to show updated node count and status counts
 	$effect(() => {
 		if (projectSlug && projectsService && !loading) {
-			const interval = setInterval(() => {
-				const updatedProject = projectsService.getProject(projectSlug);
+			const interval = setInterval(async () => {
+				const updatedProject = await projectsService.getProject(projectSlug);
 				if (updatedProject) {
 					project = updatedProject;
 				}
-				updateStatusCounts();
-				loadProjectTasks();
+				await updateStatusCounts();
+				await loadProjectTasks();
 			}, 2000);
 
 			return () => clearInterval(interval);

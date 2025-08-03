@@ -11,13 +11,12 @@
 		type Connection
 	} from '@xyflow/svelte';
 	import UniversalNode from './UniversalNode.svelte';
-	import { NodesService } from '../services/NodesService';
-	import { ProjectsService } from '../services/ProjectsService';
-	import { TaskService } from '../services/TaskService';
+	import { ServiceFactory } from '../services/ServiceFactory';
+	import type { INodesService, IProjectsService, ITaskService } from '../services/interfaces';
 	import CreateNodeModal from './CreateNodeModal.svelte';
 	import EditPanel from './EditPanel.svelte';
 	import NodeTaskSidebar from './tasks/NodeTaskSidebar.svelte';
-import AddTaskModal from './tasks/AddTaskModal.svelte';
+	import AddTaskModal from './tasks/AddTaskModal.svelte';
 	import type { Task } from '../types/task';
 	import '@xyflow/svelte/dist/style.css';
 
@@ -30,8 +29,9 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 	// Use $state.raw for better performance with arrays as shown in reference
 	let nodes = $state.raw<Node[]>([]);
 	let edges = $state.raw<Edge[]>([]);
-	let nodesService: NodesService;
-	let projectsService: ProjectsService;
+	let nodesService: INodesService;
+	let projectsService: IProjectsService;
+	let taskService: ITaskService;
 	let showCreateModal = $state(false);
 	let createPosition = $state({ x: 0, y: 0 });
 	let saveTimeout: number;
@@ -76,11 +76,12 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 	$effect(() => {
 		if (nodesService) {
 			clearTimeout(saveTimeout);
-			saveTimeout = setTimeout(() => {
-				nodesService.saveToStorage(nodes, edges);
+			saveTimeout = setTimeout(async () => {
+				const result = nodesService.saveBatch(nodes, edges);
+				if (result instanceof Promise) await result;
 				// Update project node count if we have a project
 				if (projectSlug && projectsService) {
-					projectsService.updateNodeCount(projectSlug, nodes.length);
+					await projectsService.updateNodeCount(projectSlug, nodes.length);
 				}
 			}, 500);
 		}
@@ -105,8 +106,10 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 	});
 
 	onMount(() => {
-		projectsService = new ProjectsService();
-		nodesService = new NodesService(
+		projectsService = ServiceFactory.createProjectsService();
+		taskService = ServiceFactory.createTaskService();
+		nodesService = ServiceFactory.createNodesService(
+			'default-project', // TODO: Get actual project ID
 			(newNodes) => {
 				nodes = newNodes;
 			},
@@ -118,7 +121,26 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 			projectSlug
 		);
 
-		nodesService.loadFromStorage();
+		// Load initial data - localStorage services use loadFromStorage, Firebase services handle this internally
+		if (nodesService.loadFromStorage) {
+			nodesService.loadFromStorage();
+		} else {
+			// For Firebase services, load nodes and edges
+			(async () => {
+				try {
+					const nodeResults = nodesService.getNodes();
+					const edgeResults = nodesService.getEdges();
+
+					const loadedNodes = nodeResults instanceof Promise ? await nodeResults : nodeResults;
+					const loadedEdges = edgeResults instanceof Promise ? await edgeResults : edgeResults;
+
+					nodes = loadedNodes;
+					edges = loadedEdges;
+				} catch (error) {
+					console.error('Failed to load nodes and edges:', error);
+				}
+			})();
+		}
 
 		// Add initial project node if none exist, or sync existing project node
 		if (nodes.length === 0) {
@@ -231,8 +253,13 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 		nodesService.addEdge(edge);
 	}
 
-
-	async function handleBeforeDelete({ nodes: nodesToDelete, edges: edgesToDelete }: { nodes: Node[], edges: Edge[] }) {
+	async function handleBeforeDelete({
+		nodes: nodesToDelete,
+		edges: edgesToDelete
+	}: {
+		nodes: Node[];
+		edges: Edge[];
+	}) {
 		// Prevent node deletion by returning false if any nodes would be deleted
 		if (nodesToDelete.length > 0) {
 			return false; // This should prevent the deletion
@@ -241,9 +268,15 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 		return true;
 	}
 
-	function handleDelete({ nodes: nodesToDelete, edges: edgesToDelete }: { nodes: Node[], edges: Edge[] }) {
+	function handleDelete({
+		nodes: nodesToDelete,
+		edges: edgesToDelete
+	}: {
+		nodes: Node[];
+		edges: Edge[];
+	}) {
 		// This should only be called for edges now due to onbeforedelete
-		edgesToDelete.forEach(edge => {
+		edgesToDelete.forEach((edge) => {
 			nodesService.deleteEdge(edge.id);
 		});
 	}
@@ -254,13 +287,13 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 
 	function handleEditPanelSave(nodeId: string, data: any) {
 		nodesService.updateNode(nodeId, data);
-		
+
 		// If this is a project node, sync changes back to project metadata
-		const node = nodes.find(n => n.id === nodeId);
+		const node = nodes.find((n) => n.id === nodeId);
 		if (node && node.data.templateType === 'project' && projectSlug && projectsService) {
 			const nodeData = data.nodeData;
 			const updates: any = {};
-			
+
 			// Sync title, status, and collaborators back to project metadata
 			if (nodeData.title !== undefined) {
 				updates.title = nodeData.title;
@@ -271,12 +304,12 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 			if (nodeData.collaborators !== undefined) {
 				updates.collaborators = nodeData.collaborators;
 			}
-			
+
 			if (Object.keys(updates).length > 0) {
 				projectsService.updateProject(projectSlug, updates);
 			}
 		}
-		
+
 		showEditPanel = false;
 	}
 
@@ -286,14 +319,25 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 	}
 
 	// Function to refresh task sidebar data and node display
-	function handleTasksUpdated() {
+	async function handleTasksUpdated() {
 		// Always refresh node display to update task counts
-		nodesService.loadFromStorage();
-		
+		if (nodesService.loadFromStorage) {
+			nodesService.loadFromStorage();
+		} else {
+			// For Firebase services, reload nodes to get updated data
+			try {
+				const nodeResults = nodesService.getNodes();
+				const loadedNodes = nodeResults instanceof Promise ? await nodeResults : nodeResults;
+				nodes = loadedNodes;
+			} catch (error) {
+				console.error('Failed to reload nodes:', error);
+			}
+		}
+
 		// If sidebar is open, refresh its tasks too
-		if (showNodeTaskSidebar && taskSidebarNodeId) {
-			const taskService = new TaskService();
-			const updatedTasks = taskService.getNodeTasks(taskSidebarNodeId, projectSlug);
+		if (showNodeTaskSidebar && taskSidebarNodeId && taskService) {
+			const tasksResult = taskService.getNodeTasks(taskSidebarNodeId, projectSlug);
+			const updatedTasks = tasksResult instanceof Promise ? await tasksResult : tasksResult;
 			taskSidebarTasks = [...updatedTasks];
 		}
 	}
@@ -340,7 +384,8 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 		const currentNodes = nodes;
 		const updatedNodes = [...currentNodes, newNode];
 		nodesService.setNodes(updatedNodes);
-		nodesService.saveToStorage(updatedNodes, edges);
+		const result = nodesService.saveBatch(updatedNodes, edges);
+		if (result instanceof Promise) result.catch(console.error);
 	}
 
 	function syncProjectNode() {
@@ -350,17 +395,15 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 		if (!project) return;
 
 		// Find ALL project nodes and sync them
-		const projectNodes = nodes.filter(node => 
-			node.data.templateType === 'project'
-		);
+		const projectNodes = nodes.filter((node) => node.data.templateType === 'project');
 
 		if (projectNodes.length > 0) {
 			let hasUpdates = false;
-			const updatedNodes = nodes.map(node => {
+			const updatedNodes = nodes.map((node) => {
 				if (node.data.templateType === 'project') {
 					const currentTitle = node.data.nodeData?.title;
 					const currentStatus = node.data.nodeData?.status;
-					
+
 					// Only update if title or status has changed
 					if (currentTitle !== project.title || currentStatus !== project.status) {
 						hasUpdates = true;
@@ -380,10 +423,11 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 				}
 				return node;
 			});
-			
+
 			if (hasUpdates) {
 				nodesService.setNodes(updatedNodes);
-				nodesService.saveToStorage(updatedNodes, edges);
+				const result = nodesService.saveBatch(updatedNodes, edges);
+				if (result instanceof Promise) result.catch(console.error);
 			}
 		}
 	}
@@ -394,7 +438,7 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 <svelte:window on:keydown={handleKeyDown} />
 
 <!-- Canvas and Sidebar Container -->
-<div class="h-full w-full flex bg-zinc-950">
+<div class="flex h-full w-full bg-zinc-950">
 	<!-- Canvas -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -438,7 +482,7 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 			nodeTitle={taskSidebarNodeTitle}
 			{projectSlug}
 			tasks={taskSidebarTasks}
-			onClose={() => showNodeTaskSidebar = false}
+			onClose={() => (showNodeTaskSidebar = false)}
 			onTasksUpdated={handleTasksUpdated}
 		/>
 	{/if}
@@ -460,4 +504,3 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 		onTaskAdded={handleAddTaskComplete}
 	/>
 {/if}
-

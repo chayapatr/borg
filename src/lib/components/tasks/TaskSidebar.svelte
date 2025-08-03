@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronLeft, CheckSquare } from '@lucide/svelte';
-	import { PeopleService } from '../../services/PeopleService';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { IPeopleService } from '../../services/interfaces';
 	import type { TaskWithContext } from '../../types/task';
 
 	interface Props {
@@ -11,7 +12,7 @@
 
 	let { projectSlug, projectTasks, onClose }: Props = $props();
 
-	const peopleService = new PeopleService();
+	const peopleService = ServiceFactory.createPeopleService();
 
 </script>
 

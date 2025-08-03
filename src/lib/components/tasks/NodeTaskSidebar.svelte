@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { X, Plus } from '@lucide/svelte';
-	import { TaskService } from '../../services/TaskService';
+	import { TaskService } from '../../services/local/TaskService';
 	import type { Task } from '../../types/task';
 	import TaskList from './TaskList.svelte';
 

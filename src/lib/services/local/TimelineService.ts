@@ -1,4 +1,4 @@
-import type { TemplateField } from '../templates';
+import type { TemplateField } from '../../templates';
 
 export interface TimelineTemplate {
 	id: string;

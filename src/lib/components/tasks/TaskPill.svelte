@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PersonTaskCount } from '../../types/task';
-	import { PeopleService } from '../../services/PeopleService';
+	import { PeopleService } from '../../services/local/PeopleService';
 
 	interface Props {
 		personTaskCount: PersonTaskCount;

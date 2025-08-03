@@ -4,7 +4,8 @@
 	import FieldRenderer from './FieldRenderer.svelte';
 	import { Trash2, CircleDashed, Hand, CheckCircle, Plus } from '@lucide/svelte';
 	import TaskPill from './tasks/TaskPill.svelte';
-	import { TaskService } from '../services/TaskService';
+	import { ServiceFactory } from '../services/ServiceFactory';
+	import type { ITaskService } from '../services/interfaces/ITaskService';
 	import type { Task } from '../types/task';
 
 	let { data, id } = $props<{ data: any; id: string }>();
@@ -13,10 +14,16 @@
 	let nodeData = $derived(data.nodeData || {});
 
 	// Task-related state
-	const taskService = new TaskService();
+	const taskService: ITaskService = ServiceFactory.createTaskService();
 	
 	// Get tasks for this node from TaskService instead of embedded data
-	let tasks = $derived.by(() => {
+	let tasks = $state<Task[]>([]);
+	let personTaskCounts = $state<Array<{ personId: string; count: number }>>([]);
+	let hasTasks = $derived(tasks.length > 0);
+
+	// Load tasks when component mounts or data changes
+	$effect(() => {
+		(async () => {
 		// Get project slug from data if available, otherwise extract from URL
 		const projectSlug = data.projectSlug || (() => {
 			if (typeof window !== 'undefined') {
@@ -27,30 +34,30 @@
 			return null;
 		})();
 		
-		const nodeTasks = projectSlug ? 
+		const nodeTasksResult = projectSlug ? 
 			taskService.getNodeTasks(id, projectSlug) : 
 			taskService.getNodeTasks(id);
+		
+		const nodeTasks = nodeTasksResult instanceof Promise ? await nodeTasksResult : nodeTasksResult;
 		
 		// Debug log to see what's happening
 		if (nodeTasks.length > 0) {
 			console.log(`Node ${id} has ${nodeTasks.length} tasks:`, nodeTasks);
 		}
 		
-		return nodeTasks;
-	});
+		tasks = nodeTasks;
 
-	// Get person task counts for this node from local tasks data
-	let personTaskCounts = $derived.by(() => {
+		// Update person task counts
 		const counts = new Map<string, number>();
-		tasks.forEach((task) => {
+		nodeTasks.forEach((task) => {
 			counts.set(task.assignee, (counts.get(task.assignee) || 0) + 1);
 		});
-		return Array.from(counts.entries()).map(([personId, count]) => ({
+		personTaskCounts = Array.from(counts.entries()).map(([personId, count]) => ({
 			personId,
 			count
 		}));
+		})();
 	});
-	let hasTasks = $derived(tasks.length > 0);
 
 	// Determine border color based on status
 	let borderColor = $derived.by(() => {

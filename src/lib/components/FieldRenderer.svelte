@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { TemplateField } from '../templates';
-	import { PeopleService } from '../services/PeopleService';
-	import { TimelineService } from '../services/TimelineService';
+	import { PeopleService } from '../services/local/PeopleService';
+	import { TimelineService } from '../services/local/TimelineService';
 
 	let {
 		field,

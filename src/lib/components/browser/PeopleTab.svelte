@@ -1,20 +1,22 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { PeopleService, type Person } from '../../services/PeopleService';
-	import { TaskService } from '../../services/TaskService';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { Person } from '../../services/local/PeopleService';
+	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
+	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import AddPersonModal from './AddPersonModal.svelte';
 	import type { TaskWithContext } from '../../types/task';
 
-	let peopleService: PeopleService;
-	let taskService: TaskService;
+	let peopleService: IPeopleService;
+	let taskService: ITaskService;
 	let people = $state<Person[]>([]);
 	let showAddModal = $state(false);
 	let searchQuery = $state('');
 	let personTasks = $state<Map<string, TaskWithContext[]>>(new Map());
 
 	onMount(() => {
-		peopleService = new PeopleService();
-		taskService = new TaskService();
+		peopleService = ServiceFactory.createPeopleService();
+		taskService = ServiceFactory.createTaskService();
 		loadPeople();
 
 		// Listen for visibility changes to refresh data
@@ -31,30 +33,48 @@
 		};
 	});
 
-	function loadPeople() {
-		people = peopleService.getAllPeople();
+	async function loadPeople() {
+		const result = peopleService.getAllPeople();
+		people = result instanceof Promise ? await result : result;
 		loadPersonTasks();
 	}
 
-	function loadPersonTasks() {
+	async function loadPersonTasks() {
 		const taskMap = new Map<string, TaskWithContext[]>();
-		people.forEach(person => {
-			const tasks = taskService.getPersonTasks(person.id);
+		for (const person of people) {
+			const result = taskService.getPersonTasks(person.id);
+			const tasks = result instanceof Promise ? await result : result;
 			taskMap.set(person.id, tasks);
-		});
+		}
 		personTasks = taskMap;
 	}
 
-	function handleAddPerson(personData: { name: string; email?: string }) {
-		peopleService.addPerson(personData);
-		loadPeople();
-		showAddModal = false;
+	async function handleAddPerson(personData: { name: string; email?: string }) {
+		try {
+			const result = peopleService.addPerson(personData);
+			if (result instanceof Promise) await result;
+			await loadPeople();
+			showAddModal = false;
+		} catch (error) {
+			console.error('Failed to add person:', error);
+			alert('Failed to add person. In Firebase mode, users must be authenticated first.');
+		}
 	}
 
-	function handleDeletePerson(id: string) {
+	async function handleDeletePerson(id: string) {
 		if (confirm('Are you sure you want to delete this person?')) {
-			peopleService.deletePerson(id);
-			loadPeople();
+			try {
+				const result = peopleService.deletePerson(id);
+				const success = result instanceof Promise ? await result : result;
+				if (success) {
+					await loadPeople();
+				} else {
+					alert('Cannot delete authenticated users. They must be deactivated through user management.');
+				}
+			} catch (error) {
+				console.error('Failed to delete person:', error);
+				alert('Failed to delete person.');
+			}
 		}
 	}
 

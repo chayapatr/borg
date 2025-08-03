@@ -1,4 +1,4 @@
-import type { Task, TaskWithContext, TaskCounts, PersonTaskCount } from '../types/task';
+import type { Task, TaskWithContext, TaskCounts, PersonTaskCount } from '../../types/task';
 import { ProjectsService } from './ProjectsService';
 import { PeopleService } from './PeopleService';
 

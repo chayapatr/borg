@@ -1,31 +1,36 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TimelineService, type TimelineEvent } from '../../services/TimelineService';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { ITimelineService } from '../../services/interfaces/ITimelineService';
+	import type { TimelineEvent } from '../../services/local/TimelineService';
 	import AddTimelineEventModal from './AddTimelineEventModal.svelte';
 
-	let timelineService: TimelineService;
+	let timelineService: ITimelineService;
 	let events = $state<TimelineEvent[]>([]);
 	let showAddModal = $state(false);
 
 	onMount(() => {
-		timelineService = new TimelineService();
+		timelineService = ServiceFactory.createTimelineService();
 		loadEvents();
 	});
 
-	function loadEvents() {
-		events = timelineService.getEventsSortedByDate();
+	async function loadEvents() {
+		const result = timelineService.getEventsSortedByDate();
+		events = result instanceof Promise ? await result : result;
 	}
 
-	function handleAddEvent(templateType: string, eventData: Record<string, any>) {
-		timelineService.addEvent(templateType, eventData);
-		loadEvents();
+	async function handleAddEvent(templateType: string, eventData: Record<string, any>) {
+		const result = timelineService.addEvent(templateType, eventData);
+		if (result instanceof Promise) await result;
+		await loadEvents();
 		showAddModal = false;
 	}
 
-	function handleDeleteEvent(id: string) {
+	async function handleDeleteEvent(id: string) {
 		if (confirm('Are you sure you want to delete this event?')) {
-			timelineService.deleteEvent(id);
-			loadEvents();
+			const result = timelineService.deleteEvent(id);
+			if (result instanceof Promise) await result;
+			await loadEvents();
 		}
 	}
 
