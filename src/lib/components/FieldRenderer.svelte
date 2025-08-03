@@ -156,9 +156,11 @@
 </script>
 
 <div class="field-container">
-	<label class="mb-1 block text-sm font-medium text-zinc-600">
-		{field.label}
-	</label>
+	{#if !((field.type === 'button' || field.type === 'link') && mode === 'display')}
+		<label class="mb-1 block text-sm font-medium text-zinc-600">
+			{field.label}
+		</label>
+	{/if}
 
 	{#if field.type === 'text'}
 		{#if readonly || mode === 'display'}
@@ -264,7 +266,7 @@
 					onclick={() => window.open(value, '_blank')}
 					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
-					{field.buttonText || 'Open Link'}
+					Open {field.label}
 				</button>
 			{:else}
 				<div class="py-1 text-zinc-600">No link set</div>
@@ -328,7 +330,7 @@
 					onclick={() => window.open(value, '_blank')}
 					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
-					{field.buttonText || 'Open'}
+					Open {field.label}
 				</button>
 			{:else}
 				<div class="py-1 text-zinc-600">No URL set</div>
@@ -339,7 +341,7 @@
 					onclick={() => window.open(value, '_blank')}
 					class="w-full rounded-lg bg-zinc-600 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-500 focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
-					{field.buttonText || 'Open'}
+					Open {field.label}
 				</button>
 			{:else}
 				<div class="py-1 text-black">-</div>
@@ -448,6 +450,38 @@
 					</option>
 				{/each}
 			</select>
+		{/if}
+	{:else if field.type === 'color-picker'}
+		{#if mode === 'display'}
+			{#if value}
+				<div class="py-1">
+					<div class="flex items-center space-x-2">
+						<div class="w-4 h-4 rounded border border-gray-300" style="background-color: {value}"></div>
+						<span class="text-sm text-zinc-600">{value}</span>
+					</div>
+				</div>
+			{:else}
+				<div class="py-1 text-zinc-600">No color selected</div>
+			{/if}
+		{:else}
+			<div class="space-y-2">
+				<input
+					type="color"
+					bind:value
+					class="w-full h-10 rounded border border-zinc-700 cursor-pointer"
+					{readonly}
+				/>
+				<div class="grid grid-cols-6 gap-2">
+					{#each ['#fef08a', '#fde047', '#facc15', '#fed7d7', '#fbb6ce', '#ddd6fe', '#a5f3fc', '#bbf7d0', '#fed7aa', '#fecaca'] as color}
+						<button
+							type="button"
+							class="w-8 h-8 rounded border-2 border-gray-300 hover:border-gray-400 transition-colors"
+							style="background-color: {color}"
+							onclick={() => { value = color; }}
+						></button>
+					{/each}
+				</div>
+			</div>
 		{/if}
 	{/if}
 </div>

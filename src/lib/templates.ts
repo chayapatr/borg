@@ -22,7 +22,8 @@ export interface TemplateField {
 		| 'date'
 		| 'button'
 		| 'people-selector'
-		| 'timeline-selector';
+		| 'timeline-selector'
+		| 'color-picker';
 	placeholder?: string;
 	options?: string[];
 	required?: boolean;
@@ -122,12 +123,6 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				type: 'status',
 				options: ['Draft', 'In Review', 'Accepted', 'Published']
 			},
-			{
-				id: 'overleaf',
-				label: '',
-				type: 'button',
-				buttonText: 'Open Overleaf'
-			}
 		]
 	},
 
@@ -148,14 +143,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				label: 'Status',
 				type: 'status',
 				options: ['To Do', 'Doing', 'Done']
-			},
-			{
-				id: 'github',
-				label: '',
-				type: 'button',
-				buttonText: 'Open Github Repo'
-			}
-		]
+			}		]
 	},
 
 	time: {
@@ -187,32 +175,20 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 	note: {
 		id: 'note',
 		name: 'Note',
-		color: '#52525b',
+		color: '#fef08a', // Default yellow post-it color
 		fields: [
 			{
-				id: 'title',
-				label: 'Note Title',
-				type: 'text',
-				placeholder: 'Enter note title...',
+				id: 'content',
+				label: 'Note Content',
+				type: 'textarea',
+				placeholder: 'Write your note here...',
 				required: true
 			},
 			{
-				id: 'content',
-				label: 'Content',
-				type: 'textarea',
-				placeholder: 'Write your notes here...'
-			},
-			{
-				id: 'status',
-				label: 'Status',
-				type: 'status',
-				options: ['To Do', 'Doing', 'Done']
-			},
-			{
-				id: 'tags',
-				label: 'Tags',
-				type: 'tags',
-				placeholder: 'Add tags...'
+				id: 'backgroundColor',
+				label: 'Background Color',
+				type: 'color-picker',
+				placeholder: 'Choose background color'
 			}
 		]
 	},
@@ -234,14 +210,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				label: 'Status',
 				type: 'status',
 				options: ['To Do', 'Doing', 'Done']
-			},
-			{
-				id: 'drive',
-				label: '',
-				type: 'button',
-				buttonText: 'Open Google Drive'
-			}
-		]
+			}		]
 	},
 
 	blank: {

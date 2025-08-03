@@ -65,10 +65,19 @@
 	// Determine border color based on status
 	let borderColor = $derived.by(() => {
 		const status = nodeData.status;
-		if (status === 'To Do') return '#8b5cf6'; // purple-500 - planned, future potential
-		if (status === 'Doing') return '#3b82f6'; // blue-500 - active, engaged
-		if (status === 'Done') return '#22c55e'; // green-500 - success, completion
+		if (status === 'To Do') return '#9333ea'; // purple-600 - planned, future potential
+		if (status === 'Doing') return '#0284c7'; // sky-600 - active, engaged
+		if (status === 'Done') return '#16a34a'; // green-600 - success, completion
 		return '#3f3f46'; // zinc-700 - default
+	});
+
+	// Create dynamic box-shadow based on status
+	let boxShadow = $derived.by(() => {
+		const status = nodeData.status;
+		if (status === 'To Do') return '3px 3px 0px #9333ea'; // purple-600 shadow
+		if (status === 'Doing') return '3px 3px 0px #0284c7'; // sky-600 shadow
+		if (status === 'Done') return '3px 3px 0px #16a34a'; // green-600 shadow
+		return '3px 3px 0px #000'; // black shadow - default
 	});
 
 	// Determine status icon and color
@@ -134,34 +143,36 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div>
 	<!-- Node Header -->
-	<div class="mb-2 flex items-center justify-between">
-		<div class="flex items-center gap-2">
-			{#if statusIcon}
-				{@const StatusIconComponent = statusIcon.component}
-				<StatusIconComponent class="h-5 w-5" style="color: {statusIcon.color};" />
-			{/if}
-			<span class="rounded-md border border-zinc-700 bg-white px-1 py-0.5 text-sm font-medium"
-				>{template.name}</span
-			>
-		</div>
-
-		<div class="flex items-center gap-1">
-			{#if data.templateType !== 'project'}
-				<button
-					onclick={handleDelete}
-					aria-label="Delete node"
-					class="rounded p-1 text-zinc-500 hover:bg-red-500/30 hover:text-zinc-300"
+	{#if template.id !== 'note'}
+		<div class="mb-2 flex items-center justify-between">
+			<div class="flex items-center gap-2">
+				{#if statusIcon}
+					{@const StatusIconComponent = statusIcon.component}
+					<StatusIconComponent class="h-5 w-5" style="color: {statusIcon.color};" />
+				{/if}
+				<span class="rounded-md border border-zinc-700 bg-white px-1 py-0.5 text-sm font-medium"
+					>{template.name}</span
 				>
-					<Trash2 class="h-4 w-4" />
-				</button>
-			{/if}
+			</div>
+
+			<div class="flex items-center gap-1">
+				{#if data.templateType !== 'project'}
+					<button
+						onclick={handleDelete}
+						aria-label="Delete node"
+						class="rounded p-1 text-zinc-500 hover:bg-red-500/30 hover:text-zinc-300"
+					>
+						<Trash2 class="h-4 w-4" />
+					</button>
+				{/if}
+			</div>
 		</div>
-	</div>
+	{/if}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="box-shadow-black relative min-w-64 cursor-pointer rounded-lg border bg-white p-4 transition-colors"
-		style="border-color: {borderColor};"
+		class="relative cursor-pointer rounded-lg border transition-all duration-200 group {template.id === 'note' ? 'w-32 h-32 p-3' : 'min-w-64 p-4'}"
+		style="border-color: {borderColor}; box-shadow: {boxShadow}; background-color: {template.id === 'note' && nodeData.backgroundColor ? nodeData.backgroundColor : (template.id === 'note' ? '#fef08a' : 'white')};"
 		onclick={handleNodeClick}
 	>
 		<!-- Node Content -->
@@ -173,6 +184,19 @@
 					<FieldRenderer field={eventField} value={nodeData[eventField.id]} readonly={true} mode="display" {nodeData} countdownOnly={true} />
 				</div>
 			{/if}
+		{:else if template.id === 'note'}
+			<!-- Post-it note style: simple content display -->
+			<div class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap h-full flex items-center justify-center text-center overflow-hidden">
+				{nodeData.content || 'Click to edit...'}
+			</div>
+			<!-- Delete button for note nodes -->
+			<button
+				onclick={(event) => { event.stopPropagation(); handleDelete(); }}
+				aria-label="Delete note"
+				class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity rounded p-1 text-gray-600 hover:text-red-600 hover:bg-white/50"
+			>
+				<Trash2 class="h-3 w-3" />
+			</button>
 		{:else}
 			<!-- Normal mode: show all fields -->
 			<div class="space-y-3">
