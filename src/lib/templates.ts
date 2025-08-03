@@ -122,7 +122,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				label: 'Publication Status',
 				type: 'status',
 				options: ['Draft', 'In Review', 'Accepted', 'Published']
-			},
+			}
 		]
 	},
 
@@ -143,7 +143,8 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				label: 'Status',
 				type: 'status',
 				options: ['To Do', 'Doing', 'Done']
-			}		]
+			}
+		]
 	},
 
 	time: {
@@ -172,9 +173,30 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 		]
 	},
 
+	storage: {
+		id: 'storage',
+		name: 'Storage',
+		color: '#52525b',
+		fields: [
+			{
+				id: 'title',
+				label: 'Storage Name',
+				type: 'text',
+				placeholder: 'Enter storage name...',
+				required: true
+			},
+			{
+				id: 'status',
+				label: 'Status',
+				type: 'status',
+				options: ['To Do', 'Doing', 'Done']
+			}
+		]
+	},
+
 	note: {
 		id: 'note',
-		name: 'Note',
+		name: 'Post-It',
 		color: '#fef08a', // Default yellow post-it color
 		fields: [
 			{
@@ -193,29 +215,9 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 		]
 	},
 
-	storage: {
-		id: 'storage',
-		name: 'Storage',
-		color: '#52525b',
-		fields: [
-			{
-				id: 'title',
-				label: 'Storage Name',
-				type: 'text',
-				placeholder: 'Enter storage name...',
-				required: true
-			},
-			{
-				id: 'status',
-				label: 'Status',
-				type: 'status',
-				options: ['To Do', 'Doing', 'Done']
-			}		]
-	},
-
 	blank: {
 		id: 'blank',
-		name: 'Blank Node',
+		name: 'Blank',
 		color: '#52525b',
 		fields: [
 			{
@@ -224,12 +226,6 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				type: 'text',
 				placeholder: 'Enter title...',
 				required: true
-			},
-			{
-				id: 'description',
-				label: 'Description',
-				type: 'textarea',
-				placeholder: 'Enter description...'
 			}
 		]
 	}
