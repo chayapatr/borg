@@ -1,19 +1,22 @@
 import type { Node, Edge } from '@xyflow/svelte';
 import { getTemplate } from '../templates';
+import { ProjectsService } from './ProjectsService';
 
 export class NodesService {
 	private storageKey: string;
+	private projectsService: ProjectsService;
 
 	constructor(
 		private setNodes: (nodes: Node[]) => void,
 		private getNodes: () => Node[],
 		private setEdges: (edges: Edge[]) => void,
 		private getEdges: () => Edge[],
-		projectSlug?: string
+		private projectSlug?: string
 	) {
 		this.storageKey = projectSlug 
 			? `things-canvas-data-${projectSlug}` 
 			: 'things-canvas-data';
+		this.projectsService = new ProjectsService();
 	}
 
 	addNode(templateType: string, position: { x: number; y: number }) {
@@ -37,7 +40,7 @@ export class NodesService {
 			data: {
 				templateType,
 				nodeData,
-				tasks: [] // Initialize empty tasks array
+				projectSlug: this.projectSlug // Add project slug for task loading
 			}
 		};
 
@@ -49,11 +52,24 @@ export class NodesService {
 	}
 
 	updateNode(nodeId: string, data: any) {
-		const updatedNodes = this.getNodes().map((node) =>
+		const oldNodes = this.getNodes();
+		const oldNode = oldNodes.find(n => n.id === nodeId);
+		const oldStatus = oldNode?.data?.nodeData?.status;
+		
+		const updatedNodes = oldNodes.map((node) =>
 			node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
 		);
+		
 		this.setNodes(updatedNodes);
 		this.saveToStorage(updatedNodes, this.getEdges());
+		
+		// Check if status changed and invalidate cache if needed
+		const newNode = updatedNodes.find(n => n.id === nodeId);
+		const newStatus = newNode?.data?.nodeData?.status;
+		
+		if (oldStatus !== newStatus && this.projectSlug) {
+			this.projectsService.invalidateStatusCache(this.projectSlug);
+		}
 	}
 
 	deleteNode(nodeId: string) {
@@ -114,15 +130,17 @@ export class NodesService {
 			if (stored) {
 				const data = JSON.parse(stored);
 				if (data.nodes) {
-					// Ensure backward compatibility - add tasks array if missing
-					const nodesWithTasks = data.nodes.map((node: any) => ({
+					// Add projectSlug to node data and ensure backward compatibility
+					const nodesWithProjectSlug = data.nodes.map((node: any) => ({
 						...node,
 						data: {
 							...node.data,
-							tasks: node.data.tasks || []
+							projectSlug: this.projectSlug, // Add project slug for task loading
+							// Remove tasks array since they're now stored separately
+							tasks: undefined
 						}
 					}));
-					this.setNodes(nodesWithTasks);
+					this.setNodes(nodesWithProjectSlug);
 				}
 				if (data.edges) {
 					this.setEdges(data.edges);

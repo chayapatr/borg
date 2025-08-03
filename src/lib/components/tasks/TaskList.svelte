@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check, Calendar, StickyNote, Edit, Trash2 } from '@lucide/svelte';
+	import { Calendar, StickyNote, Edit, Trash2 } from '@lucide/svelte';
 	import type { Task } from '../../types/task';
 	import { PeopleService } from '../../services/PeopleService';
 	import { TaskService } from '../../services/TaskService';
@@ -19,13 +19,8 @@
 	
 	let editingTask = $state<Task | null>(null);
 
-	function handleResolveTask(taskId: string) {
-		taskService.resolveTask(nodeId, taskId, projectSlug);
-		onTasksUpdated?.();
-	}
-
-	function handleUnresolveTask(taskId: string) {
-		taskService.unresolveTask(nodeId, taskId, projectSlug);
+	function handleCompleteTask(taskId: string) {
+		taskService.deleteTask(nodeId, taskId, projectSlug);
 		onTasksUpdated?.();
 	}
 
@@ -52,26 +47,20 @@
 <div class="space-y-2">
 	{#each tasks as task}
 		{@const person = peopleService.getPerson(task.assignee)}
-		{@const isResolved = !!task.resolvedAt}
-		{@const overdue = task.dueDate && !isResolved && isOverdue(task.dueDate)}
+		{@const overdue = task.dueDate && isOverdue(task.dueDate)}
 		
-		<div class="group flex items-start gap-2 rounded-lg bg-zinc-800/50 p-3 {isResolved ? 'opacity-60' : ''}">
+		<div class="group flex items-start gap-2 rounded-lg bg-zinc-800/50 p-3">
 			<button
-				onclick={() => isResolved ? handleUnresolveTask(task.id) : handleResolveTask(task.id)}
-				class="mt-0.5 rounded-full border-2 {isResolved 
-					? 'border-green-500 bg-green-500 hover:border-zinc-600 hover:bg-transparent' 
-					: 'border-zinc-600 hover:border-green-500'} p-1 transition-colors"
+				onclick={() => handleCompleteTask(task.id)}
+				class="mt-0.5 rounded-full border-2 border-zinc-600 hover:border-green-500 p-1 transition-colors"
+				title="Mark as complete (delete)"
 			>
-				{#if isResolved}
-					<Check class="h-3 w-3 text-white group-hover:text-zinc-400" />
-				{:else}
-					<div class="h-3 w-3"></div>
-				{/if}
+				<div class="h-3 w-3"></div>
 			</button>
 
 			<div class="flex-1 min-w-0">
 				<div class="flex items-start justify-between gap-2">
-					<p class="text-sm text-zinc-100 {isResolved ? 'line-through' : ''}">{task.title}</p>
+					<p class="text-sm text-zinc-100">{task.title}</p>
 					<div class="flex items-center gap-1">
 						<span class="text-xs text-zinc-400 whitespace-nowrap">
 							{person?.name || 'Unknown'}
@@ -112,11 +101,6 @@
 					</div>
 				{/if}
 
-				{#if isResolved && task.resolvedAt}
-					<div class="mt-1 text-xs text-green-500">
-						Resolved {formatDate(task.resolvedAt)}
-					</div>
-				{/if}
 			</div>
 		</div>
 	{/each}

@@ -16,8 +16,8 @@
 	const taskService = new TaskService();
 	const peopleService = new PeopleService();
 
-	function handleResolveTask(task: TaskWithContext) {
-		taskService.resolveTask(task.nodeId, task.id, projectSlug);
+	function handleCompleteTask(task: TaskWithContext) {
+		taskService.deleteTask(task.nodeId, task.id, projectSlug);
 		onTasksUpdated?.();
 	}
 </script>
@@ -35,7 +35,7 @@
 			</button>
 		</div>
 		<p class="mt-1 text-sm text-zinc-400">
-			{projectTasks.filter(t => !t.resolvedAt).length} active • {projectTasks.filter(t => t.resolvedAt).length} resolved
+			{projectTasks.length} tasks
 		</p>
 	</div>
 
@@ -60,50 +60,30 @@
 			<div class="space-y-4">
 				{#each Object.entries(tasksByNode) as [nodeId, tasks]}
 					{@const nodeTasks = tasks}
-					{@const activeTasks = nodeTasks.filter(t => !t.resolvedAt)}
 					<div class="rounded-lg border border-zinc-800 bg-zinc-800/50 p-3">
 						<h4 class="font-medium text-zinc-200 mb-3">{nodeTasks[0].nodeTitle}</h4>
 						
-						{#if activeTasks.length > 0}
-							<div class="mb-3">
-								<h5 class="text-sm font-medium text-zinc-400 mb-2">Active ({activeTasks.length})</h5>
-								<div class="space-y-2">
-									{#each activeTasks as task}
-										{@const person = peopleService.getPerson(task.assignee)}
-										<div class="flex items-start gap-2 rounded bg-zinc-900/50 p-2">
-											<button
-												onclick={() => handleResolveTask(task)}
-												class="mt-0.5 rounded-full border-2 border-zinc-600 hover:border-green-500 p-1 transition-colors"
-											>
-												<div class="h-3 w-3"></div>
-											</button>
-											<div class="flex-1 min-w-0">
-												<p class="text-sm text-zinc-200">{task.title}</p>
-												<p class="text-xs text-zinc-500">{person?.name || 'Unknown'}</p>
-												{#if task.dueDate}
-													<p class="text-xs text-zinc-500">Due: {new Date(task.dueDate).toLocaleDateString()}</p>
-												{/if}
-											</div>
-										</div>
-									{/each}
+						<div class="space-y-2">
+							{#each nodeTasks as task}
+								{@const person = peopleService.getPerson(task.assignee)}
+								<div class="flex items-start gap-2 rounded bg-zinc-900/50 p-2">
+									<button
+										onclick={() => handleCompleteTask(task)}
+										class="mt-0.5 rounded-full border-2 border-zinc-600 hover:border-green-500 p-1 transition-colors"
+										title="Mark as complete (delete)"
+									>
+										<div class="h-3 w-3"></div>
+									</button>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm text-zinc-200">{task.title}</p>
+										<p class="text-xs text-zinc-500">{person?.name || 'Unknown'}</p>
+										{#if task.dueDate}
+											<p class="text-xs text-zinc-500">Due: {new Date(task.dueDate).toLocaleDateString()}</p>
+										{/if}
+									</div>
 								</div>
-							</div>
-						{/if}
-
-						{#if nodeTasks.filter(t => t.resolvedAt).length > 0}
-							{@const resolvedTasks = nodeTasks.filter(t => t.resolvedAt)}
-							<div>
-								<h5 class="text-sm font-medium text-zinc-500 mb-2">Resolved ({resolvedTasks.length})</h5>
-								<div class="space-y-1">
-									{#each resolvedTasks.slice(0, 3) as task}
-										<div class="text-xs text-zinc-600 line-through">{task.title}</div>
-									{/each}
-									{#if resolvedTasks.length > 3}
-										<div class="text-xs text-zinc-600">+{resolvedTasks.length - 3} more...</div>
-									{/if}
-								</div>
-							</div>
-						{/if}
+							{/each}
+						</div>
 					</div>
 				{/each}
 			</div>

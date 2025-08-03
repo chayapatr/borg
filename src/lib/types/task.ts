@@ -5,7 +5,6 @@ export interface Task {
 	dueDate?: string; // ISO date string
 	notes?: string;
 	createdAt: string; // timestamp
-	resolvedAt?: string; // timestamp when resolved
 }
 
 export interface TaskWithContext extends Task {
@@ -17,8 +16,7 @@ export interface TaskWithContext extends Task {
 }
 
 export interface TaskCounts {
-	active: number;
-	resolved: number;
+	total: number;
 }
 
 export interface PersonTaskCount {

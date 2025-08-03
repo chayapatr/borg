@@ -14,13 +14,35 @@
 
 	// Task-related state
 	const taskService = new TaskService();
-	let tasks = $derived(data.tasks || []);
+	
+	// Get tasks for this node from TaskService instead of embedded data
+	let tasks = $derived.by(() => {
+		// Get project slug from data if available, otherwise extract from URL
+		const projectSlug = data.projectSlug || (() => {
+			if (typeof window !== 'undefined') {
+				const currentPath = window.location.pathname;
+				const pathParts = currentPath.split('/');
+				return pathParts[2]; // /project/[slug]/...
+			}
+			return null;
+		})();
+		
+		const nodeTasks = projectSlug ? 
+			taskService.getNodeTasks(id, projectSlug) : 
+			taskService.getNodeTasks(id);
+		
+		// Debug log to see what's happening
+		if (nodeTasks.length > 0) {
+			console.log(`Node ${id} has ${nodeTasks.length} tasks:`, nodeTasks);
+		}
+		
+		return nodeTasks;
+	});
 
 	// Get person task counts for this node from local tasks data
-	let activeTasks = $derived(tasks.filter((task) => !task.resolvedAt));
 	let personTaskCounts = $derived.by(() => {
 		const counts = new Map<string, number>();
-		activeTasks.forEach((task) => {
+		tasks.forEach((task) => {
 			counts.set(task.assignee, (counts.get(task.assignee) || 0) + 1);
 		});
 		return Array.from(counts.entries()).map(([personId, count]) => ({
@@ -28,7 +50,7 @@
 			count
 		}));
 	});
-	let hasActiveTasks = $derived(activeTasks.length > 0);
+	let hasTasks = $derived(tasks.length > 0);
 
 	// Determine border color based on status
 	let borderColor = $derived.by(() => {
@@ -153,7 +175,7 @@
 		</div>
 
 		<!-- Add task button when no tasks (bottom right corner) -->
-		{#if !hasActiveTasks}
+		{#if !hasTasks}
 			<button
 				onclick={(event) => handleAddTask(event)}
 				class="absolute -bottom-2 -right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-zinc-400 transition-colors hover:bg-zinc-600 hover:text-zinc-300 border border-zinc-600 shadow-sm"
@@ -168,7 +190,7 @@
 	</div>
 
 	<!-- Tasks Section (Stacked to main node) -->
-	{#if hasActiveTasks}
+	{#if hasTasks}
 		<!-- Show person pills in a stacked container -->
 		<div class="min-w-64 rounded-b-lg rounded-t-none border border-t-0 border-zinc-700 bg-zinc-800/50 p-3 shadow -mt-2 pt-5">
 			<div class="flex flex-wrap items-center gap-2">

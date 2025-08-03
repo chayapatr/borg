@@ -16,8 +16,6 @@
 	let { nodeId, nodeTitle, projectSlug, tasks, onClose, onTasksUpdated }: Props = $props();
 
 	const taskService = new TaskService();
-	let activeTasks = $derived(tasks.filter(task => !task.resolvedAt));
-	let resolvedTasks = $derived(tasks.filter(task => task.resolvedAt));
 </script>
 
 <div class="w-80 border-l border-zinc-800 bg-zinc-900 flex flex-col">
@@ -37,7 +35,7 @@
 		</div>
 		<div class="mt-3 flex items-center justify-between">
 			<div class="text-sm text-zinc-400">
-				{activeTasks.length} active • {resolvedTasks.length} resolved
+				{tasks.length} tasks
 			</div>
 			<button
 				onclick={() => {
@@ -77,19 +75,7 @@
 			</div>
 		{:else}
 			<div class="space-y-4">
-				{#if activeTasks.length > 0}
-					<div>
-						<h4 class="text-sm font-medium text-zinc-400 mb-3">Active Tasks ({activeTasks.length})</h4>
-						<TaskList tasks={activeTasks} {nodeId} {projectSlug} {onTasksUpdated} />
-					</div>
-				{/if}
-
-				{#if resolvedTasks.length > 0}
-					<div>
-						<h4 class="text-sm font-medium text-zinc-500 mb-3">Resolved Tasks ({resolvedTasks.length})</h4>
-						<TaskList tasks={resolvedTasks} {nodeId} {projectSlug} {onTasksUpdated} />
-					</div>
-				{/if}
+				<TaskList {tasks} {nodeId} {projectSlug} {onTasksUpdated} />
 			</div>
 		{/if}
 	</div>

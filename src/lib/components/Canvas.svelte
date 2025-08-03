@@ -13,6 +13,7 @@
 	import UniversalNode from './UniversalNode.svelte';
 	import { NodesService } from '../services/NodesService';
 	import { ProjectsService } from '../services/ProjectsService';
+	import { TaskService } from '../services/TaskService';
 	import CreateNodeModal from './CreateNodeModal.svelte';
 	import EditPanel from './EditPanel.svelte';
 	import NodeTaskSidebar from './tasks/NodeTaskSidebar.svelte';
@@ -295,21 +296,26 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 		}
 	}
 
-	function handleAddTaskComplete() {
-		showAddTaskModal = false;
-		// Reload nodes to reflect the new task
-		nodesService.loadFromStorage();
+
+	// Function to refresh task sidebar data
+	function handleTasksUpdated() {
+		if (showNodeTaskSidebar && taskSidebarNodeId) {
+			// Refresh tasks from TaskService instead of node data
+			const taskService = new TaskService();
+			const updatedTasks = taskService.getNodeTasks(taskSidebarNodeId, projectSlug);
+			taskSidebarTasks = [...updatedTasks];
+			
+			// Also refresh the node display by triggering a re-render
+			nodesService.loadFromStorage();
+		}
 	}
 
-	// Effect to keep task sidebar in sync with node data changes
-	$effect(() => {
-		if (showNodeTaskSidebar && taskSidebarNodeId) {
-			const node = nodes.find(n => n.id === taskSidebarNodeId);
-			if (node && node.data && Array.isArray(node.data.tasks)) {
-				taskSidebarTasks = [...node.data.tasks]; // Sync tasks when nodes change
-			}
-		}
-	});
+	// Handle add task completion
+	function handleAddTaskComplete() {
+		showAddTaskModal = false;
+		// Refresh task sidebar if it's open
+		handleTasksUpdated();
+	}
 
 	function createSyncedProjectNode(position: { x: number; y: number }) {
 		if (!projectSlug || !projectsService) {
@@ -464,5 +470,16 @@ import AddTaskModal from './tasks/AddTaskModal.svelte';
 		{projectSlug}
 		onClose={() => (showAddTaskModal = false)}
 		onTaskAdded={handleAddTaskComplete}
+	/>
+{/if}
+
+{#if showNodeTaskSidebar}
+	<NodeTaskSidebar
+		nodeId={taskSidebarNodeId}
+		nodeTitle={taskSidebarNodeTitle}
+		tasks={taskSidebarTasks}
+		{projectSlug}
+		onClose={() => (showNodeTaskSidebar = false)}
+		onTasksUpdated={handleTasksUpdated}
 	/>
 {/if}

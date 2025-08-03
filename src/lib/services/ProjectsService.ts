@@ -12,6 +12,8 @@ export interface Project {
 
 export class ProjectsService {
 	private storageKey = 'things-projects';
+	private statusCountsCache = new Map<string, { counts: { todo: number; doing: number; done: number }, lastUpdated: number }>();
+	private readonly CACHE_DURATION = 10000; // 10 seconds
 
 	getAllProjects(): Project[] {
 		try {
@@ -87,6 +89,16 @@ export class ProjectsService {
 		this.updateProject(slug, { nodeCount: count });
 	}
 
+	// Invalidate status cache for a project
+	invalidateStatusCache(slug: string): void {
+		this.statusCountsCache.delete(slug);
+	}
+
+	// Invalidate all status caches
+	invalidateAllStatusCaches(): void {
+		this.statusCountsCache.clear();
+	}
+
 	getGlobalStatusCounts(): { todo: number; doing: number; done: number } {
 		const projects = this.getAllProjects();
 		const counts = { todo: 0, doing: 0, done: 0 };
@@ -103,9 +115,22 @@ export class ProjectsService {
 
 	getProjectStatusCounts(slug: string): { todo: number; doing: number; done: number } {
 		try {
+			// Check cache first
+			const cached = this.statusCountsCache.get(slug);
+			const now = Date.now();
+			
+			if (cached && (now - cached.lastUpdated) < this.CACHE_DURATION) {
+				return cached.counts;
+			}
+
+			// Calculate fresh counts
 			const storageKey = `things-canvas-data-${slug}`;
 			const stored = localStorage.getItem(storageKey);
-			if (!stored) return { todo: 0, doing: 0, done: 0 };
+			if (!stored) {
+				const emptyCounts = { todo: 0, doing: 0, done: 0 };
+				this.statusCountsCache.set(slug, { counts: emptyCounts, lastUpdated: now });
+				return emptyCounts;
+			}
 			
 			const data = JSON.parse(stored);
 			const nodes = data.nodes || [];
@@ -121,6 +146,9 @@ export class ProjectsService {
 					counts.done++;
 				}
 			});
+			
+			// Cache the result
+			this.statusCountsCache.set(slug, { counts, lastUpdated: now });
 			
 			return counts;
 		} catch (error) {
