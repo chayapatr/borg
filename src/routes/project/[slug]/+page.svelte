@@ -120,59 +120,59 @@
 {:else if project}
 	<div class="flex h-screen w-full flex-col">
 		<!-- Project Header -->
-		<div class="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6 py-4">
+		<div class="flex h-16 items-center justify-between border-b border-zinc-800 bg-borg-brown px-6">
 			<div class="flex items-center gap-4">
 				<button
 					onclick={handleBackToBrowser}
-					class="flex items-center gap-2 text-zinc-400 transition-colors hover:text-zinc-300"
+					class="flex items-center gap-2 text-black transition-colors hover:text-borg-violet"
 				>
 					<ChevronLeft class="h-4 w-4" />
 					Back to Projects
 				</button>
 				<div class="h-6 w-px bg-zinc-700"></div>
 				<div>
-					<h1 class="text-lg font-semibold text-zinc-100">{project.title}</h1>
-					{#if project.description}
+					<h1 class="text-lg font-semibold text-black">{project.title}</h1>
+					<!-- {#if project.description}
 						<p class="text-sm text-zinc-400">{project.description}</p>
-					{/if}
+					{/if} -->
 				</div>
 			</div>
 			<div class="flex items-center gap-4">
 				<!-- Status Counts -->
 				<div class="flex items-center gap-3">
 					<div class="flex items-center gap-1">
-						<span class="text-xs text-zinc-400">To Do</span>
-						<span class="rounded-full bg-purple-500/20 px-2 py-1 text-xs text-purple-400"
+						<span class="text-xs text-black">To Do</span>
+						<span class="rounded-full border border-black bg-purple-400 px-2 py-1 text-xs"
 							>{statusCounts.todo}</span
 						>
 					</div>
 					<div class="flex items-center gap-1">
-						<span class="text-xs text-zinc-400">Doing</span>
-						<span class="rounded-full bg-blue-500/20 px-2 py-1 text-xs text-blue-400"
+						<span class="text-xs text-black">Doing</span>
+						<span class="rounded-full border border-black bg-blue-400 px-2 py-1 text-xs"
 							>{statusCounts.doing}</span
 						>
 					</div>
 					<div class="flex items-center gap-1">
-						<span class="text-xs text-zinc-400">Done</span>
-						<span class="rounded-full bg-green-500/20 px-2 py-1 text-xs text-green-400"
+						<span class="text-xs text-black">Done</span>
+						<span class="rounded-full border border-black bg-green-400 px-2 py-1 text-xs"
 							>{statusCounts.done}</span
 						>
 					</div>
 				</div>
 
-				<div class="h-4 w-px bg-zinc-700"></div>
+				<div class="h-4 w-px bg-black"></div>
 
 				<button
 					onclick={() => (showTaskSidebar = !showTaskSidebar)}
-					class="flex items-center gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-zinc-100"
+					class="flex items-center gap-2 rounded-lg bg-black px-3 py-2 text-sm text-white transition-colors hover:bg-borg-orange"
 				>
 					<CheckSquare class="h-4 w-4" />
 					Tasks ({projectTasks.filter((t) => !t.resolvedAt).length})
 				</button>
 
-				<div class="h-4 w-px bg-zinc-700"></div>
+				<div class="h-4 w-px bg-black"></div>
 
-				<div class="text-sm text-zinc-500">
+				<div class="text-sm text-black">
 					<span class="capitalize">{project.status}</span>
 				</div>
 			</div>
@@ -189,11 +189,7 @@
 
 			<!-- Task Sidebar -->
 			{#if showTaskSidebar && projectSlug}
-				<TaskSidebar
-					projectSlug={projectSlug}
-					{projectTasks}
-					onClose={() => (showTaskSidebar = false)}
-				/>
+				<TaskSidebar {projectSlug} {projectTasks} onClose={() => (showTaskSidebar = false)} />
 			{/if}
 		</div>
 	</div>

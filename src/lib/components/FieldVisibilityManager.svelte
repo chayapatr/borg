@@ -15,7 +15,7 @@
 	function toggleFieldVisibility(fieldId: string, isCustom: boolean = false) {
 		if (isCustom) {
 			// Update custom field visibility
-			const fieldIndex = customFields.findIndex(f => f.id === fieldId);
+			const fieldIndex = customFields.findIndex((f) => f.id === fieldId);
 			if (fieldIndex !== -1) {
 				customFields[fieldIndex].showInDisplay = !customFields[fieldIndex].showInDisplay;
 				customFields = [...customFields]; // Trigger reactivity
@@ -40,14 +40,14 @@
 	}
 
 	let allFields = $derived([
-		...templateFields.filter(f => f.id !== 'status').map(f => ({ ...f, isCustom: false })),
-		...customFields.filter(f => f.id !== 'status').map(f => ({ ...f, isCustom: true }))
+		...templateFields.filter((f) => f.id !== 'status').map((f) => ({ ...f, isCustom: false })),
+		...customFields.filter((f) => f.id !== 'status').map((f) => ({ ...f, isCustom: true }))
 	]);
 </script>
 
-<div class="border-t border-zinc-700 pt-4 mt-4">
-	<div class="flex items-center justify-between mb-3">
-		<h4 class="text-sm font-medium text-zinc-300">Field Visibility</h4>
+<div class="mt-4 border-t border-zinc-700 pt-4">
+	<div class="mb-3 flex items-center justify-between">
+		<h4 class="text-sm font-medium text-black">Field Visibility</h4>
 		<span class="text-xs text-zinc-500">Control which fields show in display mode</span>
 	</div>
 
@@ -55,25 +55,27 @@
 		<div class="space-y-2">
 			{#each allFields as field}
 				{@const isVisible = getFieldVisibility(field, field.isCustom)}
-				<div class="flex items-center justify-between bg-zinc-800 rounded px-3 py-2">
+				<div
+					class="flex items-center justify-between rounded border border-black bg-white px-3 py-2"
+				>
 					<div class="flex items-center gap-2">
-						<span class="text-sm text-zinc-300">{field.label}</span>
+						<span class="text-sm text-black">{field.label}</span>
 						{#if field.isCustom}
-							<span class="text-xs text-zinc-500 bg-zinc-700 px-1 rounded">custom</span>
+							<span class="rounded bg-borg-brown px-1 text-xs text-black">custom</span>
 						{/if}
 					</div>
 					<button
 						onclick={() => toggleFieldVisibility(field.id, field.isCustom)}
-						class="flex items-center gap-1 text-xs transition-colors {isVisible 
-							? 'text-green-400 hover:text-green-300' 
+						class="flex items-center gap-1 text-xs transition-colors {isVisible
+							? 'text-borg-green hover:text-borg-orange'
 							: 'text-zinc-500 hover:text-zinc-400'}"
 						aria-label={isVisible ? 'Hide field' : 'Show field'}
 					>
 						{#if isVisible}
-							<Eye class="w-3 h-3" />
+							<Eye class="h-3 w-3" />
 							<span>Visible</span>
 						{:else}
-							<EyeOff class="w-3 h-3" />
+							<EyeOff class="h-3 w-3" />
 							<span>Hidden</span>
 						{/if}
 					</button>

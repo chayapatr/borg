@@ -20,11 +20,11 @@
 
 	let showTagInput = $state(false);
 	let editingButton = $state(false);
-	
+
 	// State for people data
 	let allPeople = $state<any[]>([]);
 	let peopleMap = $state<Map<string, any>>(new Map());
-	
+
 	// State for timeline data
 	let allEvents = $state<any[]>([]);
 	let eventsMap = $state<Map<string, any>>(new Map());
@@ -35,14 +35,14 @@
 			const result = peopleService.getAllPeople();
 			const people = result instanceof Promise ? await result : result;
 			allPeople = people;
-			
+
 			// Create a map for quick lookup
 			const map = new Map();
-			people.forEach(person => map.set(person.id, person));
+			people.forEach((person) => map.set(person.id, person));
 			peopleMap = map;
 		})();
 	});
-	
+
 	// Load timeline data reactively
 	$effect(() => {
 		(async () => {
@@ -50,10 +50,10 @@
 				const result = timelineService.getEventsSortedByDate();
 				const events = result instanceof Promise ? await result : result;
 				allEvents = events;
-				
+
 				// Create a map for quick lookup
 				const map = new Map();
-				events.forEach(event => map.set(event.id, event));
+				events.forEach((event) => map.set(event.id, event));
 				eventsMap = map;
 			}
 		})();
@@ -88,15 +88,15 @@
 	function getStatusColor(status: string): string {
 		const statusColors: Record<string, string> = {
 			// Universal statuses (To Do/Doing/Done)
-			'To Do': 'bg-purple-500/20 text-purple-400',
-			Doing: 'bg-blue-500/20 text-blue-400',
-			Done: 'bg-green-500/20 text-green-400',
+			'To Do': 'bg-purple-400 text-black',
+			Doing: 'bg-sky-400 text-black',
+			Done: 'bg-green-400 text-black',
 
 			// Publication statuses for papers
 			Draft: 'bg-gray-500/20 text-gray-400',
 			'In Review': 'bg-yellow-500/20 text-yellow-400',
 			Accepted: 'bg-green-500/20 text-green-400',
-			Published: 'bg-blue-500/20 text-blue-400'
+			Published: 'bg-borg-blue/20 text-blue-400'
 		};
 
 		return statusColors[status] || 'bg-zinc-500/20 text-zinc-600';
@@ -118,7 +118,7 @@
 				type="text"
 				bind:value
 				placeholder={field.placeholder}
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-black bg-white px-3 py-2 text-black placeholder-zinc-400 focus:border-borg-blue focus:outline-none"
 			/>
 		{/if}
 	{:else if field.type === 'textarea'}
@@ -131,7 +131,7 @@
 				bind:value
 				placeholder={field.placeholder}
 				rows="3"
-				class="w-full resize-none rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+				class="w-full resize-none rounded border border-zinc-700 bg-white px-3 py-2 text-black placeholder-zinc-400 focus:border-borg-blue focus:outline-none"
 			></textarea>
 		{/if}
 	{:else if field.type === 'tags'}
@@ -140,7 +140,7 @@
 				{#if value && Array.isArray(value) && value.length > 0}
 					{#each value as tag}
 						<span
-							class="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2 py-1 text-xs text-white"
+							class="inline-flex items-center gap-1 rounded-full bg-black px-2 py-1 text-xs text-white"
 						>
 							{tag}
 							{#if !readonly}
@@ -155,7 +155,7 @@
 						<button
 							type="button"
 							onclick={() => (showTagInput = !showTagInput)}
-							class="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-700"
+							class="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-white px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-700"
 						>
 							<span>+</span>
 						</button>
@@ -166,7 +166,7 @@
 								placeholder={field.placeholder}
 								onkeydown={handleTagsInput}
 								onblur={() => (showTagInput = false)}
-								class="absolute top-0 left-0 z-10 w-32 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+								class="absolute top-0 left-0 z-10 w-32 rounded border border-zinc-700 bg-white px-2 py-1 text-xs text-black placeholder-zinc-400 focus:border-borg-blue focus:outline-none"
 								autofocus
 							/>
 						{/if}
@@ -194,10 +194,10 @@
 						<button
 							type="button"
 							onclick={() => (value = value === option ? '' : option)}
-							class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors {value ===
+							class="inline-flex items-center rounded-full border border-black px-3 py-1 text-xs font-medium transition-colors {value ===
 							option
 								? getStatusColor(option)
-								: 'bg-zinc-700 text-zinc-600 hover:bg-zinc-600'}"
+								: 'bg-zinc-100 text-black hover:bg-zinc-300'}"
 						>
 							{option}
 						</button>
@@ -210,7 +210,7 @@
 			{#if value}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
 					{field.buttonText || 'Open Link'}
 				</button>
@@ -235,7 +235,7 @@
 				type="url"
 				bind:value
 				placeholder={field.placeholder}
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-zinc-700 bg-white px-3 py-2 text-black placeholder-zinc-400 focus:border-borg-blue focus:outline-none"
 			/>
 		{/if}
 	{:else if field.type === 'date'}
@@ -266,7 +266,7 @@
 			<input
 				type="date"
 				bind:value
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-zinc-700 bg-white px-3 py-2 text-black focus:border-borg-blue focus:outline-none"
 			/>
 		{/if}
 	{:else if field.type === 'button'}
@@ -274,7 +274,7 @@
 			{#if value}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
 					{field.buttonText || 'Open'}
 				</button>
@@ -297,7 +297,7 @@
 				type="url"
 				bind:value
 				placeholder="Enter URL..."
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-black bg-white px-3 py-2 text-black placeholder-zinc-400 focus:border-borg-blue focus:outline-none"
 			/>
 		{/if}
 	{:else if field.type === 'people-selector'}
@@ -308,7 +308,7 @@
 						{@const person = peopleMap.get(personId)}
 						{#if person}
 							<span
-								class="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2 py-1 text-xs text-white"
+								class="inline-flex items-center gap-1 rounded-full bg-black px-2 py-1 text-xs text-white"
 							>
 								{person.name}
 								{#if mode === 'edit'}
@@ -339,7 +339,7 @@
 									target.value = '';
 								}
 							}}
-							class="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-black focus:border-blue-500 focus:outline-none"
+							class="rounded border border-zinc-700 bg-white px-2 py-1 text-xs text-black focus:border-borg-blue focus:outline-none"
 						>
 							<option value="">Add person...</option>
 							{#each availablePeople as person}
@@ -370,12 +370,13 @@
 		{:else}
 			<select
 				bind:value
-				class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-black focus:border-blue-500 focus:outline-none"
+				class="w-full rounded border border-zinc-700 bg-white px-3 py-2 text-black focus:border-borg-blue focus:outline-none"
 			>
 				<option value="">Select timeline event...</option>
 				{#each allEvents as event}
 					<option value={event.id}>
-						{event.title} ({new Date(event.date).toLocaleDateString()}) - {event.templateType || 'Event'}
+						{event.title} ({new Date(event.date).toLocaleDateString()}) - {event.templateType ||
+							'Event'}
 					</option>
 				{/each}
 			</select>

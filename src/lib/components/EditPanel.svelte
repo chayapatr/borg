@@ -76,14 +76,16 @@
 
 {#if isOpen}
 	<!-- Panel -->
-	<div class="flex w-96 flex-col border-l border-zinc-800 bg-zinc-900 shadow-2xl">
+	<div
+		class="flex h-[calc(100vh-64px)] w-96 flex-col overflow-scroll border-l border-black bg-white shadow-2xl"
+	>
 		<!-- Header -->
 		<div class="border-b border-zinc-800 p-4">
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-2">
 					<!-- <h3 class="font-semibold text-zinc-100">Edit {template.name}</h3> -->
 					<span
-						class="rounded-md border bg-zinc-800 px-2 py-1 text-xs font-medium text-zinc-400"
+						class="rounded-md border bg-white px-2 py-1 text-xs font-medium"
 						style="border-color: {template.color};"
 					>
 						{template.name}
@@ -136,14 +138,14 @@
 				onclick={handleSave}
 				class="{templateType === 'project'
 					? 'w-full'
-					: 'flex-1'} rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					: 'flex-1'} rounded-lg bg-borg-violet px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-borg-blue focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 			>
 				Save Changes
 			</button>
 			{#if templateType !== 'project'}
 				<button
 					onclick={handleDelete}
-					class="rounded-lg border border-red-600 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-600/10 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="rounded-lg border border-borg-orange px-4 py-2 text-sm font-medium text-borg-orange transition-colors hover:bg-borg-orange hover:text-white focus:ring-2 focus:ring-borg-orange focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
 					Delete
 				</button>

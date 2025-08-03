@@ -2,10 +2,7 @@
 	import { Plus, X } from '@lucide/svelte';
 	import type { TemplateField } from '../templates';
 
-	let {
-		customFields = $bindable(),
-		nodeData = $bindable()
-	} = $props<{
+	let { customFields = $bindable(), nodeData = $bindable() } = $props<{
 		customFields: TemplateField[];
 		nodeData: Record<string, any>;
 	}>();
@@ -27,7 +24,7 @@
 		if (!newFieldLabel.trim()) return;
 
 		const fieldId = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-		
+
 		const newField: TemplateField = {
 			id: fieldId,
 			label: newFieldLabel.trim(),
@@ -42,7 +39,7 @@
 		}
 
 		customFields = [...customFields, newField];
-		
+
 		// Initialize the field value in nodeData
 		if (newFieldType === 'tags') {
 			nodeData[fieldId] = [];
@@ -57,7 +54,7 @@
 	}
 
 	function removeCustomField(fieldId: string) {
-		customFields = customFields.filter(f => f.id !== fieldId);
+		customFields = customFields.filter((f) => f.id !== fieldId);
 		// Remove the field data
 		delete nodeData[fieldId];
 		nodeData = { ...nodeData }; // Trigger reactivity
@@ -74,42 +71,38 @@
 	}
 </script>
 
-<div class="border-t border-zinc-700 pt-4 mt-4">
-	<div class="flex items-center justify-between mb-3">
-		<h4 class="text-sm font-medium text-zinc-300">Custom Fields</h4>
+<div class="mt-4 border-t border-zinc-700 pt-4">
+	<div class="mb-3 flex items-center justify-between">
+		<h4 class="text-sm font-medium text-black">Custom Fields</h4>
 		<button
 			onclick={() => (showAddField = !showAddField)}
-			class="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-300 transition-colors"
+			class="flex items-center gap-1 text-xs text-zinc-600 transition-colors hover:text-borg-blue"
 		>
-			<Plus class="w-3 h-3" />
+			<Plus class="h-3 w-3" />
 			Add Field
 		</button>
 	</div>
 
 	{#if showAddField}
-		<div class="bg-zinc-800 rounded-lg p-3 mb-3">
+		<div class="mb-3 rounded-lg border border-black bg-borg-brown p-3">
 			<div class="space-y-3">
 				<div>
-					<label class="block text-xs font-medium text-zinc-300 mb-1">
-						Field Label
-					</label>
+					<label class="mb-1 block text-xs font-medium text-zinc-300"> Field Label </label>
 					<input
 						bind:value={newFieldLabel}
 						type="text"
 						placeholder="Enter field name..."
 						onkeydown={handleKeyDown}
-						class="w-full rounded border border-zinc-600 bg-zinc-700 px-2 py-1 text-sm text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+						class="w-full rounded border border-black bg-white px-2 py-1 text-sm text-black placeholder-zinc-500 focus:border-borg-blue focus:outline-none"
 						autofocus
 					/>
 				</div>
-				
+
 				<div>
-					<label class="block text-xs font-medium text-zinc-300 mb-1">
-						Field Type
-					</label>
+					<label class="mb-1 block text-xs font-medium text-black"> Field Type </label>
 					<select
 						bind:value={newFieldType}
-						class="w-full rounded border border-zinc-600 bg-zinc-700 px-2 py-1 text-sm text-zinc-100 focus:border-blue-500 focus:outline-none"
+						class="w-full rounded border border-black bg-white px-2 py-1 text-sm text-black focus:border-borg-blue focus:outline-none"
 					>
 						{#each fieldTypes as type}
 							<option value={type.value}>{type.label}</option>
@@ -121,7 +114,7 @@
 					<button
 						onclick={addCustomField}
 						disabled={!newFieldLabel.trim()}
-						class="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-xs transition-colors"
+						class="flex-1 rounded bg-black px-3 py-1 text-xs text-white transition-colors hover:bg-borg-blue disabled:cursor-not-allowed disabled:bg-zinc-600"
 					>
 						Add Field
 					</button>
@@ -131,7 +124,7 @@
 							newFieldLabel = '';
 							newFieldType = 'text';
 						}}
-						class="bg-zinc-600 hover:bg-zinc-500 text-zinc-300 px-3 py-1 rounded text-xs transition-colors"
+						class="rounded bg-zinc-600 px-3 py-1 text-xs text-white transition-colors hover:bg-zinc-500"
 					>
 						Cancel
 					</button>
@@ -143,16 +136,18 @@
 	{#if customFields.length > 0}
 		<div class="space-y-2">
 			{#each customFields as field}
-				<div class="flex items-center justify-between bg-zinc-800 rounded px-2 py-1">
-					<span class="text-sm text-zinc-300">{field.label}</span>
+				<div
+					class="box-shadow-black flex items-center justify-between rounded border border-black bg-white px-2 py-1"
+				>
+					<span class="text-sm text-black">{field.label}</span>
 					<div class="flex items-center gap-2">
 						<span class="text-xs text-zinc-500 capitalize">{field.type}</span>
 						<button
 							onclick={() => removeCustomField(field.id)}
-							class="text-zinc-500 hover:text-red-400 transition-colors"
+							class="text-zinc-500 transition-colors hover:text-red-400"
 							aria-label="Remove field"
 						>
-							<X class="w-3 h-3" />
+							<X class="h-3 w-3" />
 						</button>
 					</div>
 				</div>

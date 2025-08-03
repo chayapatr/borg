@@ -6,6 +6,7 @@
 	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import AddPersonModal from './AddPersonModal.svelte';
 	import type { TaskWithContext } from '../../types/task';
+	import { PersonStandingIcon } from '@lucide/svelte';
 
 	let peopleService: IPeopleService;
 	let taskService: ITaskService;
@@ -69,7 +70,9 @@
 				if (success) {
 					await loadPeople();
 				} else {
-					alert('Cannot delete authenticated users. They must be deactivated through user management.');
+					alert(
+						'Cannot delete authenticated users. They must be deactivated through user management.'
+					);
 				}
 			} catch (error) {
 				console.error('Failed to delete person:', error);
@@ -105,26 +108,20 @@
 
 <div class="flex flex-1 flex-col">
 	<!-- Header -->
-	<div class="border-b border-zinc-800 p-6">
+	<div class=" border-b bg-white px-6 py-4">
 		<div class="flex items-center justify-between">
 			<div>
-				<h2 class="text-2xl font-semibold text-zinc-100">People</h2>
-				<p class="mt-1 text-zinc-400">Manage collaborators and team members</p>
+				<h2 class="rounded-md text-4xl font-semibold">👽 PEOPLE</h2>
+				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
-			<button
+			<!-- <button
+				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-green px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
+				"
 				onclick={() => (showAddModal = true)}
-				class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-500"
 			>
-				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 4v16m8-8H4"
-					/>
-				</svg>
-				Add Person
-			</button>
+				<Plus class="h-4 w-4" />
+				New Project
+			</button> -->
 		</div>
 	</div>
 
@@ -134,64 +131,63 @@
 			bind:value={searchQuery}
 			type="text"
 			placeholder="Search people..."
-			class="w-full max-w-md rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+			class="w-full rounded border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
 		/>
 	</div>
 
 	<!-- People List -->
 	<div class="flex-1 overflow-y-auto px-6 pb-6">
-		{#if filteredPeople.length === 0}
+		{#if filteredPeople.length == 0}
 			<div class="flex h-64 flex-col items-center justify-center text-center">
-				<div class="mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-zinc-800">
-					<svg class="h-8 w-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<div class="mb-4 flex h-16 w-16 items-center justify-center rounded-lg">
+					<!-- <svg class="h-8 w-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
 							stroke-width="2"
 							d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
 						/>
-					</svg>
+					</svg> -->
+					<PersonStandingIcon class="h-8 w-8" />
 				</div>
-				<h3 class="mb-2 text-lg font-medium text-zinc-300">
+				<h3 class="mb-2 text-xl font-medium text-black">
 					{searchQuery ? 'No people found' : 'No people yet'}
 				</h3>
-				<p class="mb-4 text-zinc-500">
+				<!-- <p class="mb-4 text-zinc-500">
 					{searchQuery
 						? 'Try a different search term'
 						: 'Add your first collaborator to get started'}
-				</p>
-				{#if !searchQuery}
+				</p> -->
+				<!-- {#if !searchQuery}
 					<button
 						onclick={() => (showAddModal = true)}
 						class="rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-500"
 					>
 						Add Person
 					</button>
-				{/if}
+				{/if} -->
 			</div>
 		{:else}
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each filteredPeople as person}
 					{@const tasks = personTasks.get(person.id) || []}
-					{@const activeTaskCount = tasks.filter(t => !t.resolvedAt).length}
-					<div
-						class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition-colors hover:border-zinc-700"
-					>
-						<div class="mb-3 flex items-start justify-between">
+					{@const activeTaskCount = tasks.filter((t) => !t.resolvedAt).length}
+					<div class="box-shadow-black rounded-lg border border-zinc-800 bg-white p-4">
+						<div class="mb-4 flex items-start justify-between">
 							<div class="flex items-center gap-3">
 								<div
-									class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600"
+									class="flex h-10 w-10 items-center justify-center rounded-full border border-black bg-borg-green"
 								>
 									<span class="text-sm font-medium text-white">{getInitials(person.name)}</span>
 								</div>
 								<div>
-									<h3 class="font-medium text-zinc-100">{person.name}</h3>
+									<h3 class="font-medium text-black">{person.name}</h3>
 									{#if person.email}
-										<p class="text-sm text-zinc-400">{person.email}</p>
+										<p class="text-sm text-zinc-600">{person.email}</p>
 									{/if}
 								</div>
 							</div>
-							<button
+							<!-- <button
 								onclick={() => handleDeletePerson(person.id)}
 								class="text-zinc-500 transition-colors hover:text-rose-400"
 								aria-label="Delete person"
@@ -204,24 +200,26 @@
 										d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
 									/>
 								</svg>
-							</button>
+							</button> -->
 						</div>
 
 						<!-- Tasks Section -->
 						{#if activeTaskCount > 0}
-							<div class="mb-3 rounded-lg bg-zinc-800/50 p-3">
+							<div class="rounded-lg border border-black bg-borg-orange p-3">
 								<div class="mb-2 flex items-center justify-between">
-									<span class="text-sm font-medium text-zinc-300">Active Tasks</span>
-									<span class="rounded-full bg-rose-500/20 px-2 py-1 text-xs text-rose-400">{activeTaskCount}</span>
+									<span class="text-sm font-semibold text-white">ACTIVE TASKS</span>
+									<span class="rounded-full border border-black bg-white px-2 py-1 text-xs"
+										>{activeTaskCount}</span
+									>
 								</div>
 								<div class="space-y-1">
-									{#each tasks.filter(t => !t.resolvedAt).slice(0, 3) as task}
-										<div class="text-xs text-zinc-400">
-											<span class="font-medium text-zinc-300">{task.projectTitle || 'Unknown'}</span>: {task.title}
+									{#each tasks.filter((t) => !t.resolvedAt).slice(0, 3) as task}
+										<div class="text-xs text-white">
+											<span class="font-medium text-white">{task.projectTitle || 'Unknown'}</span>: {task.title}
 										</div>
 									{/each}
 									{#if activeTaskCount > 3}
-										<div class="text-xs text-zinc-500">
+										<div class="text-xs text-white">
 											+{activeTaskCount - 3} more...
 										</div>
 									{/if}
@@ -229,9 +227,9 @@
 							</div>
 						{/if}
 
-						<div class="text-xs text-zinc-500">
-							Added {formatDate(person.createdAt)}
-						</div>
+						<!-- <div class="text-xs text-zinc-500">
+							Added {formatDate(person.createdAt.seconds)}
+						</div> -->
 					</div>
 				{/each}
 			</div>

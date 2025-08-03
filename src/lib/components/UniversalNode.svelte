@@ -187,7 +187,7 @@
 		{#if !hasTasks}
 			<button
 				onclick={(event) => handleAddTask(event)}
-				class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-zinc-600 bg-zinc-700 text-zinc-400 shadow-sm transition-colors hover:bg-zinc-600 hover:text-zinc-300"
+				class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
 			>
 				<Plus class="h-3 w-3" />
 			</button>
@@ -202,7 +202,7 @@
 	{#if hasTasks}
 		<!-- Show person pills in a stacked container -->
 		<div
-			class="-mt-2 min-w-64 rounded-t-none rounded-b-lg border border-t-0 border-black bg-zinc-700 p-3 pt-5 shadow"
+			class="-mt-2 min-w-64 rounded-t-none rounded-b-lg border border-t-0 border-black bg-borg-brown p-3 pt-5 shadow"
 		>
 			<div class="flex flex-wrap items-center gap-2">
 				{#each personTaskCounts as personTaskCount}
@@ -210,7 +210,7 @@
 				{/each}
 				<button
 					onclick={(event) => handleAddTask(event)}
-					class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-zinc-400 transition-colors hover:bg-zinc-600 hover:text-zinc-300"
+					class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
 				>
 					<Plus class="h-4 w-4" />
 				</button>

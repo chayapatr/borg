@@ -76,15 +76,15 @@
 
 <div class="flex flex-1 flex-col">
 	<!-- Header -->
-	<div class="border-b border-black bg-black px-6 py-4">
+	<div class=" border-b bg-white px-6 py-4">
 		<div class="flex items-center justify-between">
 			<div>
-				<h2 class="text-2xl font-semibold text-white">🚀 Projects</h2>
+				<h2 class="rounded-md text-4xl font-semibold">🚀 PROJECTS</h2>
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
 			<button
 				onclick={() => (showCreateModal = true)}
-				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-violet px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-borg-green
+				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-violet px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
 				"
 			>
 				<Plus class="h-4 w-4" />
@@ -142,15 +142,15 @@
 						{#if projectCounts[project.slug]}
 							<div class="mb-3 flex items-center gap-2">
 								<div class="flex items-center gap-1">
-									<span class="h-2 w-2 rounded-full border border-black bg-borg-purple"></span>
+									<span class="h-2 w-2 rounded-full border border-black bg-sky-500"></span>
 									<span class="text-xs">{projectCounts[project.slug].todo}</span>
 								</div>
 								<div class="flex items-center gap-1">
-									<span class="h-2 w-2 rounded-full border border-black bg-borg-blue"></span>
+									<span class="h-2 w-2 rounded-full border border-black bg-purple-500"></span>
 									<span class="text-xs">{projectCounts[project.slug].doing}</span>
 								</div>
 								<div class="flex items-center gap-1">
-									<span class="h-2 w-2 rounded-full border border-black bg-borg-green"></span>
+									<span class="h-2 w-2 rounded-full border border-black bg-green-500"></span>
 									<span class="text-xs">{projectCounts[project.slug].done}</span>
 								</div>
 							</div>

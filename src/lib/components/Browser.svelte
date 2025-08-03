@@ -43,12 +43,14 @@
 	}
 </script>
 
-<div class="flex h-screen w-full bg-borg-white">
+<div class="flex h-full min-h-screen w-full bg-borg-white">
 	<!-- Sidebar -->
-	<div class="flex w-64 flex-col border-r border-zinc-800 bg-borg-beige">
+	<div
+		class="fixed flex h-screen min-h-screen w-64 flex-col border-r border-zinc-800 bg-borg-brown"
+	>
 		<!-- Header -->
 		<div class="p-6">
-			<img src="BORG.svg" class="h-12" alt="" />
+			<img src="BORG.svg" class="w-3/4" alt="" />
 			<!-- <p class="mt-1 text-sm text-zinc-400">MIT Media Lab</p> -->
 
 			<!-- Status Counts -->
@@ -125,7 +127,7 @@
 	</div>
 
 	<!-- Main Content -->
-	<div class="flex flex-1 flex-col">
+	<div class="ml-64 flex h-full flex-1">
 		{#if activeTab === 'projects'}
 			<ProjectsTab onCountsUpdate={updateGlobalCounts} />
 		{:else if activeTab === 'people'}

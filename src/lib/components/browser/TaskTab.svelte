@@ -32,24 +32,24 @@
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
 			const matchingTasks = [];
-			
+
 			for (const task of filtered) {
 				const titleMatch = task.title.toLowerCase().includes(query);
 				const nodeMatch = task.nodeTitle.toLowerCase().includes(query);
 				const projectMatch = task.projectTitle?.toLowerCase().includes(query);
-				
+
 				let personMatch = false;
 				if (task.assignee) {
 					const result = peopleService.getPerson(task.assignee);
 					const person = result instanceof Promise ? await result : result;
 					personMatch = person?.name.toLowerCase().includes(query) || false;
 				}
-				
+
 				if (titleMatch || nodeMatch || projectMatch || personMatch) {
 					matchingTasks.push(task);
 				}
 			}
-			
+
 			filtered = matchingTasks;
 		}
 
@@ -85,20 +85,20 @@
 	// Get task stats
 	let taskStats = $derived({
 		total: tasks.length,
-		overdue: tasks.filter(t => t.dueDate && isOverdue(t.dueDate)).length
+		overdue: tasks.filter((t) => t.dueDate && isOverdue(t.dueDate)).length
 	});
 </script>
 
-<div class="flex h-full flex-col">
+<div class="flex flex-1 flex-col">
 	<!-- Header -->
-	<div class="border-b border-zinc-800 bg-zinc-900 px-6 py-4">
+	<!-- <div class="border-b border-zinc-800 bg-zinc-900 px-6 py-4">
 		<div class="flex items-center justify-between">
 			<div>
 				<h1 class="text-xl font-semibold text-zinc-100">Tasks</h1>
 				<p class="mt-1 text-sm text-zinc-400">All tasks across projects</p>
 			</div>
 			
-			<!-- Stats -->
+			Stats
 			<div class="flex items-center gap-4">
 				<div class="flex items-center gap-1">
 					<span class="text-xs text-zinc-400">Total</span>
@@ -113,7 +113,7 @@
 			</div>
 		</div>
 
-		<!-- Search -->
+		Search
 		<div class="mt-4">
 			<input
 				type="text"
@@ -122,82 +122,118 @@
 				class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
 			/>
 		</div>
+	</div> -->
+
+	<div class=" w-full border-b bg-white px-6 py-4">
+		<div class="flex items-center justify-between">
+			<div>
+				<h2 class="rounded-md text-4xl font-semibold">🦖 TASKS</h2>
+				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
+			</div>
+			<div class="flex items-center gap-4">
+				<div class="flex items-center gap-1">
+					<span class="text-xs text-black">Total</span>
+					<span class="rounded-full bg-borg-orange px-2 py-1 text-xs text-white"
+						>{taskStats.total}</span
+					>
+				</div>
+				{#if taskStats.overdue > 0}
+					<div class="flex items-center gap-1">
+						<span class="text-xs text-black">Overdue</span>
+						<span class="rounded-full bg-zinc-600 px-2 py-1 text-xs text-white"
+							>{taskStats.overdue}</span
+						>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+
+	<div class="mt-4 px-6">
+		<input
+			type="text"
+			placeholder="Search tasks..."
+			bind:value={searchQuery}
+			class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
+		/>
 	</div>
 
 	<!-- Content -->
 	<div class="flex-1 overflow-auto">
 		{#if filteredTasks.length === 0}
-			<div class="flex h-full items-center justify-center">
+			<div class="mt-12 flex h-full items-center justify-center">
 				<div class="text-center">
 					<CheckCircle class="mx-auto h-12 w-12 text-zinc-600" />
-					<h3 class="mt-4 text-lg font-medium text-zinc-300">No tasks found</h3>
+					<h3 class="mt-4 text-lg font-medium text-black">No tasks found</h3>
 					<p class="mt-2 text-sm text-zinc-500">
 						Tasks will appear here when you add them to nodes
 					</p>
 				</div>
 			</div>
 		{:else}
-			<div class="space-y-1 p-4">
+			<div class="space-y-3 p-6">
 				{#each filteredTasks as task}
 					{@const personResult = peopleService.getPerson(task.assignee)}
 					{#await personResult instanceof Promise ? personResult : Promise.resolve(personResult) then person}
-					{@const overdue = task.dueDate && isOverdue(task.dueDate)}
-					
-					<div class="group rounded-lg border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors">
-						<div class="flex items-start justify-between gap-3">
-							<div class="flex-1 min-w-0">
-								<!-- Task info -->
-								<div class="flex items-start justify-between gap-2 mb-2">
-									<h3 class="font-medium text-zinc-100">{task.title}</h3>
-									<div class="flex items-center gap-2">
-										<button
-											onclick={() => handleDeleteTask(task)}
-											class="opacity-0 group-hover:opacity-100 rounded-full border-2 border-zinc-600 hover:border-rose-500 p-1 transition-all"
-											title="Delete task"
-										>
-											<Trash2 class="h-4 w-4 text-zinc-400 hover:text-rose-500" />
-										</button>
-										<button
-											onclick={() => handleTaskClick(task)}
-											class="opacity-0 group-hover:opacity-100 rounded-full bg-zinc-800 hover:bg-zinc-700 p-1 transition-all"
-											title="Go to project"
-										>
-											<ExternalLink class="h-4 w-4 text-zinc-400 hover:text-zinc-300" />
-										</button>
+						{@const overdue = task.dueDate && isOverdue(task.dueDate)}
+
+						<div
+							class="group box-shadow-black rounded-lg border border-black bg-white p-4 transition-colors"
+						>
+							<div class="flex items-start justify-between gap-3">
+								<div class="min-w-0 flex-1">
+									<!-- Task info -->
+									<div class="mb-2 flex items-start justify-between gap-2">
+										<h3 class="font-medium text-black">{task.title}</h3>
+										<div class="flex items-center gap-2">
+											<button
+												onclick={() => handleDeleteTask(task)}
+												class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
+												title="Delete task"
+											>
+												<Trash2 class="h-4 w-4 text-zinc-500 hover:text-rose-500" />
+											</button>
+											<button
+												onclick={() => handleTaskClick(task)}
+												class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
+												title="Go to project"
+											>
+												<ExternalLink class="h-4 w-4 text-zinc-500 hover:text-borg-purple" />
+											</button>
+										</div>
 									</div>
-								</div>
 
-								<!-- Context info -->
-								<div class="flex items-center gap-2 text-sm text-zinc-500 mb-2">
-									<span class="font-medium">{task.projectTitle || 'Unknown Project'}</span>
-									<span>→</span>
-									<span>{task.nodeTitle}</span>
-									<span>•</span>
-									<span>{person?.name || 'Unknown'}</span>
-								</div>
+									<!-- Context info -->
+									<div class="mb-2 flex items-center gap-2 text-sm text-zinc-500">
+										<span class="font-medium">{task.projectTitle || 'Unknown Project'}</span>
+										<span>→</span>
+										<span>{task.nodeTitle}</span>
+										<span>•</span>
+										<span>{person?.name || 'Unknown'}</span>
+									</div>
 
-								<!-- Meta info -->
-								<div class="flex items-center gap-4 text-xs text-zinc-500">
-									{#if task.dueDate}
-										<div class="flex items-center gap-1 {overdue ? 'text-rose-400' : ''}">
-											<Calendar class="h-3 w-3" />
-											<span>Due {formatDate(task.dueDate)}</span>
-											{#if overdue}
-												<span class="text-rose-400">(Overdue)</span>
-											{/if}
-										</div>
-									{/if}
+									<!-- Meta info -->
+									<div class="flex items-center gap-4 text-xs text-zinc-500">
+										{#if task.dueDate}
+											<div class="flex items-center gap-1 {overdue ? 'text-rose-400' : ''}">
+												<Calendar class="h-3 w-3" />
+												<span>Due {formatDate(task.dueDate)}</span>
+												{#if overdue}
+													<span class="text-rose-400">(Overdue)</span>
+												{/if}
+											</div>
+										{/if}
 
-									{#if task.notes}
-										<div class="flex items-center gap-1">
-											<StickyNote class="h-3 w-3" />
-											<span>Has notes</span>
-										</div>
-									{/if}
+										{#if task.notes}
+											<div class="flex items-center gap-1">
+												<StickyNote class="h-3 w-3" />
+												<span>Has notes</span>
+											</div>
+										{/if}
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
 					{/await}
 				{/each}
 			</div>

@@ -4,6 +4,7 @@
 	import type { ITimelineService } from '../../services/interfaces/ITimelineService';
 	import type { TimelineEvent } from '../../services/local/TimelineService';
 	import AddTimelineEventModal from './AddTimelineEventModal.svelte';
+	import { CalendarPlus, Calendar, DollarSign, Clock, Fish } from '@lucide/svelte';
 
 	let timelineService: ITimelineService;
 	let events = $state<TimelineEvent[]>([]);
@@ -36,10 +37,10 @@
 
 	function formatDate(dateString: string) {
 		const date = new Date(dateString);
-		return date.toLocaleDateString('en-US', { 
-			month: 'short', 
-			day: 'numeric', 
-			year: 'numeric' 
+		return date.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric'
 		});
 	}
 
@@ -57,9 +58,9 @@
 	}
 </script>
 
-<div class="flex-1 flex flex-col">
+<div class="flex flex-1 flex-col">
 	<!-- Header -->
-	<div class="p-6 border-b border-zinc-800">
+	<!-- <div class="p-6 border-b border-zinc-800">
 		<div class="flex items-center justify-between">
 			<div>
 				<h2 class="text-2xl font-semibold text-zinc-100">Timeline</h2>
@@ -75,81 +76,112 @@
 				Add Event
 			</button>
 		</div>
+	</div> -->
+	<div class=" border-b bg-white px-6 py-4">
+		<div class="flex items-center justify-between">
+			<div>
+				<h2 class="rounded-md text-4xl font-semibold">🐟 TIMELINE</h2>
+				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
+			</div>
+			<button
+				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-blue px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
+				"
+				onclick={() => (showAddModal = true)}
+			>
+				<CalendarPlus class="h-4 w-4" />
+				New Event
+			</button>
+		</div>
 	</div>
 
 	<!-- Timeline Events -->
-	<div class="flex-1 p-6 overflow-y-auto">
+	<div class="flex-1 overflow-y-auto p-6">
 		{#if events.length === 0}
-			<div class="flex flex-col items-center justify-center h-64 text-center">
-				<div class="w-16 h-16 bg-zinc-800 rounded-lg flex items-center justify-center mb-4">
-					<svg class="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-					</svg>
-				</div>
-				<h3 class="text-lg font-medium text-zinc-300 mb-2">No events yet</h3>
-				<p class="text-zinc-500 mb-4">Add your first conference, deadline, or event</p>
-				<button
+			<div class="flex h-64 flex-col items-center justify-center text-center">
+				<Fish class="h-8 w-8" />
+
+				<h3 class="mb-2 text-xl font-medium text-black">No events yet</h3>
+				<p class="mb-4 text-zinc-500">Add your first conference, deadline, or event</p>
+				<!-- <button
 					onclick={() => (showAddModal = true)}
-					class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors"
+					class="rounded-lg bg-borg-blue px-4 py-2 text-white transition-colors hover:bg-blue-500"
 				>
 					Add Event
-				</button>
+				</button> -->
 			</div>
 		{:else}
 			<div class="space-y-4">
 				{#each events as event}
 					{@const template = getTemplateInfo(event.templateType)}
-					<div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-zinc-700 transition-colors">
+					<div
+						class="box-shadow-black rounded-lg border border-black bg-white p-4 transition-colors"
+					>
 						<div class="flex items-start justify-between">
-							<div class="flex items-start gap-3 flex-1">
-								<div 
-									class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+							<div class="flex flex-1 items-start gap-3">
+								<div
+									class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg"
 									style="background-color: {template.color}20; border: 1px solid {template.color}40;"
 								>
-									<svg class="w-5 h-5" style="color: {template.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg
+										class="h-5 w-5"
+										style="color: {template.color}"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
 										{#if template.icon === 'calendar'}
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+											<Calendar />
 										{:else if template.icon === 'clock'}
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+											<Clock />
 										{:else if template.icon === 'dollar-sign'}
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+											<DollarSign />
 										{:else}
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+											<Calendar />
 										{/if}
 									</svg>
 								</div>
 								<div class="flex-1">
-									<div class="flex items-center gap-2 mb-1">
-										<h3 class="font-medium text-zinc-100">{event.title}</h3>
-										<span class="text-xs px-2 py-1 rounded-full bg-zinc-800 text-zinc-300">
+									<div class="mb-1 flex items-center gap-2">
+										<h3 class="font-medium text-black">{event.title}</h3>
+										<span class="rounded-full bg-zinc-800 px-2 py-1 text-xs text-zinc-300">
 											{template.name}
 										</span>
 									</div>
-									<div class="flex items-center gap-4 text-sm text-zinc-400 mb-2">
+									<div class="mb-2 flex items-center gap-4 text-sm text-zinc-400">
 										<span class="flex items-center gap-1">
-											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+												/>
 											</svg>
 											{formatDate(event.date)}
 										</span>
 										{#if isUpcoming(event.date)}
-											<span class="text-green-400 text-xs">Upcoming</span>
+											<span class="text-xs text-borg-green">Upcoming</span>
 										{:else}
-											<span class="text-zinc-500 text-xs">Past</span>
+											<span class="text-xs text-zinc-500">Past</span>
 										{/if}
 									</div>
 									{#if event.eventData.description}
-										<p class="text-sm text-zinc-400 line-clamp-2">{event.eventData.description}</p>
+										<p class="line-clamp-2 text-sm text-zinc-400">{event.eventData.description}</p>
 									{/if}
 								</div>
 							</div>
 							<button
 								onclick={() => handleDeleteEvent(event.id)}
-								class="text-zinc-500 hover:text-red-400 transition-colors ml-2"
+								class="ml-2 text-zinc-500 transition-colors hover:text-red-400"
 								aria-label="Delete event"
 							>
-								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+									/>
 								</svg>
 							</button>
 						</div>
@@ -161,8 +193,5 @@
 </div>
 
 {#if showAddModal}
-	<AddTimelineEventModal
-		onAdd={handleAddEvent}
-		onClose={() => (showAddModal = false)}
-	/>
+	<AddTimelineEventModal onAdd={handleAddEvent} onClose={() => (showAddModal = false)} />
 {/if}

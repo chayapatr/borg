@@ -23,7 +23,7 @@
 </script>
 
 <button
-	class="inline-flex items-center gap-1 rounded-full bg-rose-500/20 px-2 py-1 text-xs font-medium text-rose-400 transition-colors hover:bg-rose-500/30"
+	class="inline-flex items-center gap-1 rounded-full border border-black bg-borg-orange px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-borg-orange/90"
 	onclick={(event) => {
 		event.stopPropagation();
 		onclick?.();

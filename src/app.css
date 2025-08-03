@@ -4,12 +4,13 @@
 @theme {
 	--color-borg-white: #f3f3f1;
 	--color-borg-orange: #e9492d;
-	--color-borg-violet: #4d17f5;
 	--color-borg-yellow: #ebd22f;
 	--color-borg-green: #1e8d42;
 	--color-borg-beige: #edede9;
 	--color-borg-purple: #8220fa;
+	--color-borg-violet: #4d17f5;
 	--color-borg-blue: #5551fe;
+	--color-borg-brown: #d7d3d0;
 }
 
 @layer utilities {
@@ -18,6 +19,6 @@
 	}
 }
 
-* {
-	font-family: 'Zed Mono Extended' !important;
+body {
+	font-family: 'Google Sans Code', 'Roboto Mono', 'Courier', monospace;
 }
