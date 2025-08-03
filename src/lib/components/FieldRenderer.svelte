@@ -6,12 +6,16 @@
 		field,
 		value = $bindable(),
 		readonly = false,
-		mode = 'display'
+		mode = 'display',
+		nodeData = undefined,
+		countdownOnly = false
 	} = $props<{
 		field: TemplateField;
 		value: any;
 		readonly?: boolean;
 		mode?: 'display' | 'edit';
+		nodeData?: any;
+		countdownOnly?: boolean;
 	}>();
 
 	// Services for synced data
@@ -28,6 +32,54 @@
 	// State for timeline data
 	let allEvents = $state<any[]>([]);
 	let eventsMap = $state<Map<string, any>>(new Map());
+
+	// Countdown calculation function
+	function calculateCountdown(targetDate: string): { days: number; hours: number; minutes: number; isOverdue: boolean } {
+		const now = new Date();
+		const target = new Date(targetDate);
+		const diffMs = target.getTime() - now.getTime();
+		
+		if (diffMs <= 0) {
+			return { days: 0, hours: 0, minutes: 0, isOverdue: true };
+		}
+		
+		const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+		const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+		const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+		
+		return { days, hours, minutes, isOverdue: false };
+	}
+
+	// Format countdown display
+	function formatCountdown(countdown: { days: number; hours: number; minutes: number; isOverdue: boolean }): string {
+		if (countdown.isOverdue) return 'Overdue';
+		
+		if (countdown.days > 0) {
+			return `${countdown.days}d ${countdown.hours}h ${countdown.minutes}m`;
+		} else if (countdown.hours > 0) {
+			return `${countdown.hours}h ${countdown.minutes}m`;
+		} else {
+			return `${countdown.minutes}m`;
+		}
+	}
+
+	// Update countdown every 30 seconds for live updates
+	let countdownRefreshKey = $state(0);
+	let countdownInterval: ReturnType<typeof setInterval>;
+	
+	$effect(() => {
+		// Start interval when component mounts
+		countdownInterval = setInterval(() => {
+			countdownRefreshKey++;
+		}, 30000); // Update every 30 seconds
+		
+		// Cleanup interval on unmount
+		return () => {
+			if (countdownInterval) {
+				clearInterval(countdownInterval);
+			}
+		};
+	});
 
 	// Load people data reactively
 	$effect(() => {
@@ -355,12 +407,28 @@
 			{#if value}
 				{@const event = eventsMap.get(value)}
 				{#if event}
-					<div class="py-1 text-black">
-						<div class="font-medium">{event.title}</div>
-						<div class="text-sm text-zinc-600">
-							{new Date(event.date).toLocaleDateString()} • {event.templateType || 'Event'}
+					{#if countdownOnly}
+						<!-- Countdown-only mode: large, centered display -->
+						{@const countdown = (() => { countdownRefreshKey; return calculateCountdown(event.date); })()}
+						<div class="py-2 text-center">
+							<div class="text-lg font-bold text-black mb-2">{event.title}</div>
+							<div class="text-2xl font-mono font-bold {countdown.isOverdue ? 'text-red-600' : 'text-blue-600'}">
+								{#if countdown.isOverdue}
+									⚠️ OVERDUE
+								{:else}
+									⏰ {formatCountdown(countdown)}
+								{/if}
+							</div>
 						</div>
-					</div>
+					{:else}
+						<!-- Normal mode: standard display -->
+						<div class="py-1 text-black">
+							<div class="font-medium">{event.title}</div>
+							<div class="text-sm text-zinc-600">
+								{new Date(event.date).toLocaleDateString()} • {event.templateType || 'Event'}
+							</div>
+						</div>
+					{/if}
 				{:else}
 					<div class="py-1 text-zinc-600">Event not found</div>
 				{/if}

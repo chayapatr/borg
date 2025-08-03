@@ -165,23 +165,34 @@
 		onclick={handleNodeClick}
 	>
 		<!-- Node Content -->
-		<div class="space-y-3">
-			{#each template.fields as field}
-				{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? true}
-				{#if field.id !== 'status' && isVisible}
-					<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" />
-				{/if}
-			{/each}
-
-			{#if nodeData.customFields && Array.isArray(nodeData.customFields)}
-				{#each nodeData.customFields as field}
-					{@const isVisible = field.showInDisplay ?? true}
-					{#if isVisible && field.id !== 'status'}
-						<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" />
+		{#if nodeData.countdownMode && template.id === 'time'}
+			<!-- Countdown-only mode: show only event name and countdown -->
+			{@const eventField = template.fields.find(f => f.type === 'timeline-selector')}
+			{#if eventField}
+				<div class="space-y-3">
+					<FieldRenderer field={eventField} value={nodeData[eventField.id]} readonly={true} mode="display" {nodeData} countdownOnly={true} />
+				</div>
+			{/if}
+		{:else}
+			<!-- Normal mode: show all fields -->
+			<div class="space-y-3">
+				{#each template.fields as field}
+					{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? true}
+					{#if field.id !== 'status' && isVisible}
+						<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" {nodeData} />
 					{/if}
 				{/each}
-			{/if}
-		</div>
+
+				{#if nodeData.customFields && Array.isArray(nodeData.customFields)}
+					{#each nodeData.customFields as field}
+						{@const isVisible = field.showInDisplay ?? true}
+						{#if isVisible && field.id !== 'status'}
+							<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" {nodeData} />
+						{/if}
+					{/each}
+				{/if}
+			</div>
+		{/if}
 
 		<!-- Add task button when no tasks (bottom right corner) -->
 		{#if !hasTasks}
