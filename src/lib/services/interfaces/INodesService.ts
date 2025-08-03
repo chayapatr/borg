@@ -9,6 +9,7 @@ export interface INodesService {
 	deleteEdge(edgeId: string): Promise<boolean> | boolean;
 	getEdges(): Promise<Edge[]> | Edge[];
 	saveBatch(nodes: Node[], edges: Edge[]): Promise<void> | void;
+	saveBatchOptimized?(nodes: Node[], edges: Edge[], previousNodes?: Node[], previousEdges?: Edge[]): Promise<void> | void;
 
 	// localStorage specific methods
 	loadFromStorage?(): void;

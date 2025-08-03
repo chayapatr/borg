@@ -325,6 +325,100 @@ export class FirebaseNodesService implements INodesService {
 		}
 	}
 
+	async saveBatchOptimized(nodes: Node[], edges: Edge[], previousNodes?: Node[], previousEdges?: Edge[]): Promise<void> {
+		try {
+			const changedNodes = this.getChangedNodes(nodes, previousNodes || []);
+			const changedEdges = this.getChangedEdges(edges, previousEdges || []);
+			
+			if (changedNodes.length === 0 && changedEdges.length === 0) {
+				console.log('No changes detected, skipping batch update');
+				return;
+			}
+
+			console.log('FirebaseNodesService.saveBatchOptimized: updating', changedNodes.length, 'nodes and', changedEdges.length, 'edges');
+			
+			this.isUpdatingPositions = true;
+			const batch = writeBatch(db);
+
+			// Update only changed nodes
+			for (const node of changedNodes) {
+				if (!node.id || !node.position) {
+					console.warn('Skipping node with invalid ID or position:', { id: node.id, position: node.position });
+					continue;
+				}
+				
+				const nodeRef = doc(db, 'projects', this.projectId, 'nodes', node.id);
+				batch.set(nodeRef, {
+					position: node.position,
+					updatedAt: new Date()
+				}, { merge: true });
+			}
+
+			// Update only changed edges
+			for (const edge of changedEdges) {
+				if (edge.id) {
+					const edgeRef = doc(db, 'projects', this.projectId, 'edges', edge.id);
+					batch.set(edgeRef, {
+						source: edge.source,
+						target: edge.target,
+						type: edge.type,
+						style: edge.style,
+						updatedAt: new Date()
+					}, { merge: true });
+				}
+			}
+
+			await batch.commit();
+			console.log('Optimized batch save completed successfully');
+			
+			setTimeout(() => {
+				this.isUpdatingPositions = false;
+			}, 1000);
+		} catch (error) {
+			console.error('Failed to save optimized batch:', error);
+			this.isUpdatingPositions = false;
+		}
+	}
+
+	private getChangedNodes(currentNodes: Node[], previousNodes: Node[]): Node[] {
+		const previousNodeMap = new Map(previousNodes.map(node => [node.id, node]));
+		
+		return currentNodes.filter(currentNode => {
+			const previousNode = previousNodeMap.get(currentNode.id);
+			if (!previousNode) {
+				// New node
+				return true;
+			}
+			
+			// Check if position changed (main concern for batch updates)
+			const positionChanged = 
+				currentNode.position.x !== previousNode.position.x ||
+				currentNode.position.y !== previousNode.position.y;
+			
+			return positionChanged;
+		});
+	}
+
+	private getChangedEdges(currentEdges: Edge[], previousEdges: Edge[]): Edge[] {
+		const previousEdgeMap = new Map(previousEdges.map(edge => [edge.id, edge]));
+		
+		return currentEdges.filter(currentEdge => {
+			const previousEdge = previousEdgeMap.get(currentEdge.id);
+			if (!previousEdge) {
+				// New edge
+				return true;
+			}
+			
+			// Check if edge properties changed
+			const edgeChanged = 
+				currentEdge.source !== previousEdge.source ||
+				currentEdge.target !== previousEdge.target ||
+				currentEdge.type !== previousEdge.type;
+			
+			return edgeChanged;
+		});
+	}
+
 	// Helper method to recursively filter out undefined values
 	private filterUndefinedValues(obj: any): any {
 		if (obj === null || typeof obj !== 'object') {

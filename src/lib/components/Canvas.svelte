@@ -30,6 +30,8 @@
 	// Use $state.raw for better performance with arrays as shown in reference
 	let nodes = $state.raw<Node[]>([]);
 	let edges = $state.raw<Edge[]>([]);
+	let previousNodes = $state.raw<Node[]>([]);
+	let previousEdges = $state.raw<Edge[]>([]);
 	let nodesService: INodesService;
 	let projectsService: IProjectsService;
 	let taskService: ITaskService;
@@ -81,8 +83,19 @@
 		if (nodesService) {
 			clearTimeout(saveTimeout);
 			saveTimeout = setTimeout(async () => {
-				const result = nodesService.saveBatch(nodes, edges);
-				if (result instanceof Promise) await result;
+				// Use optimized batch save if available, otherwise fall back to regular batch save
+				if ('saveBatchOptimized' in nodesService && typeof (nodesService as any).saveBatchOptimized === 'function') {
+					const result = (nodesService as any).saveBatchOptimized(nodes, edges, previousNodes, previousEdges);
+					if (result instanceof Promise) await result;
+				} else {
+					const result = nodesService.saveBatch(nodes, edges);
+					if (result instanceof Promise) await result;
+				}
+				
+				// Update previous state after saving
+				previousNodes = [...nodes];
+				previousEdges = [...edges];
+				
 				// Update project node count if we have a project
 				if (projectSlug && projectsService) {
 					await projectsService.updateNodeCount(projectSlug, nodes.length);
@@ -162,6 +175,10 @@
 					const unsubscribeNodes = nodesService.subscribeToNodes((updatedNodes) => {
 						console.log('Canvas received nodes update:', updatedNodes.length, 'nodes');
 						nodes = updatedNodes;
+						// Initialize previous state if empty (first load)
+						if (previousNodes.length === 0) {
+							previousNodes = [...updatedNodes];
+						}
 
 						// Check if we need to create initial project node
 						if (updatedNodes.length === 0 && !hasAttemptedProjectNodeCreation) {
@@ -177,6 +194,10 @@
 					const unsubscribeEdges = nodesService.subscribeToEdges((updatedEdges) => {
 						console.log('Canvas received edges update:', updatedEdges.length, 'edges');
 						edges = updatedEdges;
+						// Initialize previous state if empty (first load)
+						if (previousEdges.length === 0) {
+							previousEdges = [...updatedEdges];
+						}
 					});
 
 					// Clean up subscriptions on component destroy
@@ -196,6 +217,9 @@
 
 						nodes = loadedNodes;
 						edges = loadedEdges;
+						// Initialize previous state for local storage
+						previousNodes = [...loadedNodes];
+						previousEdges = [...loadedEdges];
 					} catch (error) {
 						console.error('Failed to load nodes and edges:', error);
 					}
@@ -423,15 +447,40 @@
 		console.log('Node drag stopped, saving positions...', event);
 		console.log('Current nodes state:', nodes.map(n => ({ id: n.id, position: n.position })));
 		
-		if (nodesService && nodesService.saveBatch) {
-			// Save positions immediately when drag stops
-			const result = nodesService.saveBatch(nodes, edges);
-			if (result instanceof Promise) {
-				result.then(() => {
-					console.log('Positions saved after drag');
-				}).catch(error => {
-					console.error('Failed to save positions after drag:', error);
-				});
+		if (nodesService) {
+			// Use optimized batch save if available for immediate drag save
+			if ('saveBatchOptimized' in nodesService && typeof (nodesService as any).saveBatchOptimized === 'function') {
+				const result = (nodesService as any).saveBatchOptimized(nodes, edges, previousNodes, previousEdges);
+				if (result instanceof Promise) {
+					result.then(() => {
+						console.log('Positions saved after drag (optimized)');
+						// Update previous state after saving
+						previousNodes = [...nodes];
+						previousEdges = [...edges];
+					}).catch(error => {
+						console.error('Failed to save positions after drag:', error);
+					});
+				} else {
+					// Update previous state after saving
+					previousNodes = [...nodes];
+					previousEdges = [...edges];
+				}
+			} else if (nodesService.saveBatch) {
+				const result = nodesService.saveBatch(nodes, edges);
+				if (result instanceof Promise) {
+					result.then(() => {
+						console.log('Positions saved after drag');
+						// Update previous state after saving
+						previousNodes = [...nodes];
+						previousEdges = [...edges];
+					}).catch(error => {
+						console.error('Failed to save positions after drag:', error);
+					});
+				} else {
+					// Update previous state after saving
+					previousNodes = [...nodes];
+					previousEdges = [...edges];
+				}
 			}
 		}
 
