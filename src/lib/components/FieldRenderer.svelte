@@ -68,11 +68,11 @@
 		if (countdown.isOverdue) return 'Overdue';
 
 		if (countdown.days > 0) {
-			return `${countdown.days}d ${countdown.hours}h ${countdown.minutes}m`;
+			return `${countdown.days}D ${countdown.hours}H ${countdown.minutes}M`;
 		} else if (countdown.hours > 0) {
-			return `${countdown.hours}h ${countdown.minutes}m`;
+			return `${countdown.hours}H ${countdown.minutes}M`;
 		} else {
-			return `${countdown.minutes}m`;
+			return `${countdown.minutes}M`;
 		}
 	}
 
@@ -213,9 +213,9 @@
 		{#if readonly || mode === 'display'}
 			<div
 				class="py-1 font-semibold text-black {isProjectTitle
-					? 'pt-2 text-3xl'
+					? 'text-2xl'
 					: field.id === 'title'
-						? 'font-sans text-lg'
+						? 'font-sanss text-lg'
 						: ''}"
 			>
 				{value || '-'}
@@ -318,7 +318,7 @@
 				{@const icon = getFieldIcon(field.label)}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="flex w-full items-center justify-center gap-1 rounded-lg bg-black p-2 text-xs font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
 					{#if icon.type === 'svg'}
 						<img src={icon.path} alt="" class="h-4 w-4" />
@@ -389,7 +389,7 @@
 				{@const icon = getFieldIcon(field.label)}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="flex w-full items-center justify-center gap-1 rounded-lg bg-black px-2 py-1.5 text-xs font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
 					{#if icon.type === 'svg'}
 						<img src={icon.path} alt="" class="h-4 w-4" />
@@ -490,18 +490,41 @@
 							return calculateCountdown(event.date);
 						})()}
 						<div class="py-2 text-center">
-							<div class="mb-2 font-sans text-xl font-semibold text-black">{event.title}</div>
-							<div
-								class="font-mono text-3xl font-bold {countdown.isOverdue
-									? 'text-red-600'
-									: 'text-borg-blue'}"
-							>
-								{#if countdown.isOverdue}
-									⚠️ OVERDUE
-								{:else}
-									{formatCountdown(countdown)}
-								{/if}
-							</div>
+							<div class="font-sanss mb-3 text-lg font-semibold text-black">{event.title}</div>
+							{#if countdown.isOverdue}
+								<div class="font-mono text-2xl font-bold text-red-600">⚠️ OVERDUE</div>
+							{:else}
+								<div class="flex justify-center gap-4">
+									{#if countdown.days > 0}
+										<div class="flex flex-col items-center">
+											<div class="font-mono text-3xl font-bold text-borg-blue">
+												{countdown.days.toString().padStart(2, '0')}
+											</div>
+											<div class="text-sm font-medium text-zinc-600">
+												Day{countdown.days !== 1 ? 's' : ''}
+											</div>
+										</div>
+									{/if}
+									{#if countdown.days > 0 || countdown.hours > 0}
+										<div class="flex flex-col items-center">
+											<div class="font-mono text-3xl font-bold text-borg-blue">
+												{countdown.hours.toString().padStart(2, '0')}
+											</div>
+											<div class="text-sm font-medium text-zinc-600">
+												Hr{countdown.hours !== 1 ? 's' : ''}
+											</div>
+										</div>
+									{/if}
+									<div class="flex flex-col items-center">
+										<div class="font-mono text-3xl font-bold text-borg-blue">
+											{countdown.minutes.toString().padStart(2, '0')}
+										</div>
+										<div class="text-sm font-medium text-zinc-600">
+											Min{countdown.minutes !== 1 ? 's' : ''}
+										</div>
+									</div>
+								</div>
+							{/if}
 						</div>
 					{:else}
 						<!-- Normal mode: standard display -->

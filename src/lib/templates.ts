@@ -239,6 +239,12 @@ export const suggestedCustomFields: Record<string, TemplateField[]> = {
 			label: 'GitHub',
 			type: 'link',
 			placeholder: 'https://github.com/...'
+		},
+		{
+			id: 'deepnote',
+			label: 'Deepnote',
+			type: 'link',
+			placeholder: 'https://deepnote.com/...'
 		}
 	],
 	paper: [

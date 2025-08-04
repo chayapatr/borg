@@ -263,16 +263,16 @@
 
 	{#if template.id === 'project'}
 		<div class="mb-2 flex items-center justify-between">
-			<div class="text-2xl font-semibold">🏕️ Project</div>
+			<div class="text-xl font-semibold">🏕️ Project</div>
 			{#if nodeData.status}
 				{@const statusStyle = getStatusStyling(nodeData.status)}
 				<div
-					class="flex items-center gap-1 rounded border px-2 py-1 text-sm font-medium {statusStyle.bgColor} {statusStyle.textColor}"
+					class="flex items-center gap-1 rounded border px-1 py-[0.15rem] text-sm font-medium {statusStyle.bgColor} {statusStyle.textColor}"
 					style="border-color: {borderColor};"
 				>
 					{#if statusStyle.icon}
 						{@const StatusIcon = statusStyle.icon}
-						<StatusIcon class="h-4 w-4" style="color: {statusStyle.color};" />
+						<StatusIcon class="h-3 w-3" style="color: {statusStyle.color};" />
 					{/if}
 					<span>{nodeData.status}</span>
 				</div>
@@ -283,7 +283,7 @@
 	<div
 		class="group relative cursor-pointer border transition-all duration-200 {template.id === 'note'
 			? 'h-32 w-32 rounded-lg p-3'
-			: 'max-w-80 min-w-64'} {hasTasks && template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
+			: 'max-w-64 min-w-48'} {hasTasks && template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
 		style="border-color: {borderColor}; background-color: {template.id === 'note' &&
 		nodeData.backgroundColor
 			? nodeData.backgroundColor
@@ -355,7 +355,7 @@
 				</button>
 			{:else}
 				<!-- Normal mode: show all fields -->
-				<div class="space-y-3">
+				<div class="mt-2 space-y-3">
 					{#each template.fields as field}
 						{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? field.id === 'title'}
 						{#if field.id !== 'status' && isVisible}

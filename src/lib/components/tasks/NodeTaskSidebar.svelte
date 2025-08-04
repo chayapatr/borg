@@ -18,10 +18,10 @@
 	let { nodeId, nodeTitle, projectSlug, tasks, onClose, onTasksUpdated }: Props = $props();
 
 	const taskService: ITaskService = ServiceFactory.createTaskService();
-	
+
 	// Active tasks are passed as props
 	const activeTasks = $derived(tasks);
-	
+
 	// Fetch resolved tasks for this specific node
 	let resolvedTasks = $state<Task[]>([]);
 	let showResolved = $state(false);
@@ -34,13 +34,16 @@
 		console.log('NodeTaskSidebar: Loading resolved tasks for node:', nodeId);
 		// Get all resolved tasks and filter for this node
 		const allResolvedResult = taskService.getResolvedTasks();
-		const allResolved = allResolvedResult instanceof Promise ? await allResolvedResult : allResolvedResult;
+		const allResolved =
+			allResolvedResult instanceof Promise ? await allResolvedResult : allResolvedResult;
 		console.log('NodeTaskSidebar: Total resolved tasks from service:', allResolved.length);
-		
+
 		// Filter for this specific node
 		resolvedTasks = allResolved
-			.filter(task => task.nodeId === nodeId && (!projectSlug || task.projectSlug === projectSlug))
-			.map(task => ({
+			.filter(
+				(task) => task.nodeId === nodeId && (!projectSlug || task.projectSlug === projectSlug)
+			)
+			.map((task) => ({
 				id: task.id,
 				title: task.title,
 				assignee: task.assignee,
@@ -54,13 +57,14 @@
 
 	// Reload resolved tasks when active tasks change (indicating updates)
 	$effect(() => {
-		if (tasks.length >= 0) { // Triggers whenever tasks prop changes
+		if (tasks.length >= 0) {
+			// Triggers whenever tasks prop changes
 			loadResolvedTasks();
 		}
 	});
 </script>
 
-<div class="w-80 border-l border-black bg-white flex flex-col">
+<div class="flex h-[calc(100vh-64px)] w-80 flex-col border-l border-black bg-white">
 	<!-- Sidebar Header -->
 	<div class="border-b border-black p-4">
 		<div class="flex items-center justify-between">
@@ -86,7 +90,7 @@
 					});
 					document.dispatchEvent(customEvent);
 				}}
-				class="flex items-center gap-1 rounded-lg border border-black bg-borg-beige hover:bg-black hover:text-white px-3 py-1.5 text-xs text-black transition-colors"
+				class="flex items-center gap-1 rounded-lg border border-black bg-borg-beige px-3 py-1.5 text-xs text-black transition-colors hover:bg-black hover:text-white"
 			>
 				<Plus class="h-3 w-3" />
 				Add Task
@@ -97,12 +101,14 @@
 	<!-- Task List -->
 	<div class="flex-1 overflow-auto p-4">
 		{#if activeTasks.length === 0 && resolvedTasks.length === 0}
-			<div class="text-center py-8">
-				<div class="w-12 h-12 rounded-full bg-zinc-200 flex items-center justify-center mx-auto mb-4">
+			<div class="py-8 text-center">
+				<div
+					class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-200"
+				>
 					<Plus class="h-6 w-6 text-zinc-600" />
 				</div>
-				<h4 class="text-lg font-medium text-zinc-700 mb-2">No tasks yet</h4>
-				<p class="text-sm text-zinc-500 mb-4">Add your first task to get started</p>
+				<h4 class="mb-2 text-lg font-medium text-zinc-700">No tasks yet</h4>
+				<p class="mb-4 text-sm text-zinc-500">Add your first task to get started</p>
 				<button
 					onclick={() => {
 						const customEvent = new CustomEvent('addTask', {
@@ -110,7 +116,7 @@
 						});
 						document.dispatchEvent(customEvent);
 					}}
-					class="rounded-lg border border-black bg-borg-beige hover:bg-black hover:text-white px-4 py-2 text-sm text-black transition-colors"
+					class="rounded-lg border border-black bg-borg-beige px-4 py-2 text-sm text-black transition-colors hover:bg-black hover:text-white"
 				>
 					Add Task
 				</button>
@@ -120,7 +126,7 @@
 				<!-- Active Tasks -->
 				{#if activeTasks.length > 0}
 					<div>
-						<h4 class="text-sm font-medium text-zinc-700 mb-2">Active Tasks</h4>
+						<h4 class="mb-2 text-sm font-medium text-zinc-700">Active Tasks</h4>
 						<TaskList tasks={activeTasks} {nodeId} {projectSlug} {onTasksUpdated} />
 					</div>
 				{/if}
@@ -129,8 +135,8 @@
 				{#if resolvedTasks.length > 0}
 					<div class="border-t border-zinc-200 pt-4">
 						<button
-							onclick={() => showResolved = !showResolved}
-							class="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-800 mb-2"
+							onclick={() => (showResolved = !showResolved)}
+							class="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-800"
 						>
 							{#if showResolved}
 								<ChevronDown class="h-4 w-4" />
@@ -139,7 +145,7 @@
 							{/if}
 							Resolved Tasks ({resolvedTasks.length})
 						</button>
-						
+
 						{#if showResolved}
 							<div class="opacity-75">
 								<TaskList tasks={resolvedTasks} {nodeId} {projectSlug} {onTasksUpdated} />
@@ -151,4 +157,3 @@
 		{/if}
 	</div>
 </div>
-

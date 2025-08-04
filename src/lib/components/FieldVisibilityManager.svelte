@@ -25,7 +25,7 @@
 			if (!nodeData.fieldVisibility) {
 				nodeData.fieldVisibility = {};
 			}
-			const currentVisibility = nodeData.fieldVisibility[fieldId] ?? true;
+			const currentVisibility = nodeData.fieldVisibility[fieldId] ?? (fieldId === 'title');
 			nodeData.fieldVisibility[fieldId] = !currentVisibility;
 			nodeData = { ...nodeData }; // Trigger reactivity
 		}
@@ -33,9 +33,9 @@
 
 	function getFieldVisibility(field: TemplateField, isCustom: boolean = false): boolean {
 		if (isCustom) {
-			return field.showInDisplay ?? true;
+			return field.showInDisplay ?? (field.id === 'title');
 		} else {
-			return nodeData.fieldVisibility?.[field.id] ?? true;
+			return nodeData.fieldVisibility?.[field.id] ?? (field.id === 'title');
 		}
 	}
 

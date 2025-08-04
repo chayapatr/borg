@@ -22,10 +22,9 @@
 			allPeople = result instanceof Promise ? await result : result;
 		})();
 	});
-
 </script>
 
-<div class="w-80 border-l border-black bg-white flex flex-col">
+<div class="flex h-[calc(100vh-64px)] w-80 flex-col border-l border-black bg-white">
 	<!-- Sidebar Header -->
 	<div class="border-b border-black p-4">
 		<div class="flex items-center justify-between">
@@ -38,8 +37,8 @@
 			</button>
 		</div>
 		{#if projectTasks}
-			{@const activeTasks = projectTasks.filter(t => (t.status || 'active') === 'active')}
-			{@const resolvedTasks = projectTasks.filter(t => t.status === 'resolved')}
+			{@const activeTasks = projectTasks.filter((t) => (t.status || 'active') === 'active')}
+			{@const resolvedTasks = projectTasks.filter((t) => t.status === 'resolved')}
 			<p class="mt-1 text-sm text-zinc-500">
 				{activeTasks.length} active, {resolvedTasks.length} resolved
 			</p>
@@ -49,9 +48,9 @@
 	<!-- Task List -->
 	<div class="flex-1 overflow-auto p-4">
 		{#if projectTasks.length === 0}
-			<div class="text-center py-8">
-				<CheckSquare class="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-				<h4 class="text-lg font-medium text-zinc-700 mb-2">No tasks yet</h4>
+			<div class="py-8 text-center">
+				<CheckSquare class="mx-auto mb-4 h-12 w-12 text-zinc-600" />
+				<h4 class="mb-2 text-lg font-medium text-zinc-700">No tasks yet</h4>
 				<p class="text-sm text-zinc-500">Add tasks to nodes to track progress</p>
 			</div>
 		{:else}
@@ -68,25 +67,38 @@
 				{#each Object.entries(tasksByNode) as [nodeId, tasks]}
 					{@const nodeTasks = tasks}
 					<div class="rounded-lg border border-black bg-borg-beige p-3">
-						<div class="flex items-center gap-3 mb-3">
+						<div class="mb-3 flex items-center gap-3">
 							<h4 class="font-medium text-zinc-700">{nodeTasks[0].nodeTitle}</h4>
-							<span class="rounded-md border border-black bg-borg-beige px-2 py-0.5 text-xs font-medium text-zinc-700">
+							<span
+								class="rounded-md border border-black bg-borg-beige px-2 py-0.5 text-xs font-medium text-zinc-700"
+							>
 								{nodeTasks[0].nodeType}
 							</span>
 						</div>
-						
+
 						<div class="space-y-2">
 							{#each nodeTasks as task}
-								{@const person = allPeople.find(p => p.id === task.assignee)}
+								{@const person = allPeople.find((p) => p.id === task.assignee)}
 								{@const isResolved = task.status === 'resolved'}
-								<div class="rounded border border-black bg-borg-beige p-3 {isResolved ? 'opacity-75' : ''}">
-									<p class="text-sm text-zinc-700 mb-1 {isResolved ? 'line-through' : ''}">{task.title}</p>
-									<p class="text-xs text-zinc-500">{person?.name || (task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}</p>
+								<div
+									class="rounded border border-black bg-borg-beige p-3 {isResolved
+										? 'opacity-75'
+										: ''}"
+								>
+									<p class="mb-1 text-sm text-zinc-700 {isResolved ? 'line-through' : ''}">
+										{task.title}
+									</p>
+									<p class="text-xs text-zinc-500">
+										{person?.name ||
+											(task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}
+									</p>
 									{#if task.dueDate}
-										<p class="text-xs text-zinc-500">Due: {new Date(task.dueDate).toLocaleDateString()}</p>
+										<p class="text-xs text-zinc-500">
+											Due: {new Date(task.dueDate).toLocaleDateString()}
+										</p>
 									{/if}
 									{#if task.notes}
-										<p class="text-xs text-zinc-500 mt-1">{task.notes}</p>
+										<p class="mt-1 text-xs text-zinc-500">{task.notes}</p>
 									{/if}
 									{#if isResolved}
 										<div class="mt-1 flex items-center gap-1 text-xs text-green-600">
