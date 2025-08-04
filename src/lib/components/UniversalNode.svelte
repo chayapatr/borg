@@ -282,7 +282,7 @@
 
 	<div
 		class="group relative cursor-pointer border transition-all duration-200 {template.id === 'note'
-			? 'h-32 w-32 rounded-lg p-3'
+			? 'aspect-square max-h-40 min-h-32 max-w-40 min-w-32 rounded-lg p-3'
 			: 'max-w-64 min-w-48'} {hasTasks && template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
 		style="border-color: {borderColor}; background-color: {template.id === 'note' &&
 		nodeData.backgroundColor
@@ -338,7 +338,7 @@
 			{:else if template.id === 'note'}
 				<!-- Post-it note style: simple content display -->
 				<div
-					class="flex h-full items-center justify-center overflow-hidden text-center text-sm leading-relaxed whitespace-pre-wrap text-gray-800"
+					class="flex h-full w-full items-center justify-center overflow-hidden text-center text-sm leading-relaxed break-all whitespace-pre-wrap text-gray-800"
 				>
 					{nodeData.content || 'Click to edit...'}
 				</div>
@@ -411,7 +411,7 @@
 	{#if hasTasks && template.id !== 'note'}
 		<!-- Show task list in a stacked container -->
 		<div
-			class="relative max-w-80 min-w-64 cursor-pointer rounded-b-lg border border-t-0 bg-borg-brown p-3 shadow"
+			class="relative max-w-80 min-w-64 cursor-pointer rounded-b-lg border border-t-0 bg-borg-brown p-3"
 			style="border-color: {borderColor};"
 			onclick={handleTaskPillClick}
 		>

@@ -58,7 +58,6 @@
 		return { days, hours, minutes, isOverdue: false };
 	}
 
-
 	// Update countdown every 30 seconds for live updates
 	let countdownRefreshKey = $state(0);
 	let countdownInterval: ReturnType<typeof setInterval>;
