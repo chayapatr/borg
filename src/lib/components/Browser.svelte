@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { FolderOpen, Users, Calendar, CheckSquare } from '@lucide/svelte';
+	import { FolderOpen, Users, Calendar, CheckSquare, LogOut } from '@lucide/svelte';
 	import ProjectsTab from './browser/ProjectsTab.svelte';
 	import PeopleTab from './browser/PeopleTab.svelte';
 	import TimelineTab from './browser/TimelineTab.svelte';
 	import TaskTab from './browser/TaskTab.svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
 	import type { IProjectsService } from '../services/interfaces';
+
+	import { firebaseAuth } from '../stores/authStore';
 
 	type Tab = 'projects' | 'people' | 'timeline' | 'tasks';
 
@@ -39,6 +41,12 @@
 	async function updateGlobalCounts() {
 		if (projectsService) {
 			globalCounts = await projectsService.getGlobalStatusCounts();
+		}
+	}
+
+	async function handleLogout() {
+		if (confirm('Are you sure you want to log out?')) {
+			await firebaseAuth.signOut();
 		}
 	}
 </script>
@@ -77,7 +85,7 @@
 		</div>
 
 		<!-- Navigation Tabs -->
-		<nav class="flex-1 p-4">
+		<nav class="flex flex-1 flex-col justify-between p-4">
 			<div class="space-y-2 font-semibold">
 				<button
 					onclick={() => setActiveTab('projects')}
@@ -123,6 +131,16 @@
 					Tasks
 				</button>
 			</div>
+			<button
+				onclick={handleLogout}
+				class="flex w-fit grow-0 items-center gap-1
+        rounded-md border border-black bg-white px-3 py-1.5
+        text-black transition-colors hover:bg-borg-beige"
+				title="Log out"
+			>
+				<LogOut class="h-3 w-3" />
+				<span>Log out</span>
+			</button>
 		</nav>
 	</div>
 
