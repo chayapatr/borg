@@ -209,7 +209,7 @@
 
 	{#if field.type === 'text'}
 		{#if readonly || mode === 'display'}
-			<div class="py-1 text-black {field.id === 'title' ? 'text-xl' : ''}">
+			<div class="py-1 text-black {field.id === 'title' ? 'font-sans text-xl font-semibold' : ''}">
 				{value || '-'}
 			</div>
 		{:else}

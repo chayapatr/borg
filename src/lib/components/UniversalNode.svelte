@@ -3,7 +3,6 @@
 	import { getTemplate, type NodeTemplate } from '../templates';
 	import FieldRenderer from './FieldRenderer.svelte';
 	import { Trash2, CircleDashed, PencilRuler, CheckCircle, ListTodo } from '@lucide/svelte';
-	import TaskPill from './tasks/TaskPill.svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
 	import type { ITaskService } from '../services/interfaces/ITaskService';
 	import type { Task } from '../types/task';
@@ -18,7 +17,6 @@
 
 	// Get tasks for this node from TaskService instead of embedded data
 	let tasks = $state<Task[]>([]);
-	let personTaskCounts = $state<Array<{ personId: string; count: number }>>([]);
 	let hasTasks = $derived(tasks.length > 0);
 
 	// Reactive flag to trigger task refresh
@@ -70,16 +68,6 @@
 			);
 
 			tasks = nodeTasks;
-
-			// Update person task counts
-			const counts = new Map<string, number>();
-			nodeTasks.forEach((task) => {
-				counts.set(task.assignee, (counts.get(task.assignee) || 0) + 1);
-			});
-			personTaskCounts = Array.from(counts.entries()).map(([personId, count]) => ({
-				personId,
-				count
-			}));
 		})();
 	});
 
@@ -183,10 +171,9 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="group relative cursor-pointer rounded-lg border transition-all duration-200 {template.id ===
-		'note'
-			? 'h-32 w-32 p-3'
-			: 'min-w-64'}"
+		class="group relative cursor-pointer border transition-all duration-200 {template.id === 'note'
+			? 'h-32 w-32 rounded-lg p-3'
+			: 'min-w-64'} {hasTasks && template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
 		style="border-color: {borderColor}; background-color: {template.id === 'note' &&
 		nodeData.backgroundColor
 			? nodeData.backgroundColor
@@ -202,7 +189,7 @@
 						{@const StatusIconComponent = statusIcon.component}
 						<StatusIconComponent class="h-5 w-5" style="color: {statusIcon.color};" />
 					{/if}
-					<span class="bg-white font-medium">{template.name}</span>
+					<span class="bg-white text-sm font-medium">{template.name}</span>
 				</div>
 
 				<div class="flex items-center gap-1">
@@ -219,7 +206,7 @@
 			</div>
 		{/if}
 
-		<div class={template.id === 'note' ? '' : 'p-4 pt-0'}>
+		<div class={template.id === 'note' ? '' : 'p-3 pt-0'}>
 			<!-- Node Content -->
 			{#if nodeData.countdownMode && template.id === 'time'}
 				<!-- Countdown-only mode: show only event name and countdown -->
@@ -308,30 +295,36 @@
 
 	<!-- Tasks Section (Stacked to main node) - exclude post-it notes -->
 	{#if hasTasks && template.id !== 'note'}
-		<!-- Show person pills in a stacked container -->
+		<!-- Show task list in a stacked container -->
 		<div
-			class="-mt-2 min-w-64 rounded-t-none rounded-b-lg border border-t-0 border-black bg-borg-brown p-3 pt-5 shadow"
+			class="relative min-w-64 cursor-pointer rounded-b-lg border border-t-0 bg-borg-brown p-3 shadow"
+			style="border-color: {borderColor};"
+			onclick={handleTaskPillClick}
 		>
-			<div class="flex flex-wrap items-center gap-2">
-				<!-- {JSON.stringify(tasks)} -->
-				<!-- <div class="flex flex-col">
-					{#each tasks as task}
-						<div>{task.title}</div>
-					{/each}
-				</div> -->
-				{#each personTaskCounts as personTaskCount}
-					<TaskPill {personTaskCount} onclick={handleTaskPillClick} />
+			<div class="space-y-1">
+				{#each tasks.slice(0, 3) as task}
+					<div class="flex items-center gap-2 text-sm text-black">
+						<div class="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-black"></div>
+						<span class="truncate" title={task.title}>
+							{task.title.length > 30 ? task.title.substring(0, 30) + '...' : task.title}
+						</span>
+					</div>
 				{/each}
-				<button
-					onclick={(event) => {
-						event.stopPropagation();
-						handleTaskPillClick();
-					}}
-					class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
-				>
-					<ListTodo class="h-3 w-3" />
-				</button>
+				{#if tasks.length > 3}
+					<div class="mt-2 text-xs text-black/70">
+						+{tasks.length - 3} more tasks
+					</div>
+				{/if}
 			</div>
+			<button
+				onclick={(event) => {
+					event.stopPropagation();
+					handleTaskPillClick();
+				}}
+				class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
+			>
+				<ListTodo class="h-3 w-3" />
+			</button>
 		</div>
 	{/if}
 </div>
