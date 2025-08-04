@@ -92,9 +92,9 @@
 	// Determine status icon and color
 	let statusIcon = $derived.by(() => {
 		const status = nodeData.status;
-		if (status === 'To Do') return { component: CircleDashed, color: '#8b5cf6' };
-		if (status === 'Doing') return { component: PencilRuler, color: '#3b82f6' };
-		if (status === 'Done') return { component: CheckCircle, color: '#22c55e' };
+		if (status === 'To Do') return { component: CircleDashed, color: '#9333ea' };
+		if (status === 'Doing') return { component: PencilRuler, color: '#0284c7' };
+		if (status === 'Done') return { component: CheckCircle, color: '#16a34a' };
 		return null; // No icon if status is not set
 	});
 
@@ -173,7 +173,7 @@
 	<div
 		class="group relative cursor-pointer border transition-all duration-200 {template.id === 'note'
 			? 'h-32 w-32 rounded-lg p-3'
-			: 'min-w-64'} {hasTasks && template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
+			: 'max-w-80 min-w-64'} {hasTasks && template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
 		style="border-color: {borderColor}; background-color: {template.id === 'note' &&
 		nodeData.backgroundColor
 			? nodeData.backgroundColor
@@ -189,7 +189,9 @@
 						{@const StatusIconComponent = statusIcon.component}
 						<StatusIconComponent class="h-5 w-5" style="color: {statusIcon.color};" />
 					{/if}
-					<span class="bg-white text-sm font-medium">{template.name}</span>
+					{#if template.id !== 'project'}
+						<span class="bg-white text-sm font-medium">{template.name}</span>
+					{/if}
 				</div>
 
 				<div class="flex items-center gap-1">
@@ -245,7 +247,7 @@
 				<!-- Normal mode: show all fields -->
 				<div class="space-y-3">
 					{#each template.fields as field}
-						{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? true}
+						{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? field.id === 'title'}
 						{#if field.id !== 'status' && isVisible}
 							<FieldRenderer
 								{field}
@@ -253,13 +255,14 @@
 								readonly={true}
 								mode="display"
 								{nodeData}
+								isProjectTitle={data.templateType === 'project' && field.id === 'title'}
 							/>
 						{/if}
 					{/each}
 
 					{#if nodeData.customFields && Array.isArray(nodeData.customFields)}
 						{#each nodeData.customFields as field}
-							{@const isVisible = field.showInDisplay ?? true}
+							{@const isVisible = field.showInDisplay ?? field.id === 'title'}
 							{#if isVisible && field.id !== 'status'}
 								<FieldRenderer
 									{field}
@@ -267,6 +270,7 @@
 									readonly={true}
 									mode="display"
 									{nodeData}
+									isProjectTitle={data.templateType === 'project' && field.id === 'title'}
 								/>
 							{/if}
 						{/each}
@@ -297,7 +301,7 @@
 	{#if hasTasks && template.id !== 'note'}
 		<!-- Show task list in a stacked container -->
 		<div
-			class="relative min-w-64 cursor-pointer rounded-b-lg border border-t-0 bg-borg-brown p-3 shadow"
+			class="relative max-w-80 min-w-64 cursor-pointer rounded-b-lg border border-t-0 bg-borg-brown p-3 shadow"
 			style="border-color: {borderColor};"
 			onclick={handleTaskPillClick}
 		>

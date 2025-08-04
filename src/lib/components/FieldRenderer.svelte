@@ -9,7 +9,8 @@
 		readonly = false,
 		mode = 'display',
 		nodeData = undefined,
-		countdownOnly = false
+		countdownOnly = false,
+		isProjectTitle = false
 	} = $props<{
 		field: TemplateField;
 		value: any;
@@ -17,6 +18,7 @@
 		mode?: 'display' | 'edit';
 		nodeData?: any;
 		countdownOnly?: boolean;
+		isProjectTitle?: boolean;
 	}>();
 
 	// Services for synced data
@@ -201,7 +203,7 @@
 </script>
 
 <div class="field-container">
-	{#if !((field.type === 'button' || field.type === 'link' || field.id === 'title') && mode === 'display')}
+	{#if !((field.type === 'button' || field.type === 'link' || field.id === 'title' || countdownOnly) && mode === 'display')}
 		<label class="mb-1 block text-sm font-medium text-zinc-600">
 			{field.label}
 		</label>
@@ -209,7 +211,13 @@
 
 	{#if field.type === 'text'}
 		{#if readonly || mode === 'display'}
-			<div class="py-1 text-black {field.id === 'title' ? 'font-sans text-xl font-semibold' : ''}">
+			<div
+				class="py-1 font-semibold text-black {isProjectTitle
+					? 'pt-2 text-3xl'
+					: field.id === 'title'
+						? 'font-sans text-lg'
+						: ''}"
+			>
 				{value || '-'}
 			</div>
 		{:else}
@@ -482,16 +490,16 @@
 							return calculateCountdown(event.date);
 						})()}
 						<div class="py-2 text-center">
-							<div class="mb-2 text-lg font-bold text-black">{event.title}</div>
+							<div class="mb-2 font-sans text-xl font-semibold text-black">{event.title}</div>
 							<div
-								class="font-mono text-2xl font-bold {countdown.isOverdue
+								class="font-mono text-3xl font-bold {countdown.isOverdue
 									? 'text-red-600'
-									: 'text-blue-600'}"
+									: 'text-borg-blue'}"
 							>
 								{#if countdown.isOverdue}
 									⚠️ OVERDUE
 								{:else}
-									⏰ {formatCountdown(countdown)}
+									{formatCountdown(countdown)}
 								{/if}
 							</div>
 						</div>

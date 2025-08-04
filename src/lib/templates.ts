@@ -149,7 +149,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 
 	time: {
 		id: 'time',
-		name: 'Event',
+		name: 'Time',
 		color: '#52525b',
 		fields: [
 			{

@@ -182,11 +182,11 @@
 					Tasks ({projectTasks.filter((t) => !t.resolvedAt).length})
 				</button>
 
-				<div class="h-4 w-px bg-black"></div>
+				<!-- <div class="h-4 w-px bg-black"></div> -->
 
-				<div class="text-sm text-black">
+				<!-- <div class="text-sm text-black">
 					<span class="capitalize">{project.status}</span>
-				</div>
+				</div> -->
 			</div>
 		</div>
 
