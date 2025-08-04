@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { X, Plus } from '@lucide/svelte';
+	import { X, Plus, ChevronDown, ChevronRight } from '@lucide/svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { ITaskService } from '../../services/interfaces';
 	import type { Task } from '../../types/task';
 	import TaskList from './TaskList.svelte';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		nodeId: string;
@@ -18,8 +19,45 @@
 
 	const taskService: ITaskService = ServiceFactory.createTaskService();
 	
-	// Since we removed the completed field, all tasks are considered active
+	// Active tasks are passed as props
 	const activeTasks = $derived(tasks);
+	
+	// Fetch resolved tasks for this specific node
+	let resolvedTasks = $state<Task[]>([]);
+	let showResolved = $state(false);
+
+	onMount(() => {
+		loadResolvedTasks();
+	});
+
+	async function loadResolvedTasks() {
+		console.log('NodeTaskSidebar: Loading resolved tasks for node:', nodeId);
+		// Get all resolved tasks and filter for this node
+		const allResolvedResult = taskService.getResolvedTasks();
+		const allResolved = allResolvedResult instanceof Promise ? await allResolvedResult : allResolvedResult;
+		console.log('NodeTaskSidebar: Total resolved tasks from service:', allResolved.length);
+		
+		// Filter for this specific node
+		resolvedTasks = allResolved
+			.filter(task => task.nodeId === nodeId && (!projectSlug || task.projectSlug === projectSlug))
+			.map(task => ({
+				id: task.id,
+				title: task.title,
+				assignee: task.assignee,
+				dueDate: task.dueDate,
+				notes: task.notes,
+				createdAt: task.createdAt,
+				status: task.status
+			}));
+		console.log('NodeTaskSidebar: Filtered resolved tasks for this node:', resolvedTasks.length);
+	}
+
+	// Reload resolved tasks when active tasks change (indicating updates)
+	$effect(() => {
+		if (tasks.length >= 0) { // Triggers whenever tasks prop changes
+			loadResolvedTasks();
+		}
+	});
 </script>
 
 <div class="w-80 border-l border-black bg-white flex flex-col">
@@ -39,7 +77,7 @@
 		</div>
 		<div class="mt-3 flex items-center justify-between">
 			<div class="text-sm text-zinc-500">
-				{activeTasks.length} active tasks
+				{activeTasks.length} active, {resolvedTasks.length} resolved
 			</div>
 			<button
 				onclick={() => {
@@ -58,12 +96,12 @@
 
 	<!-- Task List -->
 	<div class="flex-1 overflow-auto p-4">
-		{#if activeTasks.length === 0}
+		{#if activeTasks.length === 0 && resolvedTasks.length === 0}
 			<div class="text-center py-8">
 				<div class="w-12 h-12 rounded-full bg-zinc-200 flex items-center justify-center mx-auto mb-4">
 					<Plus class="h-6 w-6 text-zinc-600" />
 				</div>
-				<h4 class="text-lg font-medium text-zinc-700 mb-2">No active tasks</h4>
+				<h4 class="text-lg font-medium text-zinc-700 mb-2">No tasks yet</h4>
 				<p class="text-sm text-zinc-500 mb-4">Add your first task to get started</p>
 				<button
 					onclick={() => {
@@ -79,7 +117,36 @@
 			</div>
 		{:else}
 			<div class="space-y-4">
-				<TaskList tasks={activeTasks} {nodeId} {projectSlug} {onTasksUpdated} />
+				<!-- Active Tasks -->
+				{#if activeTasks.length > 0}
+					<div>
+						<h4 class="text-sm font-medium text-zinc-700 mb-2">Active Tasks</h4>
+						<TaskList tasks={activeTasks} {nodeId} {projectSlug} {onTasksUpdated} />
+					</div>
+				{/if}
+
+				<!-- Resolved Tasks -->
+				{#if resolvedTasks.length > 0}
+					<div class="border-t border-zinc-200 pt-4">
+						<button
+							onclick={() => showResolved = !showResolved}
+							class="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-800 mb-2"
+						>
+							{#if showResolved}
+								<ChevronDown class="h-4 w-4" />
+							{:else}
+								<ChevronRight class="h-4 w-4" />
+							{/if}
+							Resolved Tasks ({resolvedTasks.length})
+						</button>
+						
+						{#if showResolved}
+							<div class="opacity-75">
+								<TaskList tasks={resolvedTasks} {nodeId} {projectSlug} {onTasksUpdated} />
+							</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>

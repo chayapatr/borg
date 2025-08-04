@@ -5,6 +5,7 @@ export interface Task {
 	dueDate?: string; // ISO date string
 	notes?: string;
 	createdAt: string; // timestamp
+	status?: 'active' | 'resolved'; // Default to 'active' for backward compatibility
 }
 
 export interface TaskWithContext extends Task {

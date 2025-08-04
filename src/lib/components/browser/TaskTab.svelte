@@ -1,18 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Calendar, StickyNote, ExternalLink, CheckCircle, Trash2 } from '@lucide/svelte';
+	import { Calendar, StickyNote, ExternalLink, CheckCircle, Trash2, RotateCcw } from '@lucide/svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
-	import type { TaskWithContext } from '../../types/task';
+	import type { Task, TaskWithContext } from '../../types/task';
 	import { goto } from '$app/navigation';
 
 	const taskService: ITaskService = ServiceFactory.createTaskService();
 	const peopleService: IPeopleService = ServiceFactory.createPeopleService();
 
-	let tasks = $state<TaskWithContext[]>([]);
-	let filteredTasks = $state<TaskWithContext[]>([]);
-	let filter = $state<'all'>('all');
+	let activeTasks = $state<TaskWithContext[]>([]);
+	let resolvedTasks = $state<TaskWithContext[]>([]);
+	let filteredActiveTasks = $state<TaskWithContext[]>([]);
+	let filteredResolvedTasks = $state<TaskWithContext[]>([]);
+	let activeTab = $state<'active' | 'resolved'>('active');
 	let searchQuery = $state('');
 
 	onMount(() => {
@@ -20,12 +22,21 @@
 	});
 
 	async function loadTasks() {
-		const result = taskService.getAllTasks();
-		tasks = result instanceof Promise ? await result : result;
+		const activeResult = taskService.getActiveTasks();
+		activeTasks = activeResult instanceof Promise ? await activeResult : activeResult;
+		
+		const resolvedResult = taskService.getResolvedTasks();
+		resolvedTasks = resolvedResult instanceof Promise ? await resolvedResult : resolvedResult;
+		
 		applyFilters();
 	}
 
 	async function applyFilters() {
+		await applyFiltersToTasks(activeTasks, 'active');
+		await applyFiltersToTasks(resolvedTasks, 'resolved');
+	}
+
+	async function applyFiltersToTasks(tasks: TaskWithContext[], type: 'active' | 'resolved') {
 		let filtered = tasks;
 
 		// Filter by search query
@@ -53,7 +64,11 @@
 			filtered = matchingTasks;
 		}
 
-		filteredTasks = filtered;
+		if (type === 'active') {
+			filteredActiveTasks = filtered;
+		} else {
+			filteredResolvedTasks = filtered;
+		}
 	}
 
 	$effect(() => {
@@ -75,17 +90,30 @@
 	}
 
 	async function handleDeleteTask(task: TaskWithContext) {
-		if (confirm('Are you sure you want to delete this task?')) {
+		if (confirm('Are you sure you want to delete this task permanently?')) {
 			const result = taskService.deleteTask(task.nodeId, task.id, task.projectSlug);
 			if (result instanceof Promise) await result;
 			await loadTasks();
 		}
 	}
 
+	async function handleResolveTask(task: TaskWithContext) {
+		const result = taskService.resolveTask(task.nodeId, task.id, task.projectSlug);
+		if (result instanceof Promise) await result;
+		await loadTasks();
+	}
+
+	async function handleReactivateTask(task: TaskWithContext) {
+		const result = taskService.updateTask(task.nodeId, task.id, { status: 'active' } as Partial<Task>, task.projectSlug);
+		if (result instanceof Promise) await result;
+		await loadTasks();
+	}
+
 	// Get task stats
 	let taskStats = $derived({
-		total: tasks.length,
-		overdue: tasks.filter((t) => t.dueDate && isOverdue(t.dueDate)).length
+		active: activeTasks.length,
+		resolved: resolvedTasks.length,
+		overdue: activeTasks.filter((t) => t.dueDate && isOverdue(t.dueDate)).length
 	});
 </script>
 
@@ -132,9 +160,15 @@
 			</div>
 			<div class="flex items-center gap-4">
 				<div class="flex items-center gap-1">
-					<span class="text-xs text-black">Total</span>
+					<span class="text-xs text-black">Active</span>
 					<span class="rounded-full bg-borg-orange px-2 py-1 text-xs text-white"
-						>{taskStats.total}</span
+						>{taskStats.active}</span
+					>
+				</div>
+				<div class="flex items-center gap-1">
+					<span class="text-xs text-black">Resolved</span>
+					<span class="rounded-full bg-green-600 px-2 py-1 text-xs text-white"
+						>{taskStats.resolved}</span
 					>
 				</div>
 				{#if taskStats.overdue > 0}
@@ -158,85 +192,198 @@
 		/>
 	</div>
 
+	<!-- Tab Navigation -->
+	<div class="mt-4 px-6">
+		<div class="flex border-b border-zinc-200">
+			<button
+				onclick={() => activeTab = 'active'}
+				class="px-4 py-2 text-sm font-medium transition-colors {activeTab === 'active' 
+					? 'border-b-2 border-borg-orange text-borg-orange' 
+					: 'text-zinc-500 hover:text-zinc-700'}"
+			>
+				Active Tasks ({taskStats.active})
+			</button>
+			<button
+				onclick={() => activeTab = 'resolved'}
+				class="px-4 py-2 text-sm font-medium transition-colors {activeTab === 'resolved' 
+					? 'border-b-2 border-green-600 text-green-600' 
+					: 'text-zinc-500 hover:text-zinc-700'}"
+			>
+				Resolved Tasks ({taskStats.resolved})
+			</button>
+		</div>
+	</div>
+
 	<!-- Content -->
 	<div class="flex-1 overflow-auto">
-		{#if filteredTasks.length === 0}
-			<div class="mt-12 flex h-full items-center justify-center">
-				<div class="text-center">
-					<CheckCircle class="mx-auto h-12 w-12 text-zinc-600" />
-					<h3 class="mt-4 text-lg font-medium text-black">No tasks found</h3>
-					<p class="mt-2 text-sm text-zinc-500">
-						Tasks will appear here when you add them to nodes
-					</p>
+		{#if activeTab === 'active'}
+			{#if filteredActiveTasks.length === 0}
+				<div class="mt-12 flex h-full items-center justify-center">
+					<div class="text-center">
+						<CheckCircle class="mx-auto h-12 w-12 text-zinc-600" />
+						<h3 class="mt-4 text-lg font-medium text-black">No active tasks found</h3>
+						<p class="mt-2 text-sm text-zinc-500">
+							Tasks will appear here when you add them to nodes
+						</p>
+					</div>
 				</div>
-			</div>
-		{:else}
-			<div class="space-y-3 p-6">
-				{#each filteredTasks as task}
-					{@const personResult = peopleService.getPerson(task.assignee)}
-					{#await personResult instanceof Promise ? personResult : Promise.resolve(personResult) then person}
-						{@const overdue = task.dueDate && isOverdue(task.dueDate)}
+			{:else}
+				<div class="space-y-3 p-6">
+					{#each filteredActiveTasks as task}
+						{@const personResult = peopleService.getPerson(task.assignee)}
+						{#await personResult instanceof Promise ? personResult : Promise.resolve(personResult) then person}
+							{@const overdue = task.dueDate && isOverdue(task.dueDate)}
 
-						<div
-							class="group box-shadow-black rounded-lg border border-black bg-white p-4 transition-colors"
-						>
-							<div class="flex items-start justify-between gap-3">
-								<div class="min-w-0 flex-1">
-									<!-- Task info -->
-									<div class="mb-2 flex items-start justify-between gap-2">
-										<h3 class="font-medium text-black">{task.title}</h3>
-										<div class="flex items-center gap-2">
-											<button
-												onclick={() => handleDeleteTask(task)}
-												class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
-												title="Delete task"
-											>
-												<Trash2 class="h-4 w-4 text-zinc-500 hover:text-rose-500" />
-											</button>
-											<button
-												onclick={() => handleTaskClick(task)}
-												class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
-												title="Go to project"
-											>
-												<ExternalLink class="h-4 w-4 text-zinc-500 hover:text-borg-purple" />
-											</button>
+							<div class="group box-shadow-black rounded-lg border border-black bg-white p-4 transition-colors">
+								<div class="flex items-start justify-between gap-3">
+									<div class="min-w-0 flex-1">
+										<!-- Task info -->
+										<div class="mb-2 flex items-start justify-between gap-2">
+											<h3 class="font-medium text-black">{task.title}</h3>
+											<div class="flex items-center gap-2">
+												<button
+													onclick={() => handleResolveTask(task)}
+													class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
+													title="Mark as resolved"
+												>
+													<CheckCircle class="h-4 w-4 text-zinc-500 hover:text-green-500" />
+												</button>
+												<button
+													onclick={() => handleDeleteTask(task)}
+													class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
+													title="Delete task permanently"
+												>
+													<Trash2 class="h-4 w-4 text-zinc-500 hover:text-rose-500" />
+												</button>
+												<button
+													onclick={() => handleTaskClick(task)}
+													class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
+													title="Go to project"
+												>
+													<ExternalLink class="h-4 w-4 text-zinc-500 hover:text-borg-purple" />
+												</button>
+											</div>
 										</div>
-									</div>
 
-									<!-- Context info -->
-									<div class="mb-2 flex items-center gap-2 text-sm text-zinc-500">
-										<span class="font-medium">{task.projectTitle || 'Unknown Project'}</span>
-										<span>→</span>
-										<span>{task.nodeTitle}</span>
-										<span>•</span>
-										<span>{person?.name || 'Unknown'}</span>
-									</div>
+										<!-- Context info -->
+										<div class="mb-2 flex items-center gap-2 text-sm text-zinc-500">
+											<span class="font-medium">{task.projectTitle || 'Unknown Project'}</span>
+											<span>→</span>
+											<span>{task.nodeTitle}</span>
+											<span>•</span>
+											<span>{person?.name || 'Unknown'}</span>
+										</div>
 
-									<!-- Meta info -->
-									<div class="flex items-center gap-4 text-xs text-zinc-500">
-										{#if task.dueDate}
-											<div class="flex items-center gap-1 {overdue ? 'text-rose-400' : ''}">
-												<Calendar class="h-3 w-3" />
-												<span>Due {formatDate(task.dueDate)}</span>
-												{#if overdue}
-													<span class="text-rose-400">(Overdue)</span>
-												{/if}
-											</div>
-										{/if}
+										<!-- Meta info -->
+										<div class="flex items-center gap-4 text-xs text-zinc-500">
+											{#if task.dueDate}
+												<div class="flex items-center gap-1 {overdue ? 'text-rose-400' : ''}">
+													<Calendar class="h-3 w-3" />
+													<span>Due {formatDate(task.dueDate)}</span>
+													{#if overdue}
+														<span class="text-rose-400">(Overdue)</span>
+													{/if}
+												</div>
+											{/if}
 
-										{#if task.notes}
-											<div class="flex items-center gap-1">
-												<StickyNote class="h-3 w-3" />
-												<span>Has notes</span>
-											</div>
-										{/if}
+											{#if task.notes}
+												<div class="flex items-center gap-1">
+													<StickyNote class="h-3 w-3" />
+													<span>Has notes</span>
+												</div>
+											{/if}
+										</div>
 									</div>
 								</div>
 							</div>
-						</div>
-					{/await}
-				{/each}
-			</div>
+						{/await}
+					{/each}
+				</div>
+			{/if}
+		{:else}
+			{#if filteredResolvedTasks.length === 0}
+				<div class="mt-12 flex h-full items-center justify-center">
+					<div class="text-center">
+						<CheckCircle class="mx-auto h-12 w-12 text-zinc-600" />
+						<h3 class="mt-4 text-lg font-medium text-black">No resolved tasks found</h3>
+						<p class="mt-2 text-sm text-zinc-500">
+							Resolved tasks will appear here when you mark tasks as complete
+						</p>
+					</div>
+				</div>
+			{:else}
+				<div class="space-y-3 p-6">
+					{#each filteredResolvedTasks as task}
+						{@const personResult = peopleService.getPerson(task.assignee)}
+						{#await personResult instanceof Promise ? personResult : Promise.resolve(personResult) then person}
+							<div class="group box-shadow-black rounded-lg border border-black bg-white p-4 transition-colors opacity-75">
+								<div class="flex items-start justify-between gap-3">
+									<div class="min-w-0 flex-1">
+										<!-- Task info -->
+										<div class="mb-2 flex items-start justify-between gap-2">
+											<h3 class="font-medium text-black line-through">{task.title}</h3>
+											<div class="flex items-center gap-2">
+												<button
+													onclick={() => handleReactivateTask(task)}
+													class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
+													title="Reactivate task"
+												>
+													<RotateCcw class="h-4 w-4 text-zinc-500 hover:text-borg-orange" />
+												</button>
+												<button
+													onclick={() => handleDeleteTask(task)}
+													class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
+													title="Delete task permanently"
+												>
+													<Trash2 class="h-4 w-4 text-zinc-500 hover:text-rose-500" />
+												</button>
+												<button
+													onclick={() => handleTaskClick(task)}
+													class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
+													title="Go to project"
+												>
+													<ExternalLink class="h-4 w-4 text-zinc-500 hover:text-borg-purple" />
+												</button>
+											</div>
+										</div>
+
+										<!-- Context info -->
+										<div class="mb-2 flex items-center gap-2 text-sm text-zinc-500">
+											<span class="font-medium">{task.projectTitle || 'Unknown Project'}</span>
+											<span>→</span>
+											<span>{task.nodeTitle}</span>
+											<span>•</span>
+											<span>{person?.name || 'Unknown'}</span>
+										</div>
+
+										<!-- Meta info -->
+										<div class="flex items-center gap-4 text-xs text-zinc-500">
+											{#if task.dueDate}
+												<div class="flex items-center gap-1">
+													<Calendar class="h-3 w-3" />
+													<span>Due {formatDate(task.dueDate)}</span>
+												</div>
+											{/if}
+
+											{#if task.notes}
+												<div class="flex items-center gap-1">
+													<StickyNote class="h-3 w-3" />
+													<span>Has notes</span>
+												</div>
+											{/if}
+
+											<div class="flex items-center gap-1 text-green-600">
+												<CheckCircle class="h-3 w-3" />
+												<span>Resolved</span>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						{/await}
+					{/each}
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>

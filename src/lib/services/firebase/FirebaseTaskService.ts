@@ -25,6 +25,7 @@ export interface StoredTask {
 	dueDate: string;
 	notes: string;
 	createdAt: string;
+	status?: 'active' | 'resolved';
 	projectId: string;
 	projectSlug: string;
 	projectTitle: string;
@@ -37,7 +38,11 @@ export interface StoredTask {
 
 export class FirebaseTaskService implements ITaskService {
 	async getAllTasks(): Promise<TaskWithContext[]> {
-		const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
+		const q = query(
+			collection(db, 'tasks'),
+			where('status', 'in', ['active', null]),
+			orderBy('createdAt', 'desc')
+		);
 		const snapshot = await getDocs(q);
 		return snapshot.docs.map(doc => this.toTaskWithContext(doc.data() as StoredTask));
 	}
@@ -46,6 +51,7 @@ export class FirebaseTaskService implements ITaskService {
 		const q = query(
 			collection(db, 'tasks'),
 			where('projectSlug', '==', projectSlug),
+			where('status', 'in', ['active', null]),
 			orderBy('createdAt', 'desc')
 		);
 		const snapshot = await getDocs(q);
@@ -56,6 +62,7 @@ export class FirebaseTaskService implements ITaskService {
 		const q = query(
 			collection(db, 'tasks'),
 			where('assignee', '==', personId),
+			where('status', 'in', ['active', null]),
 			orderBy('createdAt', 'desc')
 		);
 		const snapshot = await getDocs(q);
@@ -69,12 +76,14 @@ export class FirebaseTaskService implements ITaskService {
 				collection(db, 'tasks'),
 				where('projectSlug', '==', projectSlug),
 				where('nodeId', '==', nodeId),
+				where('status', 'in', ['active', null]),
 				orderBy('createdAt', 'desc')
 			);
 		} else {
 			q = query(
 				collection(db, 'tasks'),
 				where('nodeId', '==', nodeId),
+				where('status', 'in', ['active', null]),
 				orderBy('createdAt', 'desc')
 			);
 		}
@@ -88,7 +97,8 @@ export class FirebaseTaskService implements ITaskService {
 				assignee: data.assignee,
 				dueDate: data.dueDate,
 				notes: data.notes,
-				createdAt: data.createdAt
+				createdAt: data.createdAt,
+				status: data.status || 'active'
 			};
 		});
 	}
@@ -139,6 +149,7 @@ export class FirebaseTaskService implements ITaskService {
 			dueDate: task.dueDate || '',
 			notes: task.notes || '',
 			createdAt: now.toISOString(),
+			status: task.status || 'active',
 			projectId: project.id,
 			projectSlug: projectSlug,
 			projectTitle: project.title,
@@ -196,6 +207,24 @@ export class FirebaseTaskService implements ITaskService {
 		for (const docSnap of snapshot.docs) {
 			await deleteDoc(docSnap.ref);
 		}
+	}
+
+	async resolveTask(nodeId: string, taskId: string, projectSlug?: string): Promise<void> {
+		await this.updateTask(nodeId, taskId, { status: 'resolved' }, projectSlug);
+	}
+
+	async getActiveTasks(): Promise<TaskWithContext[]> {
+		return this.getAllTasks(); // Already filters for active tasks
+	}
+
+	async getResolvedTasks(): Promise<TaskWithContext[]> {
+		const q = query(
+			collection(db, 'tasks'),
+			where('status', '==', 'resolved'),
+			orderBy('createdAt', 'desc')
+		);
+		const snapshot = await getDocs(q);
+		return snapshot.docs.map(doc => this.toTaskWithContext(doc.data() as StoredTask));
 	}
 
 	async getTaskCounts(projectSlug?: string): Promise<TaskCounts> {
@@ -272,12 +301,14 @@ export class FirebaseTaskService implements ITaskService {
 				collection(db, 'tasks'),
 				where('projectSlug', '==', projectSlug),
 				where('nodeId', '==', nodeId),
+				where('status', 'in', ['active', null]),
 				orderBy('createdAt', 'desc')
 			);
 		} else {
 			q = query(
 				collection(db, 'tasks'),
 				where('nodeId', '==', nodeId),
+				where('status', 'in', ['active', null]),
 				orderBy('createdAt', 'desc')
 			);
 		}
@@ -291,7 +322,8 @@ export class FirebaseTaskService implements ITaskService {
 					assignee: data.assignee,
 					dueDate: data.dueDate,
 					notes: data.notes,
-					createdAt: data.createdAt
+					createdAt: data.createdAt,
+					status: data.status || 'active'
 				};
 			});
 			callback(tasks);
@@ -353,6 +385,7 @@ export class FirebaseTaskService implements ITaskService {
 			dueDate: storedTask.dueDate,
 			notes: storedTask.notes,
 			createdAt: storedTask.createdAt,
+			status: storedTask.status || 'active',
 			projectSlug: storedTask.projectSlug,
 			projectTitle: storedTask.projectTitle,
 			nodeId: storedTask.nodeId,

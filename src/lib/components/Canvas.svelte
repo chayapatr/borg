@@ -518,6 +518,15 @@
 
 	// Function to refresh task sidebar data and node display
 	async function handleTasksUpdated() {
+		console.log('Canvas: handleTasksUpdated called');
+		
+		// Dispatch global event to force all UniversalNode components to refresh
+		const refreshEvent = new CustomEvent('tasksUpdated', {
+			detail: { timestamp: Date.now() }
+		});
+		document.dispatchEvent(refreshEvent);
+		console.log('Canvas: tasksUpdated event dispatched');
+		
 		// Always refresh node display to update task counts
 		if (nodesService.loadFromStorage) {
 			nodesService.loadFromStorage();
@@ -534,8 +543,10 @@
 
 		// If sidebar is open, refresh its tasks too
 		if (showNodeTaskSidebar && taskSidebarNodeId && taskService) {
+			console.log('Canvas: Refreshing sidebar tasks for node:', taskSidebarNodeId);
 			const tasksResult = taskService.getNodeTasks(taskSidebarNodeId, projectSlug);
 			const updatedTasks = tasksResult instanceof Promise ? await tasksResult : tasksResult;
+			console.log('Canvas: Updated sidebar tasks:', updatedTasks.length);
 			taskSidebarTasks = [...updatedTasks];
 		}
 	}

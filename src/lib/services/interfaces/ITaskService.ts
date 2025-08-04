@@ -9,6 +9,9 @@ export interface ITaskService {
 	addTask(nodeId: string, task: Omit<Task, 'id' | 'createdAt'>, projectSlug?: string): Promise<void> | void;
 	updateTask(nodeId: string, taskId: string, updates: Partial<Task>, projectSlug?: string): Promise<void> | void;
 	deleteTask(nodeId: string, taskId: string, projectSlug?: string): Promise<void> | void;
+	resolveTask(nodeId: string, taskId: string, projectSlug?: string): Promise<void> | void;
+	getActiveTasks(): Promise<TaskWithContext[]> | TaskWithContext[];
+	getResolvedTasks(): Promise<TaskWithContext[]> | TaskWithContext[];
 	getTaskCounts(projectSlug?: string): Promise<TaskCounts> | TaskCounts;
 	getOverdueTasks(projectSlug?: string): Promise<TaskWithContext[]> | TaskWithContext[];
 	updateOverdueStatus(): Promise<void> | void;

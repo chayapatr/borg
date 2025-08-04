@@ -60,6 +60,7 @@ export class TaskService {
 							dueDate: task.dueDate,
 							notes: task.notes,
 							createdAt: task.createdAt,
+							status: task.status || 'active',
 							projectId: project.id,
 							projectSlug: project.slug,
 							projectTitle: project.title,
@@ -117,7 +118,7 @@ export class TaskService {
 			dueDate: storedTask.dueDate,
 			notes: storedTask.notes,
 			createdAt: storedTask.createdAt,
-			completed: storedTask.completed || false,
+			status: storedTask.status || 'active',
 			projectSlug: storedTask.projectSlug,
 			projectTitle: storedTask.projectTitle,
 			nodeId: storedTask.nodeId,
@@ -149,35 +150,50 @@ export class TaskService {
 		};
 	}
 
-	// Get all tasks across all projects
+	// Get all tasks across all projects (active only)
 	getAllTasks(): TaskWithContext[] {
 		const storedTasks = this.getAllStoredTasks();
-		return storedTasks.map(task => this.toTaskWithContext(task));
+		const activeTasks = storedTasks.filter(task => (task.status || 'active') === 'active');
+		return activeTasks.map(task => this.toTaskWithContext(task));
 	}
 
-	// Get tasks for specific project
+	// Get tasks for specific project (active only)
 	getProjectTasks(projectSlug: string): TaskWithContext[] {
 		const storedTasks = this.getAllStoredTasks();
 		return storedTasks
-			.filter(task => task.projectSlug === projectSlug)
+			.filter(task => task.projectSlug === projectSlug && (task.status || 'active') === 'active')
 			.map(task => this.toTaskWithContext(task));
 	}
 
-	// Get tasks for specific person
+	// Get tasks for specific person (active only)
 	getPersonTasks(personId: string): TaskWithContext[] {
 		const storedTasks = this.getAllStoredTasks();
 		return storedTasks
-			.filter(task => task.assignee === personId && !task.completed)
+			.filter(task => task.assignee === personId && (task.status || 'active') === 'active')
 			.map(task => this.toTaskWithContext(task));
 	}
 
-	// Get tasks for specific node
+	// Get tasks for specific node (active only)
 	getNodeTasks(nodeId: string, projectSlug?: string): Task[] {
 		const storedTasks = this.getAllStoredTasks();
-		let filteredTasks = storedTasks.filter(task => task.nodeId === nodeId && !task.completed);
+		console.log(`TaskService.getNodeTasks: Looking for tasks in node ${nodeId}, total stored tasks:`, storedTasks.length);
+		
+		// Filter for this node first
+		const nodeTasksAll = storedTasks.filter(task => task.nodeId === nodeId);
+		console.log(`TaskService.getNodeTasks: Found ${nodeTasksAll.length} tasks for node ${nodeId}:`, nodeTasksAll.map(t => ({id: t.id, title: t.title, status: t.status})));
+		
+		// Then filter for active only
+		let filteredTasks = nodeTasksAll.filter(task => {
+			const status = task.status || 'active';
+			const isActive = status === 'active';
+			console.log(`TaskService.getNodeTasks: Task ${task.id} has status '${task.status}' -> '${status}' -> isActive: ${isActive}`);
+			return isActive;
+		});
+		console.log(`TaskService.getNodeTasks: After filtering for active status: ${filteredTasks.length} tasks`);
 		
 		if (projectSlug) {
 			filteredTasks = filteredTasks.filter(task => task.projectSlug === projectSlug);
+			console.log(`TaskService.getNodeTasks: After filtering for project ${projectSlug}: ${filteredTasks.length} tasks`);
 		}
 
 		return filteredTasks.map(task => ({
@@ -187,7 +203,7 @@ export class TaskService {
 			dueDate: task.dueDate,
 			notes: task.notes,
 			createdAt: task.createdAt,
-			completed: task.completed || false
+			status: task.status || 'active'
 		}));
 	}
 
@@ -233,7 +249,7 @@ export class TaskService {
 			...task,
 			id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			createdAt: new Date().toISOString(),
-			completed: task.completed || false
+			status: task.status || 'active'
 		};
 
 		const storedTask = this.toStoredTask(newTask, projectSlug, nodeId);
@@ -251,9 +267,13 @@ export class TaskService {
 			(!projectSlug || task.projectSlug === projectSlug)
 		);
 
-		if (taskIndex === -1) return;
+		if (taskIndex === -1) {
+			console.warn('Task not found for update:', taskId, 'in node:', nodeId);
+			return;
+		}
 
 		// Update the task
+		const oldTask = allTasks[taskIndex];
 		allTasks[taskIndex] = {
 			...allTasks[taskIndex],
 			...updates,
@@ -261,10 +281,18 @@ export class TaskService {
 			isOverdue: updates.dueDate ? new Date(updates.dueDate) < new Date() : allTasks[taskIndex].isOverdue
 		};
 
+		console.log('TaskService.updateTask: Task updated', {
+			taskId,
+			oldStatus: oldTask.status,
+			newStatus: allTasks[taskIndex].status,
+			updates
+		});
+
 		this.saveStoredTasks(allTasks);
+		console.log('TaskService.updateTask: Tasks saved to storage');
 	}
 
-	// Delete task completely (replaces resolve/unresolve)
+	// Delete task completely 
 	deleteTask(nodeId: string, taskId: string, projectSlug?: string): void {
 		const allTasks = this.getAllStoredTasks();
 		const filteredTasks = allTasks.filter(task => 
@@ -274,6 +302,26 @@ export class TaskService {
 		);
 
 		this.saveStoredTasks(filteredTasks);
+	}
+
+	// Resolve task (mark as resolved instead of deleting)
+	resolveTask(nodeId: string, taskId: string, projectSlug?: string): void {
+		this.updateTask(nodeId, taskId, { status: 'resolved' }, projectSlug);
+	}
+
+	// Get only active tasks
+	getActiveTasks(): TaskWithContext[] {
+		return this.getAllTasks(); // Already filters for active tasks
+	}
+
+	// Get only resolved tasks
+	getResolvedTasks(): TaskWithContext[] {
+		const storedTasks = this.getAllStoredTasks();
+		console.log('TaskService.getResolvedTasks: Total stored tasks:', storedTasks.length);
+		console.log('TaskService.getResolvedTasks: Task statuses:', storedTasks.map(t => ({id: t.id, title: t.title, status: t.status})));
+		const resolvedTasks = storedTasks.filter(task => (task.status || 'active') === 'resolved');
+		console.log('TaskService.getResolvedTasks: Found resolved tasks:', resolvedTasks.length);
+		return resolvedTasks.map(task => this.toTaskWithContext(task));
 	}
 
 	// Get task counts

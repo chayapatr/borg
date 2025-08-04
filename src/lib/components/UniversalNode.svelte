@@ -2,7 +2,7 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { getTemplate, type NodeTemplate } from '../templates';
 	import FieldRenderer from './FieldRenderer.svelte';
-	import { Trash2, CircleDashed, PencilRuler, CheckCircle, Plus } from '@lucide/svelte';
+	import { Trash2, CircleDashed, PencilRuler, CheckCircle, ListTodo } from '@lucide/svelte';
 	import TaskPill from './tasks/TaskPill.svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
 	import type { ITaskService } from '../services/interfaces/ITaskService';
@@ -21,8 +21,28 @@
 	let personTaskCounts = $state<Array<{ personId: string; count: number }>>([]);
 	let hasTasks = $derived(tasks.length > 0);
 
+	// Reactive flag to trigger task refresh
+	let refreshTrigger = $state(0);
+
+	// Listen for global task updates
+	$effect(() => {
+		const handleTasksUpdated = () => {
+			console.log('UniversalNode: Received tasksUpdated event for node:', id);
+			refreshTrigger += 1;
+		};
+
+		document.addEventListener('tasksUpdated', handleTasksUpdated);
+
+		return () => {
+			document.removeEventListener('tasksUpdated', handleTasksUpdated);
+		};
+	});
+
 	// Load tasks when component mounts or data changes
 	$effect(() => {
+		// Include refreshTrigger in dependencies to trigger on task updates
+		refreshTrigger;
+
 		(async () => {
 			// Get project slug from data if available, otherwise extract from URL
 			const projectSlug =
@@ -44,9 +64,10 @@
 				nodeTasksResult instanceof Promise ? await nodeTasksResult : nodeTasksResult;
 
 			// Debug log to see what's happening
-			if (nodeTasks.length > 0) {
-				console.log(`Node ${id} has ${nodeTasks.length} tasks:`, nodeTasks);
-			}
+			console.log(
+				`UniversalNode: Node ${id} loaded ${nodeTasks.length} tasks (trigger: ${refreshTrigger}):`,
+				nodeTasks
+			);
 
 			tasks = nodeTasks;
 
@@ -115,15 +136,6 @@
 			const event = new CustomEvent('nodeDelete', { detail: { nodeId: id } });
 			document.dispatchEvent(event);
 		}
-	}
-
-	function handleAddTask(event: MouseEvent) {
-		event.stopPropagation();
-		// Dispatch event to open add task modal at Canvas level
-		const customEvent = new CustomEvent('addTask', {
-			detail: { nodeId: id }
-		});
-		document.dispatchEvent(customEvent);
 	}
 
 	function handleTaskPillClick() {
@@ -235,7 +247,7 @@
 				<button
 					onclick={(event) => {
 						event.stopPropagation();
-						handleDelete();
+						handleDelete(event);
 					}}
 					aria-label="Delete note"
 					class="absolute top-1 right-1 rounded p-1 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/50 hover:text-red-600"
@@ -278,10 +290,13 @@
 			<!-- Add task button when no tasks (bottom right corner) - exclude post-it notes -->
 			{#if !hasTasks && template.id !== 'note'}
 				<button
-					onclick={(event) => handleAddTask(event)}
+					onclick={(event) => {
+						event.stopPropagation();
+						handleTaskPillClick();
+					}}
 					class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
 				>
-					<Plus class="h-3 w-3" />
+					<ListTodo class="h-3 w-3" />
 				</button>
 			{/if}
 
@@ -308,10 +323,13 @@
 					<TaskPill {personTaskCount} onclick={handleTaskPillClick} />
 				{/each}
 				<button
-					onclick={(event) => handleAddTask(event)}
+					onclick={(event) => {
+						event.stopPropagation();
+						handleTaskPillClick();
+					}}
 					class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
 				>
-					<Plus class="h-4 w-4" />
+					<ListTodo class="h-3 w-3" />
 				</button>
 			</div>
 		</div>

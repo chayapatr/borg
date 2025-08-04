@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronLeft, CheckSquare } from '@lucide/svelte';
+	import { ChevronLeft, CheckSquare, Check } from '@lucide/svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { IPeopleService } from '../../services/interfaces';
 	import type { TaskWithContext } from '../../types/task';
@@ -37,9 +37,13 @@
 				<ChevronLeft class="h-5 w-5" />
 			</button>
 		</div>
-		<p class="mt-1 text-sm text-zinc-500">
-			{projectTasks.length} tasks
-		</p>
+		{#if projectTasks}
+			{@const activeTasks = projectTasks.filter(t => (t.status || 'active') === 'active')}
+			{@const resolvedTasks = projectTasks.filter(t => t.status === 'resolved')}
+			<p class="mt-1 text-sm text-zinc-500">
+				{activeTasks.length} active, {resolvedTasks.length} resolved
+			</p>
+		{/if}
 	</div>
 
 	<!-- Task List -->
@@ -74,14 +78,21 @@
 						<div class="space-y-2">
 							{#each nodeTasks as task}
 								{@const person = allPeople.find(p => p.id === task.assignee)}
-								<div class="rounded border border-black bg-borg-beige p-3">
-									<p class="text-sm text-zinc-700 mb-1">{task.title}</p>
+								{@const isResolved = task.status === 'resolved'}
+								<div class="rounded border border-black bg-borg-beige p-3 {isResolved ? 'opacity-75' : ''}">
+									<p class="text-sm text-zinc-700 mb-1 {isResolved ? 'line-through' : ''}">{task.title}</p>
 									<p class="text-xs text-zinc-500">{person?.name || (task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}</p>
 									{#if task.dueDate}
 										<p class="text-xs text-zinc-500">Due: {new Date(task.dueDate).toLocaleDateString()}</p>
 									{/if}
 									{#if task.notes}
 										<p class="text-xs text-zinc-500 mt-1">{task.notes}</p>
+									{/if}
+									{#if isResolved}
+										<div class="mt-1 flex items-center gap-1 text-xs text-green-600">
+											<Check class="h-3 w-3" />
+											<span>Resolved</span>
+										</div>
 									{/if}
 								</div>
 							{/each}
