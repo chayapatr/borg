@@ -65,8 +65,8 @@ export class TaskService {
 							projectSlug: project.slug,
 							projectTitle: project.title,
 							nodeId: node.id,
-							nodeTitle: node.data?.nodeData?.title || 'Untitled',
-							nodeType: node.data?.templateType || 'unknown',
+							nodeTitle: this.extractNodeTitle(node.data?.nodeData, node.data?.templateType),
+							nodeType: node.data?.templateType || 'node',
 							isOverdue: task.dueDate ? new Date(task.dueDate) < new Date() : false
 						};
 						allTasks.push(storedTask);
@@ -87,6 +87,59 @@ export class TaskService {
 		this.migrationCompleted = true;
 
 		console.log(`Migrated ${allTasks.length} active tasks to separate storage`);
+	}
+
+	// Get the correct title field name based on template type
+	private getTitleFieldName(templateType?: string): string {
+		switch (templateType) {
+			case 'note':
+				return 'content';
+			case 'time':
+				return 'event'; // This will need special handling as it's a timeline-selector
+			default:
+				return 'title';
+		}
+	}
+
+	// Extract title from node data based on template type
+	private extractNodeTitle(nodeData: any, templateType?: string): string {
+		if (!nodeData) {
+			console.log('TaskService.extractNodeTitle: nodeData is null/undefined');
+			return 'Untitled';
+		}
+		
+		const titleField = this.getTitleFieldName(templateType);
+		const titleValue = nodeData[titleField];
+		
+		console.log('TaskService.extractNodeTitle:', {
+			templateType,
+			titleField,
+			titleValue,
+			nodeData: Object.keys(nodeData),
+			availableFields: Object.entries(nodeData).map(([k, v]) => `${k}: ${typeof v === 'string' ? v.substring(0, 50) : typeof v}`)
+		});
+		
+		if (!titleValue) {
+			// Try fallback fields if primary field is empty
+			const fallbackFields = ['title', 'content', 'name'];
+			for (const field of fallbackFields) {
+				if (nodeData[field] && typeof nodeData[field] === 'string' && nodeData[field].trim()) {
+					console.log(`TaskService.extractNodeTitle: Using fallback field '${field}': ${nodeData[field]}`);
+					return nodeData[field];
+				}
+			}
+			console.log('TaskService.extractNodeTitle: No valid title found, returning Untitled');
+			return 'Untitled';
+		}
+		
+		// For timeline-selector fields, we need to handle them differently
+		if (templateType === 'time' && titleField === 'event') {
+			// This would need timeline service to resolve the event title
+			// For now, return a placeholder
+			return titleValue ? `Timeline Event` : 'Untitled';
+		}
+		
+		return titleValue;
 	}
 
 	// Get all stored tasks from separate storage
@@ -132,11 +185,38 @@ export class TaskService {
 		const project = this.projectsService.getProject(projectSlug);
 		if (!project) throw new Error(`Project not found: ${projectSlug}`);
 
-		// Get node info
+		// Get node info - try multiple storage patterns
+		let node: any = null;
+		
+		// Try current storage format
 		const storageKey = `things-canvas-data-${projectSlug}`;
 		const stored = localStorage.getItem(storageKey);
-		const data = stored ? JSON.parse(stored) : { nodes: [] };
-		const node = data.nodes?.find((n: any) => n.id === nodeId);
+		if (stored) {
+			const data = JSON.parse(stored);
+			node = data.nodes?.find((n: any) => n.id === nodeId);
+		}
+
+		// Fallback: try default storage if project-specific doesn't exist
+		if (!node) {
+			const defaultStored = localStorage.getItem('things-canvas-data');
+			if (defaultStored) {
+				const defaultData = JSON.parse(defaultStored);
+				node = defaultData.nodes?.find((n: any) => n.id === nodeId);
+			}
+		}
+
+
+		const nodeTitle = this.extractNodeTitle(node?.data?.nodeData, node?.data?.templateType);
+		const nodeType = node?.data?.templateType || node?.type || 'node';
+		
+		console.log('TaskService.toStoredTask:', {
+			nodeId,
+			nodeTitle,
+			nodeType,
+			nodeExists: !!node,
+			nodeDataExists: !!node?.data?.nodeData,
+			templateType: node?.data?.templateType
+		});
 
 		return {
 			...task,
@@ -144,8 +224,8 @@ export class TaskService {
 			projectSlug: project.slug,
 			projectTitle: project.title,
 			nodeId,
-			nodeTitle: node?.data?.nodeData?.title || 'Untitled',
-			nodeType: node?.data?.templateType || 'unknown',
+			nodeTitle,
+			nodeType,
 			isOverdue: task.dueDate ? new Date(task.dueDate) < new Date() : false
 		};
 	}
@@ -362,6 +442,47 @@ export class TaskService {
 
 		if (hasChanges) {
 			this.saveStoredTasks(allTasks);
+		}
+	}
+
+	// Refresh node titles for all tasks (call when nodes are updated)
+	refreshNodeTitles(): void {
+		console.log('TaskService.refreshNodeTitles: Starting refresh...');
+		const allTasks = this.getAllStoredTasks();
+		let hasChanges = false;
+
+		allTasks.forEach(task => {
+			// Get current node data
+			const storageKey = `things-canvas-data-${task.projectSlug}`;
+			const stored = localStorage.getItem(storageKey);
+			if (!stored) return;
+
+			const data = JSON.parse(stored);
+			const node = data.nodes?.find((n: any) => n.id === task.nodeId);
+			
+			if (node) {
+				const newNodeTitle = this.extractNodeTitle(node.data?.nodeData, node.data?.templateType);
+				const newNodeType = node.data?.templateType || node.type || 'node';
+				
+				if (task.nodeTitle !== newNodeTitle || task.nodeType !== newNodeType) {
+					console.log(`TaskService.refreshNodeTitles: Updating task ${task.id}:`, {
+						oldTitle: task.nodeTitle,
+						newTitle: newNodeTitle,
+						oldType: task.nodeType,
+						newType: newNodeType
+					});
+					task.nodeTitle = newNodeTitle;
+					task.nodeType = newNodeType;
+					hasChanges = true;
+				}
+			}
+		});
+
+		if (hasChanges) {
+			this.saveStoredTasks(allTasks);
+			console.log('TaskService.refreshNodeTitles: Updated and saved tasks');
+		} else {
+			console.log('TaskService.refreshNodeTitles: No changes needed');
 		}
 	}
 }

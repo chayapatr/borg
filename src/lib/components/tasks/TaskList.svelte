@@ -44,7 +44,12 @@
 
 	async function handleReactivateTask(taskId: string) {
 		try {
-			const result = taskService.updateTask(nodeId, taskId, { status: 'active' } as Partial<Task>, projectSlug);
+			const result = taskService.updateTask(
+				nodeId,
+				taskId,
+				{ status: 'active' } as Partial<Task>,
+				projectSlug
+			);
 			if (result instanceof Promise) await result;
 			onTasksUpdated?.();
 		} catch (error) {
@@ -85,7 +90,11 @@
 		{@const overdue = task.dueDate && isOverdue(task.dueDate)}
 
 		{@const isResolved = task.status === 'resolved'}
-		<div class="group flex items-start gap-2 rounded-lg border border-black bg-borg-beige p-3 {isResolved ? 'opacity-75' : ''}">
+		<div
+			class="group flex items-start gap-2 rounded-lg border border-black bg-borg-beige p-3 {isResolved
+				? 'opacity-75'
+				: ''}"
+		>
 			{#if isResolved}
 				<button
 					onclick={() => handleReactivateTask(task.id)}
@@ -106,24 +115,27 @@
 
 			<div class="min-w-0 flex-1">
 				<div class="flex items-start justify-between gap-2">
-					<p class="text-sm text-black {isResolved ? 'line-through' : ''}">{task.title}</p>
-					<div class="flex items-center gap-1">
+					<p class="text-sm text-black {isResolved ? 'line-through' : ''}">
+						{task.title}
 						<span class="text-xs whitespace-nowrap text-zinc-600">
-							{person?.name || (task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}
+							[{person?.name ||
+								(task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}]
 						</span>
+					</p>
+					<div class="flex items-center gap-1">
 						<div
 							class="ml-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
 						>
 							<button
 								onclick={() => handleDeleteTask(task.id)}
-								class="rounded p-1 text-zinc-500 hover:bg-red-500 hover:text-white"
+								class="rounded p-1 text-zinc-500 hover:bg-zinc-200 hover:text-borg-orange"
 								title="Delete permanently"
 							>
 								<Trash2 class="h-3 w-3" />
 							</button>
 							<button
 								onclick={() => handleEditTask(task)}
-								class="rounded p-1 text-zinc-500 hover:bg-zinc-700 hover:text-blue-400"
+								class="rounded p-1 text-zinc-500 hover:bg-zinc-200 hover:text-borg-blue"
 								title="Edit task"
 							>
 								<Edit class="h-3 w-3" />

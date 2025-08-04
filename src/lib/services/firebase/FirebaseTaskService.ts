@@ -3,6 +3,7 @@ import {
 	addDoc, 
 	deleteDoc, 
 	getDocs, 
+	getDoc,
 	query, 
 	where, 
 	orderBy, 
@@ -37,6 +38,59 @@ export interface StoredTask {
 }
 
 export class FirebaseTaskService implements ITaskService {
+	// Get the correct title field name based on template type
+	private getTitleFieldName(templateType?: string): string {
+		switch (templateType) {
+			case 'note':
+				return 'content';
+			case 'time':
+				return 'event'; // This will need special handling as it's a timeline-selector
+			default:
+				return 'title';
+		}
+	}
+
+	// Extract title from node data based on template type
+	private extractNodeTitle(nodeData: any, templateType?: string): string {
+		if (!nodeData) {
+			console.log('FirebaseTaskService.extractNodeTitle: nodeData is null/undefined');
+			return 'Untitled';
+		}
+		
+		const titleField = this.getTitleFieldName(templateType);
+		const titleValue = nodeData[titleField];
+		
+		console.log('FirebaseTaskService.extractNodeTitle:', {
+			templateType,
+			titleField,
+			titleValue,
+			nodeData: Object.keys(nodeData),
+			availableFields: Object.entries(nodeData).map(([k, v]) => `${k}: ${typeof v === 'string' ? v.substring(0, 50) : typeof v}`)
+		});
+		
+		if (!titleValue) {
+			// Try fallback fields if primary field is empty
+			const fallbackFields = ['title', 'content', 'name'];
+			for (const field of fallbackFields) {
+				if (nodeData[field] && typeof nodeData[field] === 'string' && nodeData[field].trim()) {
+					console.log(`FirebaseTaskService.extractNodeTitle: Using fallback field '${field}': ${nodeData[field]}`);
+					return nodeData[field];
+				}
+			}
+			console.log('FirebaseTaskService.extractNodeTitle: No valid title found, returning Untitled');
+			return 'Untitled';
+		}
+		
+		// For timeline-selector fields, we need to handle them differently
+		if (templateType === 'time' && titleField === 'event') {
+			// This would need timeline service to resolve the event title
+			// For now, return a placeholder
+			return titleValue ? `Timeline Event` : 'Untitled';
+		}
+		
+		return titleValue;
+	}
+
 	async getAllTasks(): Promise<TaskWithContext[]> {
 		const q = query(
 			collection(db, 'tasks'),
@@ -134,14 +188,43 @@ export class FirebaseTaskService implements ITaskService {
 		const projectData = projectSnapshot.docs[0].data();
 		const project = { id: projectSnapshot.docs[0].id, title: projectData.title || 'Untitled Project', ...projectData };
 		
-		// Get node info
-		const nodeQuery = query(collection(db, 'projects', project.id, 'nodes'), where('id', '==', nodeId));
-		const nodeSnapshot = await getDocs(nodeQuery);
+		// Get node info - use document ID directly instead of querying by field
+		console.log('FirebaseTaskService.addTask: Looking for node:', { projectId: project.id, nodeId });
 		
-		const nodeData = nodeSnapshot.empty ? null : nodeSnapshot.docs[0].data();
+		let nodeData = null;
+		try {
+			const nodeDocRef = doc(db, 'projects', project.id, 'nodes', nodeId);
+			const nodeSnapshot = await getDoc(nodeDocRef);
+			
+			console.log('FirebaseTaskService.addTask: Node query results:', { 
+				exists: nodeSnapshot.exists()
+			});
+			
+			nodeData = nodeSnapshot.exists() ? nodeSnapshot.data() : null;
+		} catch (error) {
+			console.warn('FirebaseTaskService.addTask: Error getting node:', error);
+			nodeData = null;
+		}
+		console.log('FirebaseTaskService.addTask: Retrieved node data:', {
+			nodeData: nodeData ? Object.keys(nodeData) : 'null',
+			hasNodeData: !!nodeData?.nodeData,
+			templateType: nodeData?.templateType,
+			nodeDataKeys: nodeData?.nodeData ? Object.keys(nodeData.nodeData) : 'none',
+			rawNodeData: nodeData
+		});
 
 		const now = new Date();
 		const isOverdue = task.dueDate ? new Date(task.dueDate) < now : false;
+
+		const nodeTitle = this.extractNodeTitle(nodeData?.nodeData, nodeData?.templateType);
+		const nodeType = nodeData?.templateType || 'unknown';
+		
+		console.log('FirebaseTaskService.addTask: Extracted node info:', {
+			nodeTitle,
+			nodeType,
+			inputNodeData: nodeData?.nodeData,
+			inputTemplateType: nodeData?.templateType
+		});
 
 		const storedTask: Omit<StoredTask, 'id'> = {
 			title: task.title,
@@ -154,8 +237,8 @@ export class FirebaseTaskService implements ITaskService {
 			projectSlug: projectSlug,
 			projectTitle: project.title,
 			nodeId: nodeId,
-			nodeTitle: nodeData?.nodeData?.title || 'Untitled',
-			nodeType: nodeData?.templateType || 'unknown',
+			nodeTitle: nodeTitle,
+			nodeType: nodeType,
 			createdBy: get(authStore).user?.uid || 'anonymous',
 			isOverdue
 		};
@@ -375,6 +458,69 @@ export class FirebaseTaskService implements ITaskService {
 			);
 			callback(tasks);
 		});
+	}
+
+	// Refresh node titles for all tasks (call when nodes are updated)
+	async refreshNodeTitles(): Promise<void> {
+		console.log('FirebaseTaskService.refreshNodeTitles: Starting refresh...');
+		
+		// Get all tasks
+		const tasksQuery = query(collection(db, 'tasks'));
+		const tasksSnapshot = await getDocs(tasksQuery);
+		
+		const batch = writeBatch(db);
+		let batchCount = 0;
+		let hasChanges = false;
+
+		for (const taskDoc of tasksSnapshot.docs) {
+			const task = taskDoc.data() as StoredTask;
+			
+			try {
+				// Get current node data - use document ID directly
+				const nodeDocRef = doc(db, 'projects', task.projectId, 'nodes', task.nodeId);
+				const nodeSnapshot = await getDoc(nodeDocRef);
+				
+				if (nodeSnapshot.exists()) {
+					const nodeData = nodeSnapshot.data();
+					const newNodeTitle = this.extractNodeTitle(nodeData?.nodeData, nodeData?.templateType);
+					const newNodeType = nodeData?.templateType || 'unknown';
+					
+					if (task.nodeTitle !== newNodeTitle || task.nodeType !== newNodeType) {
+						console.log(`FirebaseTaskService.refreshNodeTitles: Updating task ${task.id}:`, {
+							oldTitle: task.nodeTitle,
+							newTitle: newNodeTitle,
+							oldType: task.nodeType,
+							newType: newNodeType
+						});
+						
+						batch.update(taskDoc.ref, {
+							nodeTitle: newNodeTitle,
+							nodeType: newNodeType,
+							updatedAt: new Date().toISOString()
+						});
+						
+						batchCount++;
+						hasChanges = true;
+						
+						// Firestore batch limit is 500 operations
+						if (batchCount >= 500) {
+							await batch.commit();
+							// Would need to create a new batch here for more updates
+							break;
+						}
+					}
+				}
+			} catch (error) {
+				console.warn(`FirebaseTaskService.refreshNodeTitles: Error updating task ${task.id}:`, error);
+			}
+		}
+
+		if (hasChanges && batchCount > 0) {
+			await batch.commit();
+			console.log('FirebaseTaskService.refreshNodeTitles: Updated and saved tasks');
+		} else {
+			console.log('FirebaseTaskService.refreshNodeTitles: No changes needed');
+		}
 	}
 
 	private toTaskWithContext(storedTask: StoredTask): TaskWithContext {

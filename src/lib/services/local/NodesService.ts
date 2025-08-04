@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/svelte';
 import { getTemplate } from '../../templates';
 import { ProjectsService } from './ProjectsService';
+import { ServiceFactory } from '../ServiceFactory';
 
 export class NodesService {
 	private storageKey: string;
@@ -71,6 +72,17 @@ export class NodesService {
 		
 		if (oldStatus !== newStatus && this.projectSlug) {
 			this.projectsService.invalidateStatusCache(this.projectSlug);
+		}
+
+		// Refresh task titles to reflect any node title/type changes
+		try {
+			const taskService = ServiceFactory.createTaskService();
+			if (taskService.refreshNodeTitles) {
+				taskService.refreshNodeTitles();
+				console.log('Task titles refreshed after node update');
+			}
+		} catch (error) {
+			console.warn('Failed to refresh task titles after node update:', error);
 		}
 		
 		return true;

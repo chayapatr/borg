@@ -58,23 +58,6 @@
 		return { days, hours, minutes, isOverdue: false };
 	}
 
-	// Format countdown display
-	function formatCountdown(countdown: {
-		days: number;
-		hours: number;
-		minutes: number;
-		isOverdue: boolean;
-	}): string {
-		if (countdown.isOverdue) return 'Overdue';
-
-		if (countdown.days > 0) {
-			return `${countdown.days}D ${countdown.hours}H ${countdown.minutes}M`;
-		} else if (countdown.hours > 0) {
-			return `${countdown.hours}H ${countdown.minutes}M`;
-		} else {
-			return `${countdown.minutes}M`;
-		}
-	}
 
 	// Update countdown every 30 seconds for live updates
 	let countdownRefreshKey = $state(0);

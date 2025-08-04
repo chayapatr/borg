@@ -17,6 +17,7 @@ import type { INodesService } from '../interfaces/INodesService';
 import { getTemplate } from '../../templates';
 import { get } from 'svelte/store';
 import { authStore } from '../../stores/authStore';
+import { ServiceFactory } from '../ServiceFactory';
 
 export class FirebaseNodesService implements INodesService {
 	private projectId: string;
@@ -141,6 +142,17 @@ export class FirebaseNodesService implements INodesService {
 			});
 
 			console.log('Node updated successfully in Firestore');
+
+			// Refresh task titles to reflect any node title/type changes
+			try {
+				const taskService = ServiceFactory.createTaskService();
+				if (taskService.refreshNodeTitles) {
+					await taskService.refreshNodeTitles();
+					console.log('Task titles refreshed after node update');
+				}
+			} catch (error) {
+				console.warn('Failed to refresh task titles after node update:', error);
+			}
 
 			// Note: We don't update local state here because the subscription will handle it
 			// The subscription in Canvas will receive the updated data and update the nodes
