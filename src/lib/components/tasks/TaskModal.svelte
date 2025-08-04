@@ -40,7 +40,7 @@
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
-		
+
 		if (!title.trim()) return;
 
 		if (isEditMode && task) {
@@ -68,18 +68,18 @@
 			if (result instanceof Promise) await result;
 			onTaskAdded?.();
 		}
-		
+
 		onClose();
 	}
 </script>
 
 <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-	<div class="w-full max-w-md rounded-lg bg-zinc-900 p-6 shadow-xl">
+	<div class="w-full max-w-md rounded-lg border border-black bg-borg-beige p-6">
 		<div class="mb-4 flex items-center justify-between">
-			<h2 class="text-lg font-semibold text-zinc-100">{modalTitle}</h2>
+			<h2 class="text-lg font-semibold text-black">{modalTitle}</h2>
 			<button
 				onclick={onClose}
-				class="rounded-lg p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300"
+				class="rounded-lg p-1 text-zinc-400 hover:bg-white hover:text-zinc-600"
 			>
 				<X class="h-5 w-5" />
 			</button>
@@ -87,7 +87,7 @@
 
 		<form onsubmit={handleSubmit} class="space-y-4">
 			<div>
-				<label for="title" class="block text-sm font-medium text-zinc-300 mb-1">
+				<label for="title" class="mb-1 block text-sm font-medium text-zinc-600">
 					Task Description *
 				</label>
 				<input
@@ -95,19 +95,19 @@
 					type="text"
 					bind:value={title}
 					placeholder="Enter task description..."
-					class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
 					required
 				/>
 			</div>
 
 			<div>
-				<label for="assignee" class="block text-sm font-medium text-zinc-300 mb-1">
+				<label for="assignee" class="mb-1 block text-sm font-medium text-zinc-600">
 					Assign to
 				</label>
 				<select
 					id="assignee"
 					bind:value={assignee}
-					class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none"
 				>
 					<option value="">Unassigned</option>
 					{#each people as person}
@@ -117,27 +117,23 @@
 			</div>
 
 			<div>
-				<label for="dueDate" class="block text-sm font-medium text-zinc-300 mb-1">
-					Due Date
-				</label>
+				<label for="dueDate" class="mb-1 block text-sm font-medium text-zinc-600"> Due Date </label>
 				<input
 					id="dueDate"
 					type="date"
 					bind:value={dueDate}
-					class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none"
 				/>
 			</div>
 
 			<div>
-				<label for="notes" class="block text-sm font-medium text-zinc-300 mb-1">
-					Notes
-				</label>
+				<label for="notes" class="mb-1 block text-sm font-medium text-zinc-600"> Notes </label>
 				<textarea
 					id="notes"
 					bind:value={notes}
 					rows="3"
 					placeholder="Additional notes..."
-					class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
 				></textarea>
 			</div>
 
@@ -145,14 +141,14 @@
 				<button
 					type="button"
 					onclick={onClose}
-					class="flex-1 rounded-lg bg-zinc-800 px-4 py-2 text-zinc-300 hover:bg-zinc-700"
+					class="flex-1 rounded-lg bg-white px-4 py-2 text-black"
 				>
 					Cancel
 				</button>
 				<button
 					type="submit"
 					disabled={!title.trim()}
-					class="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+					class="flex-1 rounded-lg bg-borg-violet px-4 py-2 text-black text-white hover:bg-borg-blue disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					{submitButtonText}
 				</button>
