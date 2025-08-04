@@ -2,7 +2,20 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { getTemplate, type NodeTemplate } from '../templates';
 	import FieldRenderer from './FieldRenderer.svelte';
-	import { Trash2, CircleDashed, PencilRuler, CheckCircle, ListTodo } from '@lucide/svelte';
+	import {
+		Trash2,
+		ListTodo,
+		GitBranch,
+		FileText,
+		Code,
+		Calendar,
+		StickyNote,
+		HardDrive,
+		Square,
+		CircleDashed,
+		PencilRuler,
+		CheckCircle
+	} from '@lucide/svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
 	import type { ITaskService } from '../services/interfaces/ITaskService';
 	import type { Task } from '../types/task';
@@ -89,13 +102,56 @@
 	// 	return '3px 3px 0px #000'; // black shadow - default
 	// });
 
-	// Determine status icon and color
+	// Determine node type icon with status-based color
 	let statusIcon = $derived.by(() => {
+		const templateType = data.templateType || template.id;
 		const status = nodeData.status;
-		if (status === 'To Do') return { component: CircleDashed, color: '#9333ea' };
-		if (status === 'Doing') return { component: PencilRuler, color: '#0284c7' };
-		if (status === 'Done') return { component: CheckCircle, color: '#16a34a' };
-		return null; // No icon if status is not set
+
+		// Hide icon for project nodes
+		if (templateType === 'project') {
+			return null;
+		}
+
+		// Get icon based on node type
+		let component;
+		switch (templateType) {
+			case 'subproject':
+				component = GitBranch;
+				break;
+			case 'paper':
+				component = FileText;
+				break;
+			case 'code':
+				component = Code;
+				break;
+			case 'time':
+				component = Calendar;
+				break;
+			case 'note':
+				component = StickyNote;
+				break;
+			case 'storage':
+				component = HardDrive;
+				break;
+			case 'blank':
+				component = Square;
+				break;
+			default:
+				component = Square;
+				break;
+		}
+
+		// Get color based on status
+		let color;
+		if (status === 'To Do')
+			color = '#9333ea'; // purple-600
+		else if (status === 'Doing')
+			color = '#0284c7'; // sky-600
+		else if (status === 'Done')
+			color = '#16a34a'; // green-600
+		else color = '#374151'; // gray-700 - default
+
+		return { component, color };
 	});
 
 	function handleNodeClick() {
@@ -137,6 +193,40 @@
 		});
 		document.dispatchEvent(customEvent);
 	}
+
+	// Get status styling for project nodes
+	function getStatusStyling(status: string) {
+		switch (status) {
+			case 'To Do':
+				return {
+					icon: CircleDashed,
+					color: '#9333ea',
+					bgColor: 'bg-purple-100',
+					textColor: 'text-purple-800'
+				};
+			case 'Doing':
+				return {
+					icon: PencilRuler,
+					color: '#0284c7',
+					bgColor: 'bg-sky-100',
+					textColor: 'text-sky-800'
+				};
+			case 'Done':
+				return {
+					icon: CheckCircle,
+					color: '#16a34a',
+					bgColor: 'bg-green-100',
+					textColor: 'text-green-800'
+				};
+			default:
+				return {
+					icon: null,
+					color: '#374151',
+					bgColor: 'bg-gray-100',
+					textColor: 'text-gray-800'
+				};
+		}
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -148,7 +238,7 @@
 			<div class="flex items-center gap-2">
 				{#if statusIcon}
 					{@const StatusIconComponent = statusIcon.component}
-					<StatusIconComponent class="h-5 w-5" style="color: {statusIcon.color};" />
+					<StatusIconComponent class="h-4 w-4" style="color: {statusIcon.color};" />
 				{/if}
 				<span class="rounded-md border border-zinc-700 bg-white px-1 py-0.5 text-sm font-medium"
 					>{template.name}</span
@@ -170,6 +260,26 @@
 	{/if} -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
+
+	{#if template.id === 'project'}
+		<div class="mb-2 flex items-center justify-between">
+			<div class="text-2xl font-semibold">🏕️ Project</div>
+			{#if nodeData.status}
+				{@const statusStyle = getStatusStyling(nodeData.status)}
+				<div
+					class="flex items-center gap-1 rounded border px-2 py-1 text-sm font-medium {statusStyle.bgColor} {statusStyle.textColor}"
+					style="border-color: {borderColor};"
+				>
+					{#if statusStyle.icon}
+						{@const StatusIcon = statusStyle.icon}
+						<StatusIcon class="h-4 w-4" style="color: {statusStyle.color};" />
+					{/if}
+					<span>{nodeData.status}</span>
+				</div>
+			{/if}
+		</div>
+	{/if}
+
 	<div
 		class="group relative cursor-pointer border transition-all duration-200 {template.id === 'note'
 			? 'h-32 w-32 rounded-lg p-3'
