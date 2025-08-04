@@ -166,9 +166,13 @@
 	}
 
 	// Function to get the appropriate icon for a field
-	function getFieldIcon(fieldLabel: string): { type: 'svg' | 'lucide'; path?: string; component?: any } {
+	function getFieldIcon(fieldLabel: string): {
+		type: 'svg' | 'lucide';
+		path?: string;
+		component?: any;
+	} {
 		const label = fieldLabel.toLowerCase();
-		
+
 		// Check for static SVG logos first
 		if (label.includes('github')) {
 			return { type: 'svg', path: '/github.svg' };
@@ -179,7 +183,7 @@
 		if (label.includes('overleaf')) {
 			return { type: 'svg', path: '/overleaf.svg' };
 		}
-		
+
 		// Fall back to Lucide icons
 		if (label.includes('arxiv') || label.includes('archive')) {
 			return { type: 'lucide', component: Archive };
@@ -190,14 +194,14 @@
 		if (label.includes('dropbox') || label.includes('storage')) {
 			return { type: 'lucide', component: HardDrive };
 		}
-		
+
 		// Default to Link icon
 		return { type: 'lucide', component: Link };
 	}
 </script>
 
 <div class="field-container">
-	{#if !((field.type === 'button' || field.type === 'link') && mode === 'display')}
+	{#if !((field.type === 'button' || field.type === 'link' || field.id === 'title') && mode === 'display')}
 		<label class="mb-1 block text-sm font-medium text-zinc-600">
 			{field.label}
 		</label>
@@ -205,7 +209,7 @@
 
 	{#if field.type === 'text'}
 		{#if readonly || mode === 'display'}
-			<div class="py-1 text-black">
+			<div class="py-1 text-black {field.id === 'title' ? 'text-xl' : ''}">
 				{value || '-'}
 			</div>
 		{:else}
@@ -306,7 +310,7 @@
 				{@const icon = getFieldIcon(field.label)}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none flex items-center justify-center gap-2"
+					class="flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
 					{#if icon.type === 'svg'}
 						<img src={icon.path} alt="" class="h-4 w-4" />
@@ -377,7 +381,7 @@
 				{@const icon = getFieldIcon(field.label)}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="w-full rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none flex items-center justify-center gap-2"
+					class="flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
 					{#if icon.type === 'svg'}
 						<img src={icon.path} alt="" class="h-4 w-4" />
@@ -395,7 +399,7 @@
 				{@const icon = getFieldIcon(field.label)}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="w-full rounded-lg bg-zinc-600 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-500 focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none flex items-center justify-center gap-2"
+					class="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-600 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-500 focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
 					{#if icon.type === 'svg'}
 						<img src={icon.path} alt="" class="h-4 w-4" />

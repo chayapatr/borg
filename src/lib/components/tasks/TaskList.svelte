@@ -16,7 +16,7 @@
 
 	const peopleService: IPeopleService = ServiceFactory.createPeopleService();
 	const taskService: ITaskService = ServiceFactory.createTaskService();
-	
+
 	let editingTask = $state<Task | null>(null);
 	let allPeople = $state<any[]>([]);
 
@@ -57,29 +57,31 @@
 
 <div class="space-y-2">
 	{#each tasks as task}
-		{@const person = allPeople.find(p => p.id === task.assignee)}
+		{@const person = allPeople.find((p) => p.id === task.assignee)}
 		{@const overdue = task.dueDate && isOverdue(task.dueDate)}
-		
-		<div class="group flex items-start gap-2 rounded-lg bg-zinc-800/50 p-3">
+
+		<div class="group flex items-start gap-2 rounded-lg border border-black bg-borg-beige p-3">
 			<button
 				onclick={() => handleResolveTask(task.id)}
-				class="mt-0.5 rounded-full border-2 border-zinc-600 hover:border-green-500 hover:bg-green-500 p-1 transition-all duration-200"
+				class="mt-0.5 rounded-full border border-black p-1 transition-all duration-200 hover:border-black hover:bg-green-400"
 				title="Resolve task (delete)"
 			>
 				<Check class="h-3 w-3" />
 			</button>
 
-			<div class="flex-1 min-w-0">
+			<div class="min-w-0 flex-1">
 				<div class="flex items-start justify-between gap-2">
-					<p class="text-sm text-zinc-100">{task.title}</p>
+					<p class="text-sm text-black">{task.title}</p>
 					<div class="flex items-center gap-1">
-						<span class="text-xs text-zinc-400 whitespace-nowrap">
+						<span class="text-xs whitespace-nowrap text-zinc-600">
 							{person?.name || (task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}
 						</span>
-						<div class="opacity-0 group-hover:opacity-100 flex items-center gap-1 ml-2 transition-opacity">
+						<div
+							class="ml-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+						>
 							<button
 								onclick={() => handleEditTask(task)}
-								class="rounded p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-700"
+								class="rounded p-1 text-zinc-500 hover:bg-zinc-700 hover:text-blue-400"
 								title="Edit task"
 							>
 								<Edit class="h-3 w-3" />
@@ -89,7 +91,11 @@
 				</div>
 
 				{#if task.dueDate}
-					<div class="mt-1 flex items-center gap-1 text-xs {overdue ? 'text-rose-400' : 'text-zinc-500'}">
+					<div
+						class="mt-1 flex items-center gap-1 text-xs {overdue
+							? 'text-rose-400'
+							: 'text-zinc-500'}"
+					>
 						<Calendar class="h-3 w-3" />
 						<span>Due {formatDate(task.dueDate)}</span>
 						{#if overdue}
@@ -100,11 +106,10 @@
 
 				{#if task.notes}
 					<div class="mt-1 flex items-start gap-1 text-xs text-zinc-500">
-						<StickyNote class="h-3 w-3 mt-0.5 flex-shrink-0" />
+						<StickyNote class="mt-0.5 h-3 w-3 flex-shrink-0" />
 						<span class="break-words">{task.notes}</span>
 					</div>
 				{/if}
-
 			</div>
 		</div>
 	{/each}
@@ -116,7 +121,7 @@
 		task={editingTask}
 		{nodeId}
 		{projectSlug}
-		onClose={() => editingTask = null}
+		onClose={() => (editingTask = null)}
 		onTaskUpdated={() => {
 			editingTask = null;
 			onTasksUpdated?.();

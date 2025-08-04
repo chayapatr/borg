@@ -2,7 +2,7 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { getTemplate, type NodeTemplate } from '../templates';
 	import FieldRenderer from './FieldRenderer.svelte';
-	import { Trash2, CircleDashed, Hand, CheckCircle, Plus } from '@lucide/svelte';
+	import { Trash2, CircleDashed, PencilRuler, CheckCircle, Plus } from '@lucide/svelte';
 	import TaskPill from './tasks/TaskPill.svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
 	import type { ITaskService } from '../services/interfaces/ITaskService';
@@ -72,19 +72,19 @@
 	});
 
 	// Create dynamic box-shadow based on status
-	let boxShadow = $derived.by(() => {
-		const status = nodeData.status;
-		if (status === 'To Do') return '3px 3px 0px #9333ea'; // purple-600 shadow
-		if (status === 'Doing') return '3px 3px 0px #0284c7'; // sky-600 shadow
-		if (status === 'Done') return '3px 3px 0px #16a34a'; // green-600 shadow
-		return '3px 3px 0px #000'; // black shadow - default
-	});
+	// let boxShadow = $derived.by(() => {
+	// 	const status = nodeData.status;
+	// 	if (status === 'To Do') return '3px 3px 0px #9333ea'; // purple-600 shadow
+	// 	if (status === 'Doing') return '3px 3px 0px #0284c7'; // sky-600 shadow
+	// 	if (status === 'Done') return '3px 3px 0px #16a34a'; // green-600 shadow
+	// 	return '3px 3px 0px #000'; // black shadow - default
+	// });
 
 	// Determine status icon and color
 	let statusIcon = $derived.by(() => {
 		const status = nodeData.status;
 		if (status === 'To Do') return { component: CircleDashed, color: '#8b5cf6' };
-		if (status === 'Doing') return { component: Hand, color: '#3b82f6' };
+		if (status === 'Doing') return { component: PencilRuler, color: '#3b82f6' };
 		if (status === 'Done') return { component: CheckCircle, color: '#22c55e' };
 		return null; // No icon if status is not set
 	});
@@ -143,7 +143,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div>
 	<!-- Node Header -->
-	{#if template.id !== 'note'}
+	<!-- {#if template.id !== 'note'}
 		<div class="mb-2 flex items-center justify-between">
 			<div class="flex items-center gap-2">
 				{#if statusIcon}
@@ -167,70 +167,128 @@
 				{/if}
 			</div>
 		</div>
-	{/if}
+	{/if} -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="relative cursor-pointer rounded-lg border transition-all duration-200 group {template.id === 'note' ? 'w-32 h-32 p-3' : 'min-w-64 p-4'}"
-		style="border-color: {borderColor}; box-shadow: {boxShadow}; background-color: {template.id === 'note' && nodeData.backgroundColor ? nodeData.backgroundColor : (template.id === 'note' ? '#fef08a' : 'white')};"
+		class="group relative cursor-pointer rounded-lg border transition-all duration-200 {template.id ===
+		'note'
+			? 'h-32 w-32 p-3'
+			: 'min-w-64'}"
+		style="border-color: {borderColor}; background-color: {template.id === 'note' &&
+		nodeData.backgroundColor
+			? nodeData.backgroundColor
+			: template.id === 'note'
+				? '#fef08a'
+				: 'white'};"
 		onclick={handleNodeClick}
 	>
-		<!-- Node Content -->
-		{#if nodeData.countdownMode && template.id === 'time'}
-			<!-- Countdown-only mode: show only event name and countdown -->
-			{@const eventField = template.fields.find(f => f.type === 'timeline-selector')}
-			{#if eventField}
-				<div class="space-y-3">
-					<FieldRenderer field={eventField} value={nodeData[eventField.id]} readonly={true} mode="display" {nodeData} countdownOnly={true} />
-				</div>
-			{/if}
-		{:else if template.id === 'note'}
-			<!-- Post-it note style: simple content display -->
-			<div class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap h-full flex items-center justify-center text-center overflow-hidden">
-				{nodeData.content || 'Click to edit...'}
-			</div>
-			<!-- Delete button for note nodes -->
-			<button
-				onclick={(event) => { event.stopPropagation(); handleDelete(); }}
-				aria-label="Delete note"
-				class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity rounded p-1 text-gray-600 hover:text-red-600 hover:bg-white/50"
-			>
-				<Trash2 class="h-3 w-3" />
-			</button>
-		{:else}
-			<!-- Normal mode: show all fields -->
-			<div class="space-y-3">
-				{#each template.fields as field}
-					{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? true}
-					{#if field.id !== 'status' && isVisible}
-						<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" {nodeData} />
+		{#if template.id !== 'note'}
+			<div class="flex items-center justify-between p-3 pb-0">
+				<div class="flex items-center gap-2">
+					{#if statusIcon}
+						{@const StatusIconComponent = statusIcon.component}
+						<StatusIconComponent class="h-5 w-5" style="color: {statusIcon.color};" />
 					{/if}
-				{/each}
+					<span class="bg-white font-medium">{template.name}</span>
+				</div>
 
-				{#if nodeData.customFields && Array.isArray(nodeData.customFields)}
-					{#each nodeData.customFields as field}
-						{@const isVisible = field.showInDisplay ?? true}
-						{#if isVisible && field.id !== 'status'}
-							<FieldRenderer {field} value={nodeData[field.id]} readonly={true} mode="display" {nodeData} />
+				<div class="flex items-center gap-1">
+					{#if data.templateType !== 'project'}
+						<button
+							onclick={handleDelete}
+							aria-label="Delete node"
+							class="rounded p-1 text-zinc-500 hover:bg-borg-orange hover:text-white"
+						>
+							<Trash2 class="h-4 w-4" />
+						</button>
+					{/if}
+				</div>
+			</div>
+		{/if}
+
+		<div class={template.id === 'note' ? '' : 'p-4 pt-0'}>
+			<!-- Node Content -->
+			{#if nodeData.countdownMode && template.id === 'time'}
+				<!-- Countdown-only mode: show only event name and countdown -->
+				{@const eventField = template.fields.find((f) => f.type === 'timeline-selector')}
+				{#if eventField}
+					<div class="space-y-3">
+						<FieldRenderer
+							field={eventField}
+							value={nodeData[eventField.id]}
+							readonly={true}
+							mode="display"
+							{nodeData}
+							countdownOnly={true}
+						/>
+					</div>
+				{/if}
+			{:else if template.id === 'note'}
+				<!-- Post-it note style: simple content display -->
+				<div
+					class="flex h-full items-center justify-center overflow-hidden text-center text-sm leading-relaxed whitespace-pre-wrap text-gray-800"
+				>
+					{nodeData.content || 'Click to edit...'}
+				</div>
+				<!-- Delete button for note nodes -->
+				<button
+					onclick={(event) => {
+						event.stopPropagation();
+						handleDelete();
+					}}
+					aria-label="Delete note"
+					class="absolute top-1 right-1 rounded p-1 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/50 hover:text-red-600"
+				>
+					<Trash2 class="h-3 w-3" />
+				</button>
+			{:else}
+				<!-- Normal mode: show all fields -->
+				<div class="space-y-3">
+					{#each template.fields as field}
+						{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? true}
+						{#if field.id !== 'status' && isVisible}
+							<FieldRenderer
+								{field}
+								value={nodeData[field.id]}
+								readonly={true}
+								mode="display"
+								{nodeData}
+							/>
 						{/if}
 					{/each}
-				{/if}
-			</div>
-		{/if}
 
-		<!-- Add task button when no tasks (bottom right corner) - exclude post-it notes -->
-		{#if !hasTasks && template.id !== 'note'}
-			<button
-				onclick={(event) => handleAddTask(event)}
-				class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
-			>
-				<Plus class="h-3 w-3" />
-			</button>
-		{/if}
+					{#if nodeData.customFields && Array.isArray(nodeData.customFields)}
+						{#each nodeData.customFields as field}
+							{@const isVisible = field.showInDisplay ?? true}
+							{#if isVisible && field.id !== 'status'}
+								<FieldRenderer
+									{field}
+									value={nodeData[field.id]}
+									readonly={true}
+									mode="display"
+									{nodeData}
+								/>
+							{/if}
+						{/each}
+					{/if}
+				</div>
+			{/if}
 
-		<!-- Connection Handles -->
-		<Handle type="target" position={Position.Left} class="!bg-zinc-600" />
-		<Handle type="source" position={Position.Right} class="!bg-zinc-600" />
+			<!-- Add task button when no tasks (bottom right corner) - exclude post-it notes -->
+			{#if !hasTasks && template.id !== 'note'}
+				<button
+					onclick={(event) => handleAddTask(event)}
+					class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
+				>
+					<Plus class="h-3 w-3" />
+				</button>
+			{/if}
+
+			<!-- Connection Handles -->
+			<Handle type="target" position={Position.Left} class="!bg-zinc-600" />
+			<Handle type="source" position={Position.Right} class="!bg-zinc-600" />
+		</div>
 	</div>
 
 	<!-- Tasks Section (Stacked to main node) - exclude post-it notes -->
@@ -240,6 +298,12 @@
 			class="-mt-2 min-w-64 rounded-t-none rounded-b-lg border border-t-0 border-black bg-borg-brown p-3 pt-5 shadow"
 		>
 			<div class="flex flex-wrap items-center gap-2">
+				<!-- {JSON.stringify(tasks)} -->
+				<!-- <div class="flex flex-col">
+					{#each tasks as task}
+						<div>{task.title}</div>
+					{/each}
+				</div> -->
 				{#each personTaskCounts as personTaskCount}
 					<TaskPill {personTaskCount} onclick={handleTaskPillClick} />
 				{/each}
