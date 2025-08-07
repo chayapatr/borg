@@ -94,13 +94,13 @@
 	});
 
 	// Create dynamic box-shadow based on status
-	// let boxShadow = $derived.by(() => {
-	// 	const status = nodeData.status;
-	// 	if (status === 'To Do') return '3px 3px 0px #9333ea'; // purple-600 shadow
-	// 	if (status === 'Doing') return '3px 3px 0px #0284c7'; // sky-600 shadow
-	// 	if (status === 'Done') return '3px 3px 0px #16a34a'; // green-600 shadow
-	// 	return '3px 3px 0px #000'; // black shadow - default
-	// });
+	let boxShadow = $derived.by(() => {
+		const status = nodeData.status;
+		if (status === 'To Do') return '3px 3px 0px #9333ea'; // purple-600 shadow
+		if (status === 'Doing') return '3px 3px 0px #0284c7'; // sky-600 shadow
+		if (status === 'Done') return '3px 3px 0px #16a34a'; // green-600 shadow
+		return '3px 3px 0px #000'; // black shadow - default
+	});
 
 	// Determine node type icon with status-based color
 	let statusIcon = $derived.by(() => {
@@ -283,8 +283,10 @@
 	<div
 		class="group relative cursor-pointer border transition-all duration-200 {template.id === 'note'
 			? 'aspect-square max-h-40 min-h-32 max-w-40 min-w-32 rounded-lg p-3'
-			: 'max-w-64 min-w-48'} {hasTasks && template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
-		style="border-color: {borderColor}; background-color: {template.id === 'note' &&
+			: 'max-w-64 min-w-48'} {hasTasks && template.id !== 'note' ? 'rounded-lg' : 'rounded-lg'}"
+		style="box-shadow: {template.id === 'note'
+			? '0;'
+			: '0;'}; border-color: {borderColor}; background-color: {template.id === 'note' &&
 		nodeData.backgroundColor
 			? nodeData.backgroundColor
 			: template.id === 'note'
@@ -338,7 +340,7 @@
 			{:else if template.id === 'note'}
 				<!-- Post-it note style: simple content display -->
 				<div
-					class="flex h-full w-full items-center justify-center overflow-hidden text-center text-sm leading-relaxed break-all whitespace-pre-wrap text-gray-800"
+					class="break-word flex h-full w-full items-center justify-center overflow-hidden text-sm leading-relaxed text-balance whitespace-pre-wrap text-gray-800"
 				>
 					{nodeData.content || 'Click to edit...'}
 				</div>
@@ -405,40 +407,40 @@
 			<Handle type="target" position={Position.Left} class="!bg-zinc-600" />
 			<Handle type="source" position={Position.Right} class="!bg-zinc-600" />
 		</div>
-	</div>
 
-	<!-- Tasks Section (Stacked to main node) - exclude post-it notes -->
-	{#if hasTasks && template.id !== 'note'}
-		<!-- Show task list in a stacked container -->
-		<div
-			class="relative max-w-80 min-w-64 cursor-pointer rounded-b-lg border border-t-0 bg-borg-brown p-3"
-			style="border-color: {borderColor};"
-			onclick={handleTaskPillClick}
-		>
-			<div class="space-y-1">
-				{#each tasks.slice(0, 3) as task}
-					<div class="flex items-center gap-2 text-sm text-black">
-						<div class="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-black"></div>
-						<span class="truncate" title={task.title}>
-							{task.title.length > 30 ? task.title.substring(0, 30) + '...' : task.title}
-						</span>
-					</div>
-				{/each}
-				{#if tasks.length > 3}
-					<div class="mt-2 text-xs text-black/70">
-						+{tasks.length - 3} more tasks
-					</div>
-				{/if}
-			</div>
-			<button
-				onclick={(event) => {
-					event.stopPropagation();
-					handleTaskPillClick();
-				}}
-				class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
+		<!-- Tasks Section (Stacked to main node) - exclude post-it notes -->
+		{#if hasTasks && template.id !== 'note'}
+			<!-- Show task list in a stacked container -->
+			<div
+				class="relative w-full cursor-pointer rounded-b-lg border-t bg-borg-beige p-3"
+				style="border-color: {borderColor};"
+				onclick={handleTaskPillClick}
 			>
-				<ListTodo class="h-3 w-3" />
-			</button>
-		</div>
-	{/if}
+				<div class="space-y-1">
+					{#each tasks.slice(0, 3) as task}
+						<div class="flex items-center gap-2 text-sm text-black">
+							<div class="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-black"></div>
+							<span class="truncate" title={task.title}>
+								{task.title.length > 30 ? task.title.substring(0, 30) + '...' : task.title}
+							</span>
+						</div>
+					{/each}
+					{#if tasks.length > 3}
+						<div class="mt-2 text-xs text-black/70">
+							+{tasks.length - 3} more tasks
+						</div>
+					{/if}
+				</div>
+				<button
+					onclick={(event) => {
+						event.stopPropagation();
+						handleTaskPillClick();
+					}}
+					class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
+				>
+					<ListTodo class="h-3 w-3" />
+				</button>
+			</div>
+		{/if}
+	</div>
 </div>

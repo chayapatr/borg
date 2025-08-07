@@ -195,9 +195,9 @@
 		{#if readonly || mode === 'display'}
 			<div
 				class="py-1 font-semibold text-black {isProjectTitle
-					? 'text-2xl'
+					? '-mt-2 text-3xl'
 					: field.id === 'title'
-						? 'font-sanss text-lg'
+						? 'font-sans text-lg text-balance'
 						: ''}"
 			>
 				{value || '-'}
@@ -300,13 +300,13 @@
 				{@const icon = getFieldIcon(field.label)}
 				<button
 					onclick={() => window.open(value, '_blank')}
-					class="flex w-full items-center justify-center gap-1 rounded-lg bg-black p-2 text-xs font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="flex w-full items-center justify-center gap-1 rounded-lg bg-borg-brown/80 p-2 text-xs font-medium transition-colors hover:bg-borg-brown/60 focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
 					{#if icon.type === 'svg'}
-						<img src={icon.path} alt="" class="h-4 w-4" />
+						<img src={icon.path} alt="" class="mr-1 h-4 w-4" />
 					{:else if icon.component}
 						{@const IconComponent = icon.component}
-						<IconComponent class="h-4 w-4" />
+						<IconComponent class="mr-1 h-4 w-4" />
 					{/if}
 					Open {field.label}
 				</button>

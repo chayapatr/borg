@@ -21,7 +21,7 @@
 	import '@xyflow/svelte/dist/style.css';
 	import './svelteflow.css';
 
-	let { projectSlug, onProjectUpdate } = $props<{ 
+	let { projectSlug, onProjectUpdate } = $props<{
 		projectSlug?: string;
 		onProjectUpdate?: () => void;
 	}>();
@@ -87,18 +87,26 @@
 			clearTimeout(saveTimeout);
 			saveTimeout = setTimeout(async () => {
 				// Use optimized batch save if available, otherwise fall back to regular batch save
-				if ('saveBatchOptimized' in nodesService && typeof (nodesService as any).saveBatchOptimized === 'function') {
-					const result = (nodesService as any).saveBatchOptimized(nodes, edges, previousNodes, previousEdges);
+				if (
+					'saveBatchOptimized' in nodesService &&
+					typeof (nodesService as any).saveBatchOptimized === 'function'
+				) {
+					const result = (nodesService as any).saveBatchOptimized(
+						nodes,
+						edges,
+						previousNodes,
+						previousEdges
+					);
 					if (result instanceof Promise) await result;
 				} else {
 					const result = nodesService.saveBatch(nodes, edges);
 					if (result instanceof Promise) await result;
 				}
-				
+
 				// Update previous state after saving
 				previousNodes = [...nodes];
 				previousEdges = [...edges];
-				
+
 				// Update project node count if we have a project
 				if (projectSlug && projectsService) {
 					await projectsService.updateNodeCount(projectSlug, nodes.length);
@@ -275,7 +283,7 @@
 			taskSidebarNodeTitle = event.detail.nodeTitle;
 			taskSidebarTasks = event.detail.tasks;
 			showNodeTaskSidebar = true;
-			
+
 			// Set up real-time subscription if available
 			if (taskService.subscribeToNodeTasks) {
 				taskSubscriptionCleanup = taskService.subscribeToNodeTasks(
@@ -287,7 +295,7 @@
 					projectSlug
 				);
 			}
-			
+
 			// Close edit panel if open to avoid conflicts
 			showEditPanel = false;
 		};
@@ -310,7 +318,7 @@
 			document.removeEventListener('nodeEdit', handleNodeEditEvent as EventListener);
 			document.removeEventListener('nodeTasksOpen', handleNodeTasksOpenEvent as EventListener);
 			document.removeEventListener('addTask', handleAddTaskEvent as EventListener);
-			
+
 			// Clean up task subscription
 			if (taskSubscriptionCleanup) {
 				taskSubscriptionCleanup();
@@ -442,7 +450,7 @@
 	function handleEditPanelDelete(nodeId: string) {
 		console.log('Canvas.handleEditPanelDelete called for:', nodeId);
 		console.log('nodesService:', nodesService);
-		
+
 		try {
 			const result = nodesService.deleteNode(nodeId);
 			console.log('deleteNode result:', result);
@@ -456,21 +464,34 @@
 	// Handle node drag stop to save position immediately
 	function handleNodeDragStop(event: any) {
 		console.log('Node drag stopped, saving positions...', event);
-		console.log('Current nodes state:', nodes.map(n => ({ id: n.id, position: n.position })));
-		
+		console.log(
+			'Current nodes state:',
+			nodes.map((n) => ({ id: n.id, position: n.position }))
+		);
+
 		if (nodesService) {
 			// Use optimized batch save if available for immediate drag save
-			if ('saveBatchOptimized' in nodesService && typeof (nodesService as any).saveBatchOptimized === 'function') {
-				const result = (nodesService as any).saveBatchOptimized(nodes, edges, previousNodes, previousEdges);
+			if (
+				'saveBatchOptimized' in nodesService &&
+				typeof (nodesService as any).saveBatchOptimized === 'function'
+			) {
+				const result = (nodesService as any).saveBatchOptimized(
+					nodes,
+					edges,
+					previousNodes,
+					previousEdges
+				);
 				if (result instanceof Promise) {
-					result.then(() => {
-						console.log('Positions saved after drag (optimized)');
-						// Update previous state after saving
-						previousNodes = [...nodes];
-						previousEdges = [...edges];
-					}).catch(error => {
-						console.error('Failed to save positions after drag:', error);
-					});
+					result
+						.then(() => {
+							console.log('Positions saved after drag (optimized)');
+							// Update previous state after saving
+							previousNodes = [...nodes];
+							previousEdges = [...edges];
+						})
+						.catch((error) => {
+							console.error('Failed to save positions after drag:', error);
+						});
 				} else {
 					// Update previous state after saving
 					previousNodes = [...nodes];
@@ -479,14 +500,16 @@
 			} else if (nodesService.saveBatch) {
 				const result = nodesService.saveBatch(nodes, edges);
 				if (result instanceof Promise) {
-					result.then(() => {
-						console.log('Positions saved after drag');
-						// Update previous state after saving
-						previousNodes = [...nodes];
-						previousEdges = [...edges];
-					}).catch(error => {
-						console.error('Failed to save positions after drag:', error);
-					});
+					result
+						.then(() => {
+							console.log('Positions saved after drag');
+							// Update previous state after saving
+							previousNodes = [...nodes];
+							previousEdges = [...edges];
+						})
+						.catch((error) => {
+							console.error('Failed to save positions after drag:', error);
+						});
 				} else {
 					// Update previous state after saving
 					previousNodes = [...nodes];
@@ -499,18 +522,20 @@
 		if (event && event.node) {
 			const draggedNode = event.node;
 			console.log('Dragged node:', draggedNode.id, 'new position:', draggedNode.position);
-			
+
 			// Update the node in the service individually
 			if (nodesService.updateNode) {
 				const updateResult = nodesService.updateNode(draggedNode.id, {
 					position: draggedNode.position
 				});
 				if (updateResult instanceof Promise) {
-					updateResult.then(() => {
-						console.log('Individual node position saved:', draggedNode.id);
-					}).catch(error => {
-						console.error('Failed to save individual node position:', error);
-					});
+					updateResult
+						.then(() => {
+							console.log('Individual node position saved:', draggedNode.id);
+						})
+						.catch((error) => {
+							console.error('Failed to save individual node position:', error);
+						});
 				}
 			}
 		}
@@ -519,14 +544,14 @@
 	// Function to refresh task sidebar data and node display
 	async function handleTasksUpdated() {
 		console.log('Canvas: handleTasksUpdated called');
-		
+
 		// Dispatch global event to force all UniversalNode components to refresh
 		const refreshEvent = new CustomEvent('tasksUpdated', {
 			detail: { timestamp: Date.now() }
 		});
 		document.dispatchEvent(refreshEvent);
 		console.log('Canvas: tasksUpdated event dispatched');
-		
+
 		// Always refresh node display to update task counts
 		if (nodesService.loadFromStorage) {
 			nodesService.loadFromStorage();
