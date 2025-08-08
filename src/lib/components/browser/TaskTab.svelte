@@ -410,7 +410,7 @@
 																						class="h-3.5 w-3.5 text-zinc-500 hover:text-rose-500"
 																					/>
 																				</button>
-																				<button
+																				<!-- <button
 																					onclick={() => handleTaskClick(task)}
 																					class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
 																					title="Go to project"
@@ -418,7 +418,7 @@
 																					<ExternalLink
 																						class="h-3.5 w-3.5 text-zinc-500 hover:text-borg-purple"
 																					/>
-																				</button>
+																				</button> -->
 																			</div>
 																		</div>
 
@@ -569,7 +569,7 @@
 																					class="h-3.5 w-3.5 text-zinc-500 hover:text-rose-500"
 																				/>
 																			</button>
-																			<button
+																			<!-- <button
 																				onclick={() => handleTaskClick(task)}
 																				class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
 																				title="Go to project"
@@ -577,7 +577,7 @@
 																				<ExternalLink
 																					class="h-3.5 w-3.5 text-zinc-500 hover:text-borg-purple"
 																				/>
-																			</button>
+																			</button> -->
 																		</div>
 																	</div>
 

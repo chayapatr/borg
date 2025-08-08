@@ -397,7 +397,7 @@
 						event.stopPropagation();
 						handleTaskPillClick();
 					}}
-					class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-yellow hover:text-black"
+					class="absolute -right-2 -bottom-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-orange hover:text-black"
 				>
 					<ListTodo class="h-3 w-3" />
 				</button>

@@ -148,7 +148,7 @@
 				<button
 					type="submit"
 					disabled={!title.trim()}
-					class="flex-1 rounded-lg bg-borg-violet px-4 py-2 text-black text-white hover:bg-borg-blue disabled:cursor-not-allowed disabled:opacity-60"
+					class="flex-1 rounded-lg bg-borg-orange px-4 py-2 text-white hover:bg-borg-orange disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					{submitButtonText}
 				</button>
