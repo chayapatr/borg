@@ -17,6 +17,7 @@
 	import EditPanel from './EditPanel.svelte';
 	import NodeTaskSidebar from './tasks/NodeTaskSidebar.svelte';
 	import TaskModal from './tasks/TaskModal.svelte';
+	import Toolbar from './Toolbar.svelte';
 	import type { Task } from '../types/task';
 	import '@xyflow/svelte/dist/style.css';
 	import './svelteflow.css';
@@ -357,6 +358,14 @@
 		showCreateModal = false;
 	}
 
+	function handleToolbarCreateNode(templateType: string) {
+		if (!nodesService) return;
+
+		// Get the center of the viewport for toolbar-created nodes
+		const centerPosition = getViewportCenterPosition();
+		(nodesService as any).addNode(templateType, centerPosition);
+	}
+
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === '/' && !showCreateModal && !showEditPanel) {
 			event.preventDefault();
@@ -690,7 +699,9 @@
 	<!-- Canvas -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="flex-1" onclick={handleCanvasClick}>
+	<div class="relative flex-1" onclick={handleCanvasClick}>
+		<!-- Floating Toolbar -->
+		<Toolbar onCreateNode={handleToolbarCreateNode} />
 		<SvelteFlow
 			class="bg-black"
 			bind:nodes
