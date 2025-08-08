@@ -229,12 +229,27 @@
 			}
 		};
 
+		const handleNodeUpdate = async (event: Event) => {
+			const customEvent = event as CustomEvent;
+			const { nodeId, data } = customEvent.detail;
+			
+			if (nodeId && nodesService && data) {
+				try {
+					await nodesService.updateNode(nodeId, data);
+				} catch (error) {
+					console.error('Failed to update node:', error);
+				}
+			}
+		};
+
 		document.addEventListener('nodeEdit', handleNodeEdit);
 		document.addEventListener('nodeDelete', handleNodeDelete);
+		document.addEventListener('nodeUpdate', handleNodeUpdate);
 
 		return () => {
 			document.removeEventListener('nodeEdit', handleNodeEdit);
 			document.removeEventListener('nodeDelete', handleNodeDelete);
+			document.removeEventListener('nodeUpdate', handleNodeUpdate);
 		};
 	});
 
