@@ -1,13 +1,5 @@
 <script lang="ts">
-	import {
-		GitBranch,
-		FileText,
-		Code,
-		Calendar,
-		StickyNote,
-		HardDrive,
-		Square
-	} from '@lucide/svelte';
+	import { StickyNote } from '@lucide/svelte';
 	import { nodeTemplates } from '../templates';
 
 	let { onCreateNode } = $props<{
@@ -15,13 +7,7 @@
 	}>();
 
 	const toolbarItems = [
-		{ id: 'subproject', icon: GitBranch, template: nodeTemplates.subproject },
-		{ id: 'paper', icon: FileText, template: nodeTemplates.paper },
-		{ id: 'code', icon: Code, template: nodeTemplates.code },
-		{ id: 'time', icon: Calendar, template: nodeTemplates.time },
-		{ id: 'note', icon: StickyNote, template: nodeTemplates.note },
-		{ id: 'storage', icon: HardDrive, template: nodeTemplates.storage },
-		{ id: 'blank', icon: Square, template: nodeTemplates.blank }
+		{ id: 'note', icon: StickyNote, template: nodeTemplates.note }
 	];
 
 	function handleItemClick(templateType: string) {

@@ -28,95 +28,116 @@
 		universal: UniversalNode
 	};
 
-	// Canvas storage for positions and edges only
-	let canvasPositions = $state(new Map<string, { x: number; y: number }>());
-	let edges = $state.raw<Edge[]>([]);
+	let nodes = $state<Node[]>([]);
+	let edges = $state<Edge[]>([]);
 	let nodesService: INodesService;
-
-	// Computed nodes: merge projects with canvas positions
-	let nodes = $derived.by(() => {
-		return projects.map((project, index) => createProjectNode(project, index));
-	});
+	let initialized = $state(false);
+	let unsubscribeFunctions: (() => void)[] = [];
 
 	onMount(() => {
-		// Create nodes service for project-canvas (positions + edges only)
-		nodesService = ServiceFactory.createNodesService(
-			'project-canvas',
-			(positionNodes) => {
-				// Extract positions from loaded nodes
-				const positions = new Map();
-				positionNodes.forEach(node => {
-					if (node.data?.nodeData?.projectId) {
-						positions.set(node.data.nodeData.projectId, node.position);
-					}
-				});
-				canvasPositions = positions;
-			},
-			() => [], // We don't store full nodes anymore
-			(newEdges) => { edges = newEdges; },
-			() => edges
-		);
+		let mounted = true;
+		
+		(async () => {
+			try {
+				initializeService();
+				await loadInitialData();
+				await syncProjectNodes();
+				if (mounted) {
+					initialized = true;
+				}
+			} catch (error) {
+				console.error('Failed to initialize ProjectsCanvas:', error);
+			}
+		})();
 
-		// Load initial positions
-		loadCanvasPositions();
-
-		// Set up edge subscriptions only
-		if (nodesService.subscribeToEdges) {
-			const unsubscribeEdges = nodesService.subscribeToEdges((updatedEdges) => {
-				edges = updatedEdges;
-			});
-
-			return () => {
-				unsubscribeEdges();
-			};
-		}
+		return () => {
+			mounted = false;
+			cleanup();
+		};
 	});
 
-	async function loadCanvasPositions() {
-		try {
-			// Load existing position data from Firebase
-			const existingNodes = await nodesService.getNodes();
-			const positions = new Map();
-			
-			existingNodes.forEach(node => {
-				if (node.data?.nodeData?.projectId) {
-					positions.set(node.data.nodeData.projectId, node.position);
-				}
+	function initializeService() {
+		nodesService = ServiceFactory.createNodesService(
+			'project-canvas',
+			(newNodes) => { nodes = newNodes; },
+			() => nodes,
+			(newEdges) => { edges = newEdges; },
+			() => edges,
+			'project-canvas'
+		);
+
+		if (nodesService.subscribeToNodes && nodesService.subscribeToEdges) {
+			const unsubscribeNodes = nodesService.subscribeToNodes((newNodes) => {
+				nodes = newNodes;
 			});
 			
-			canvasPositions = positions;
-		} catch (error) {
-			console.error('Failed to load canvas positions:', error);
+			const unsubscribeEdges = nodesService.subscribeToEdges((newEdges) => {
+				edges = newEdges;
+			});
+
+			unsubscribeFunctions = [unsubscribeNodes, unsubscribeEdges];
 		}
 	}
 
-	function createProjectNode(project: Project, index: number): Node {
-		// Get the project template to initialize proper field structure
-		const template = getTemplate('project');
+	async function loadInitialData() {
+		try {
+			const [loadedNodes, loadedEdges] = await Promise.all([
+				Promise.resolve(nodesService.getNodes()),
+				Promise.resolve(nodesService.getEdges())
+			]);
+			
+			nodes = Array.isArray(loadedNodes) ? loadedNodes : [];
+			edges = Array.isArray(loadedEdges) ? loadedEdges : [];
+		} catch (error) {
+			console.error('Failed to load initial canvas data:', error);
+			nodes = [];
+			edges = [];
+		}
+	}
+
+	async function syncProjectNodes() {
+		if (!projects.length) return;
+
+		const existingProjectIds = new Set(
+			nodes
+				.filter(node => node.data?.templateType === 'project')
+				.map(node => (node.data?.nodeData as any)?.projectId)
+				.filter(Boolean)
+		);
+
+		const newNodes: Node[] = [];
 		
-		// Initialize nodeData based on template fields
-		const nodeDataFields: Record<string, any> = {};
-		template.fields.forEach((field) => {
-			if (field.type === 'tags') {
-				nodeDataFields[field.id] = [];
-			} else {
-				nodeDataFields[field.id] = '';
+		projects.forEach((project: Project, index: number) => {
+			if (!existingProjectIds.has(project.id)) {
+				newNodes.push(createProjectNode(project, index + nodes.length));
 			}
 		});
 
-		// Populate with actual project data (always fresh from projects array)
-		nodeDataFields.title = project.title;
-		nodeDataFields.status = project.status || 'active';
+		if (newNodes.length > 0) {
+			try {
+				await nodesService.saveBatch([...nodes, ...newNodes], edges);
+			} catch (error) {
+				console.error('Failed to sync project nodes:', error);
+			}
+		}
+	}
+
+	function createProjectNode(project: Project, gridIndex: number): Node {
+		const template = getTemplate('project');
 		
-		// Add project metadata for identification
+		const nodeDataFields: Record<string, any> = {};
+		template.fields.forEach((field) => {
+			nodeDataFields[field.id] = field.type === 'tags' ? [] : '';
+		});
+
+		nodeDataFields.title = project.title;
+		nodeDataFields.status = project.status || 'To Do';
 		nodeDataFields.projectId = project.id;
 		nodeDataFields.projectSlug = project.slug;
 
-		// Use stored position or default grid position
-		const savedPosition = canvasPositions.get(project.id);
-		const position = savedPosition || {
-			x: 100 + (index % 4) * 250,
-			y: 100 + Math.floor(index / 4) * 200
+		const position = {
+			x: 150 + (gridIndex % 4) * 280,
+			y: 150 + Math.floor(gridIndex / 4) * 220
 		};
 
 		return {
@@ -126,83 +147,86 @@
 			data: {
 				templateType: 'project',
 				nodeData: nodeDataFields
-			}
+			},
+			draggable: true
 		};
 	}
 
 	function handleConnect(connection: Connection) {
+		if (!connection.source || !connection.target) return;
+
 		const edge: Edge = {
-			id: `edge-${connection.source}-${connection.target}`,
-			source: connection.source!,
-			target: connection.target!,
+			id: `edge-${connection.source}-${connection.target}-${Date.now()}`,
+			source: connection.source,
+			target: connection.target,
 			type: 'default',
 			style: 'stroke: #71717a; stroke-width: 2px;'
 		};
+		
 		nodesService.addEdge(edge);
 	}
 
 	async function handleNodeDragStop() {
-		// Save only positions to Firebase, not full project data
-		await savePositions();
-	}
-
-	async function savePositions() {
+		if (!initialized) return;
+		
 		try {
-			// Create minimal position nodes for persistence
-			const positionNodes: Node[] = [];
-			
-			nodes.forEach((node: Node) => {
-				if (node.data?.nodeData?.projectId) {
-					// Store position with minimal project reference
-					positionNodes.push({
-						id: `pos-${node.data.nodeData.projectId}`,
-						type: 'universal',
-						position: node.position,
-						data: {
-							templateType: 'project-position',
-							nodeData: {
-								projectId: node.data.nodeData.projectId
-							}
-						}
-					});
-				}
-			});
-
-			await nodesService.saveBatch(positionNodes, edges);
+			await nodesService.saveBatch(nodes, edges);
 		} catch (error) {
-			console.error('Failed to save positions:', error);
+			console.error('Failed to save node positions:', error);
 		}
 	}
 
 	async function handleToolbarCreateNode(templateType: string) {
 		const position = {
-			x: Math.random() * 400 + 100,
-			y: Math.random() * 300 + 100
+			x: Math.random() * 600 + 200,
+			y: Math.random() * 400 + 200
 		};
 
 		try {
 			await nodesService.addNode(templateType, position);
 		} catch (error) {
-			console.error('Failed to create toolbar node:', error);
+			console.error('Failed to create node:', error);
 		}
 	}
 
-	// Handle project node clicks
 	$effect(() => {
-		const handleNodeEdit = (event: CustomEvent) => {
-			const { nodeData } = event.detail;
+		if (!initialized) return;
+		
+		const handleNodeEdit = (event: Event) => {
+			const customEvent = event as CustomEvent;
+			const { nodeData } = customEvent.detail;
 			
 			if (nodeData?.projectSlug) {
 				onProjectClick(nodeData.projectSlug);
 			}
 		};
 
-		document.addEventListener('nodeEdit', handleNodeEdit as EventListener);
+		const handleNodeDelete = async (event: Event) => {
+			const customEvent = event as CustomEvent;
+			const { nodeId } = customEvent.detail;
+			
+			if (nodeId && nodesService) {
+				try {
+					await nodesService.deleteNode(nodeId);
+				} catch (error) {
+					console.error('Failed to delete node:', error);
+				}
+			}
+		};
+
+		document.addEventListener('nodeEdit', handleNodeEdit);
+		document.addEventListener('nodeDelete', handleNodeDelete);
 
 		return () => {
-			document.removeEventListener('nodeEdit', handleNodeEdit as EventListener);
+			document.removeEventListener('nodeEdit', handleNodeEdit);
+			document.removeEventListener('nodeDelete', handleNodeDelete);
 		};
 	});
+
+	function cleanup() {
+		unsubscribeFunctions.forEach(unsub => unsub());
+		unsubscribeFunctions = [];
+	}
 </script>
 
 <SvelteFlowProvider>
