@@ -13,7 +13,7 @@
 	let projects = $state<any[]>([]);
 	let showCreateModal = $state(false);
 	let projectCounts = $state<Record<string, { todo: number; doing: number; done: number }>>({});
-	let viewMode = $state<'list' | 'canvas'>('list');
+	let viewMode = $state<'list' | 'canvas'>('canvas');
 
 	onMount(() => {
 		projectsService = ServiceFactory.createProjectsService();
@@ -86,31 +86,33 @@
 			</div>
 			<div class="flex items-center gap-4">
 				<!-- View Toggle -->
-				<div class="flex items-center rounded-lg border border-black bg-white p-1">
-					<button
-						onclick={() => (viewMode = 'list')}
-						class="flex items-center gap-2 rounded px-3 py-1 text-sm transition-colors {viewMode ===
-						'list'
-							? 'bg-borg-violet text-white'
-							: 'text-black hover:bg-borg-beige'}"
-					>
-						<Grid class="h-4 w-4" />
-						List
-					</button>
+				<div
+					class="flex h-10 items-center divide-x divide-black rounded-full border border-black bg-white"
+				>
 					<button
 						onclick={() => (viewMode = 'canvas')}
-						class="flex items-center gap-2 rounded px-3 py-1 text-sm transition-colors {viewMode ===
+						class="flex h-full items-center gap-2 rounded-full rounded-r-2xl px-3 py-1 text-sm transition-colors {viewMode ===
 						'canvas'
-							? 'bg-borg-violet text-white'
+							? 'bg-borg-brown text-black'
 							: 'text-black hover:bg-borg-beige'}"
 					>
 						<Network class="h-4 w-4" />
 						Canvas
 					</button>
+					<button
+						onclick={() => (viewMode = 'list')}
+						class="flex h-full items-center gap-2 rounded-full rounded-l-2xl px-3 py-1 text-sm transition-colors {viewMode ===
+						'list'
+							? 'bg-borg-brown text-black'
+							: 'text-black hover:bg-borg-beige'}"
+					>
+						<Grid class="h-4 w-4" />
+						List
+					</button>
 				</div>
 				<button
 					onclick={() => (showCreateModal = true)}
-					class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-violet px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
+					class="transition- flex h-10 items-center gap-2 rounded-full border border-white bg-borg-violet px-4 text-white transition-all hover:cursor-pointer hover:bg-black
 					"
 				>
 					<Plus class="h-4 w-4" />
@@ -121,7 +123,7 @@
 	</div>
 
 	<!-- Content Area -->
-	<div class="{viewMode === 'canvas' ? 'flex-1 min-h-0' : 'flex-1 overflow-y-auto p-6'}">
+	<div class={viewMode === 'canvas' ? 'min-h-0 flex-1' : 'flex-1 overflow-y-auto p-6'}>
 		{#if viewMode === 'list'}
 			<!-- List View -->
 			{#if projects.length === 0}

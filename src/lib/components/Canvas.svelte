@@ -701,7 +701,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="relative flex-1" onclick={handleCanvasClick}>
 		<!-- Floating Toolbar -->
-		<Toolbar onCreateNode={handleToolbarCreateNode} />
+		<Toolbar view="project" onCreateNode={handleToolbarCreateNode} />
 		<SvelteFlow
 			class="bg-black"
 			bind:nodes

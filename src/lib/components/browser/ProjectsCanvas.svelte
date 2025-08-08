@@ -33,7 +33,7 @@
 	let canvasEdges = $state<Edge[]>([]);
 	let nodesService: INodesService;
 	let mounted = $state(false);
-	
+
 	// Current working nodes (mutable for SvelteFlow)
 	let workingNodes = $state<Node[]>([]);
 	let lastProjectsLength = 0;
@@ -54,7 +54,7 @@
 			workingNodes = canvasNodes.slice();
 			return;
 		}
-		
+
 		// Create project nodes from projects array
 		const projectNodes: Node[] = projects.map((project, index) => ({
 			id: `project-${project.id}`,
@@ -75,13 +75,11 @@
 		}));
 
 		// Filter out any project nodes from canvas nodes to avoid duplicates
-		const nonProjectCanvasNodes = canvasNodes.filter(node => 
-			!node.id.startsWith('project-')
-		);
+		const nonProjectCanvasNodes = canvasNodes.filter((node) => !node.id.startsWith('project-'));
 
 		// Merge existing working node positions with fresh project data
-		const existingWorkingNodes = new Map(workingNodes.map(n => [n.id, n]));
-		const updatedProjectNodes = projectNodes.map(pNode => {
+		const existingWorkingNodes = new Map(workingNodes.map((n) => [n.id, n]));
+		const updatedProjectNodes = projectNodes.map((pNode) => {
 			const existingNode = existingWorkingNodes.get(pNode.id);
 			return existingNode ? { ...pNode, position: existingNode.position } : pNode;
 		});
@@ -91,11 +89,11 @@
 
 	function getProjectNodePosition(projectId: string, defaultIndex: number) {
 		// Try to find existing position from canvas nodes
-		const existingNode = canvasNodes.find(node => node.id === `project-${projectId}`);
+		const existingNode = canvasNodes.find((node) => node.id === `project-${projectId}`);
 		if (existingNode?.position) {
 			return existingNode.position;
 		}
-		
+
 		// Default grid position
 		return {
 			x: 150 + (defaultIndex % 4) * 280,
@@ -108,9 +106,13 @@
 			// Initialize service
 			nodesService = ServiceFactory.createNodesService(
 				'project-canvas',
-				(nodes) => { canvasNodes = nodes; },
+				(nodes) => {
+					canvasNodes = nodes;
+				},
 				() => canvasNodes,
-				(edges) => { canvasEdges = edges; },
+				(edges) => {
+					canvasEdges = edges;
+				},
 				() => canvasEdges,
 				'project-canvas'
 			);
@@ -120,7 +122,7 @@
 				Promise.resolve(nodesService.getNodes()),
 				Promise.resolve(nodesService.getEdges())
 			]);
-			
+
 			canvasNodes = Array.isArray(initialNodes) ? initialNodes : [];
 			canvasEdges = Array.isArray(initialEdges) ? initialEdges : [];
 
@@ -130,7 +132,7 @@
 					canvasNodes = nodes;
 					updateWorkingNodes();
 				});
-				
+
 				nodesService.subscribeToEdges((edges) => {
 					canvasEdges = edges;
 				});
@@ -153,13 +155,13 @@
 			type: 'default',
 			style: 'stroke: #71717a; stroke-width: 2px;'
 		};
-		
+
 		nodesService.addEdge(edge);
 	}
 
 	async function handleNodeDragStop() {
 		if (!mounted) return;
-		
+
 		try {
 			// Save all current node positions to canvas
 			await nodesService.saveBatch(workingNodes, canvasEdges);
@@ -192,17 +194,17 @@
 	// Handle node events
 	$effect(() => {
 		if (!mounted) return;
-		
+
 		const handleNodeEdit = (event: Event) => {
 			const customEvent = event as CustomEvent;
 			const { nodeId, nodeData, templateType } = customEvent.detail;
-			
+
 			// For project nodes, navigate to project
 			if (nodeData?.projectSlug) {
 				onProjectClick(nodeData.projectSlug);
 				return;
 			}
-			
+
 			// For other nodes (like post-it notes), show edit panel
 			editNodeId = nodeId;
 			editNodeData = nodeData;
@@ -213,13 +215,13 @@
 		const handleNodeDelete = async (event: Event) => {
 			const customEvent = event as CustomEvent;
 			const { nodeId } = customEvent.detail;
-			
+
 			// Don't allow deleting project nodes
 			if (nodeId?.startsWith('project-')) {
 				alert('Project nodes cannot be deleted as they sync with workspace metadata.');
 				return;
 			}
-			
+
 			if (nodeId && nodesService) {
 				try {
 					await nodesService.deleteNode(nodeId);
@@ -232,7 +234,7 @@
 		const handleNodeUpdate = async (event: Event) => {
 			const customEvent = event as CustomEvent;
 			const { nodeId, data } = customEvent.detail;
-			
+
 			if (nodeId && nodesService && data) {
 				try {
 					await nodesService.updateNode(nodeId, data);
@@ -261,13 +263,13 @@
 
 	function handleEditPanelDelete(nodeId: string) {
 		console.log('ProjectsCanvas.handleEditPanelDelete called for:', nodeId);
-		
+
 		// Don't allow deleting project nodes
 		if (nodeId?.startsWith('project-')) {
 			alert('Project nodes cannot be deleted as they sync with workspace metadata.');
 			return;
 		}
-		
+
 		try {
 			nodesService.deleteNode(nodeId);
 			showEditPanel = false;
@@ -283,8 +285,8 @@
 		<!-- Canvas -->
 		<div class="relative flex-1">
 			<!-- Floating Toolbar -->
-			<Toolbar onCreateNode={handleToolbarCreateNode} />
-			
+			<Toolbar view="projects" onCreateNode={handleToolbarCreateNode} />
+
 			<SvelteFlow
 				class="h-full w-full bg-black"
 				bind:nodes={workingNodes}
