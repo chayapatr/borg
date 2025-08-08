@@ -25,6 +25,38 @@
 	let template: NodeTemplate = $derived(getTemplate(data.templateType || 'blank'));
 	let nodeData = $derived(data.nodeData || {});
 
+	// Get note size setting with default (current = Small)
+	let size = $derived(nodeData.size || 'Small');
+
+	// Combined font and node size classes based on single size property
+	let fontSizeClass = $derived.by(() => {
+		switch (size) {
+			case 'Small':
+				return 'text-sm';
+			case 'Medium':
+				return 'text-lg';
+			case 'Large':
+				return 'text-2xl';
+			default:
+				return 'text-sm';
+		}
+	});
+
+	// Node size classes for post-it notes
+	let nodeSizeClass = $derived.by(() => {
+		if (template.id !== 'note') return '';
+		switch (size) {
+			case 'Small':
+				return 'max-h-32 min-h-24 max-w-32 min-w-24';
+			case 'Medium':
+				return 'max-h-40 min-h-32 max-w-40 min-w-32';
+			case 'Large':
+				return 'max-h-48 min-h-40 max-w-48 min-w-40';
+			default:
+				return 'max-h-32 min-h-24 max-w-32 min-w-24';
+		}
+	});
+
 	// Task-related state
 	const taskService: ITaskService = ServiceFactory.createTaskService();
 
@@ -282,7 +314,7 @@
 
 	<div
 		class="group relative cursor-pointer border transition-all duration-200 {template.id === 'note'
-			? 'aspect-square max-h-40 min-h-32 max-w-40 min-w-32 rounded-lg p-3'
+			? `aspect-square ${nodeSizeClass} rounded-lg p-3`
 			: 'max-w-64 min-w-48'} {hasTasks && template.id !== 'note' ? 'rounded-lg' : 'rounded-lg'}"
 		style="box-shadow: {template.id === 'note'
 			? '0;'
@@ -340,7 +372,7 @@
 			{:else if template.id === 'note'}
 				<!-- Post-it note style: simple content display -->
 				<div
-					class="break-word flex h-full w-full items-center justify-center overflow-hidden text-sm leading-relaxed text-balance whitespace-pre-wrap text-gray-800"
+					class="break-word flex h-full w-full items-center justify-center overflow-hidden {fontSizeClass} leading-relaxed text-balance whitespace-pre-wrap text-gray-800"
 				>
 					{nodeData.content || 'Click to edit...'}
 				</div>

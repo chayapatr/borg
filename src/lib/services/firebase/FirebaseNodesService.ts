@@ -52,6 +52,13 @@ export class FirebaseNodesService implements INodesService {
 		template.fields.forEach((field) => {
 			if (field.type === 'tags') {
 				nodeDataFields[field.id] = [];
+			} else if (field.type === 'select' && templateType === 'note') {
+				// Set defaults for note sizing - current behavior is small size
+				if (field.id === 'size') {
+					nodeDataFields[field.id] = 'Small';
+				} else {
+					nodeDataFields[field.id] = '';
+				}
 			} else {
 				nodeDataFields[field.id] = '';
 			}

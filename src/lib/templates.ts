@@ -23,7 +23,8 @@ export interface TemplateField {
 		| 'button'
 		| 'people-selector'
 		| 'timeline-selector'
-		| 'color-picker';
+		| 'color-picker'
+		| 'select';
 	placeholder?: string;
 	options?: string[];
 	required?: boolean;
@@ -211,6 +212,13 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				label: 'Background Color',
 				type: 'color-picker',
 				placeholder: 'Choose background color'
+			},
+			{
+				id: 'size',
+				label: 'Size',
+				type: 'select',
+				options: ['Small', 'Medium', 'Large'],
+				placeholder: 'Choose size'
 			}
 		]
 	},

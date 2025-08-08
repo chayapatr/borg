@@ -29,6 +29,13 @@ export class NodesService {
 		template.fields.forEach((field) => {
 			if (field.type === 'tags') {
 				nodeData[field.id] = [];
+			} else if (field.type === 'select' && templateType === 'note') {
+				// Set defaults for note sizing - current behavior is small size
+				if (field.id === 'size') {
+					nodeData[field.id] = 'Small';
+				} else {
+					nodeData[field.id] = '';
+				}
 			} else {
 				nodeData[field.id] = '';
 			}

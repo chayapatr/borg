@@ -294,6 +294,32 @@
 				</div>
 			{/if}
 		</div>
+	{:else if field.type === 'select'}
+		<div class="space-y-2">
+			{#if readonly || mode === 'display'}
+				{#if value}
+					<span class="inline-flex items-center rounded-full bg-black px-3 py-1 text-xs font-medium text-white">
+						{value}
+					</span>
+				{:else}
+					<div class="py-1 text-black">-</div>
+				{/if}
+			{:else}
+				<div class="flex flex-wrap gap-2">
+					{#each field.options || [] as option}
+						<button
+							type="button"
+							onclick={() => (value = value === option ? '' : option)}
+							class="inline-flex items-center rounded-full border border-black px-3 py-1 text-xs font-medium transition-colors {value === option
+								? 'bg-black text-white'
+								: 'bg-white text-black hover:bg-gray-100'}"
+						>
+							{option}
+						</button>
+					{/each}
+				</div>
+			{/if}
+		</div>
 	{:else if field.type === 'link'}
 		{#if mode === 'display'}
 			{#if value}
