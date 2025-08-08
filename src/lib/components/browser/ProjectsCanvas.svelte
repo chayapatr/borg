@@ -12,6 +12,7 @@
 	} from '@xyflow/svelte';
 	import UniversalNode from '../UniversalNode.svelte';
 	import Toolbar from '../Toolbar.svelte';
+	import EditPanel from '../EditPanel.svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { INodesService } from '../../services/interfaces';
 	import type { Project } from '../../services/local/ProjectsService';
@@ -36,6 +37,12 @@
 	// Current working nodes (mutable for SvelteFlow)
 	let workingNodes = $state<Node[]>([]);
 	let lastProjectsLength = 0;
+
+	// Edit panel state
+	let showEditPanel = $state(false);
+	let editNodeId = $state('');
+	let editNodeData = $state({});
+	let editTemplateType = $state('');
 
 	function updateWorkingNodes() {
 		if (!mounted) {
@@ -188,11 +195,19 @@
 		
 		const handleNodeEdit = (event: Event) => {
 			const customEvent = event as CustomEvent;
-			const { nodeData } = customEvent.detail;
+			const { nodeId, nodeData, templateType } = customEvent.detail;
 			
+			// For project nodes, navigate to project
 			if (nodeData?.projectSlug) {
 				onProjectClick(nodeData.projectSlug);
+				return;
 			}
+			
+			// For other nodes (like post-it notes), show edit panel
+			editNodeId = nodeId;
+			editNodeData = nodeData;
+			editTemplateType = templateType;
+			showEditPanel = true;
 		};
 
 		const handleNodeDelete = async (event: Event) => {
@@ -222,10 +237,34 @@
 			document.removeEventListener('nodeDelete', handleNodeDelete);
 		};
 	});
+
+	function handleEditPanelSave(nodeId: string, data: any) {
+		console.log('ProjectsCanvas.handleEditPanelSave called:', { nodeId, data });
+		nodesService.updateNode(nodeId, data);
+		showEditPanel = false;
+	}
+
+	function handleEditPanelDelete(nodeId: string) {
+		console.log('ProjectsCanvas.handleEditPanelDelete called for:', nodeId);
+		
+		// Don't allow deleting project nodes
+		if (nodeId?.startsWith('project-')) {
+			alert('Project nodes cannot be deleted as they sync with workspace metadata.');
+			return;
+		}
+		
+		try {
+			nodesService.deleteNode(nodeId);
+			showEditPanel = false;
+		} catch (error) {
+			console.error('Failed to delete node:', error);
+			alert('Failed to delete node. Check console for details.');
+		}
+	}
 </script>
 
 <SvelteFlowProvider>
-	<div class="relative flex h-full w-full bg-zinc-950">
+	<div class="flex h-full w-full bg-zinc-950">
 		<!-- Canvas -->
 		<div class="relative flex-1">
 			<!-- Floating Toolbar -->
@@ -246,5 +285,17 @@
 				<MiniMap class="border border-black" />
 			</SvelteFlow>
 		</div>
+
+		<!-- Edit Sidebar -->
+		{#if showEditPanel}
+			<EditPanel
+				nodeId={editNodeId}
+				nodeData={editNodeData}
+				templateType={editTemplateType}
+				bind:isOpen={showEditPanel}
+				onSave={handleEditPanelSave}
+				onDelete={handleEditPanelDelete}
+			/>
+		{/if}
 	</div>
 </SvelteFlowProvider>
