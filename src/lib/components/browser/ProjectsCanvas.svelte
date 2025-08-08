@@ -28,129 +28,113 @@
 		universal: UniversalNode
 	};
 
-	let nodes = $state<Node[]>([]);
-	let edges = $state<Edge[]>([]);
+	let canvasNodes = $state<Node[]>([]);
+	let canvasEdges = $state<Edge[]>([]);
 	let nodesService: INodesService;
-	let initialized = $state(false);
-	let unsubscribeFunctions: (() => void)[] = [];
+	let mounted = $state(false);
+	
+	// Current working nodes (mutable for SvelteFlow)
+	let workingNodes = $state<Node[]>([]);
+	let lastProjectsLength = 0;
 
-	onMount(() => {
-		let mounted = true;
+	function updateWorkingNodes() {
+		if (!mounted) {
+			workingNodes = canvasNodes.slice();
+			return;
+		}
+
+		if (!projects.length) {
+			workingNodes = canvasNodes.slice();
+			return;
+		}
 		
-		(async () => {
-			try {
-				initializeService();
-				await loadInitialData();
-				await syncProjectNodes();
-				if (mounted) {
-					initialized = true;
+		// Create project nodes from projects array
+		const projectNodes: Node[] = projects.map((project, index) => ({
+			id: `project-${project.id}`,
+			type: 'universal',
+			position: getProjectNodePosition(project.id, index),
+			data: {
+				templateType: 'project',
+				nodeData: {
+					title: project.title,
+					status: project.status || 'To Do',
+					collaborators: project.collaborators || [],
+					website: project.website || '',
+					projectId: project.id,
+					projectSlug: project.slug
 				}
-			} catch (error) {
-				console.error('Failed to initialize ProjectsCanvas:', error);
-			}
-		})();
+			},
+			draggable: true
+		}));
 
-		return () => {
-			mounted = false;
-			cleanup();
-		};
-	});
-
-	function initializeService() {
-		nodesService = ServiceFactory.createNodesService(
-			'project-canvas',
-			(newNodes) => { nodes = newNodes; },
-			() => nodes,
-			(newEdges) => { edges = newEdges; },
-			() => edges,
-			'project-canvas'
+		// Filter out any project nodes from canvas nodes to avoid duplicates
+		const nonProjectCanvasNodes = canvasNodes.filter(node => 
+			!node.id.startsWith('project-')
 		);
 
-		if (nodesService.subscribeToNodes && nodesService.subscribeToEdges) {
-			const unsubscribeNodes = nodesService.subscribeToNodes((newNodes) => {
-				nodes = newNodes;
-			});
-			
-			const unsubscribeEdges = nodesService.subscribeToEdges((newEdges) => {
-				edges = newEdges;
-			});
+		// Merge existing working node positions with fresh project data
+		const existingWorkingNodes = new Map(workingNodes.map(n => [n.id, n]));
+		const updatedProjectNodes = projectNodes.map(pNode => {
+			const existingNode = existingWorkingNodes.get(pNode.id);
+			return existingNode ? { ...pNode, position: existingNode.position } : pNode;
+		});
 
-			unsubscribeFunctions = [unsubscribeNodes, unsubscribeEdges];
-		}
+		workingNodes = [...updatedProjectNodes, ...nonProjectCanvasNodes];
 	}
 
-	async function loadInitialData() {
+	function getProjectNodePosition(projectId: string, defaultIndex: number) {
+		// Try to find existing position from canvas nodes
+		const existingNode = canvasNodes.find(node => node.id === `project-${projectId}`);
+		if (existingNode?.position) {
+			return existingNode.position;
+		}
+		
+		// Default grid position
+		return {
+			x: 150 + (defaultIndex % 4) * 280,
+			y: 150 + Math.floor(defaultIndex / 4) * 220
+		};
+	}
+
+	onMount(async () => {
 		try {
-			const [loadedNodes, loadedEdges] = await Promise.all([
+			// Initialize service
+			nodesService = ServiceFactory.createNodesService(
+				'project-canvas',
+				(nodes) => { canvasNodes = nodes; },
+				() => canvasNodes,
+				(edges) => { canvasEdges = edges; },
+				() => canvasEdges,
+				'project-canvas'
+			);
+
+			// Load initial canvas data (non-project nodes and positions)
+			const [initialNodes, initialEdges] = await Promise.all([
 				Promise.resolve(nodesService.getNodes()),
 				Promise.resolve(nodesService.getEdges())
 			]);
 			
-			nodes = Array.isArray(loadedNodes) ? loadedNodes : [];
-			edges = Array.isArray(loadedEdges) ? loadedEdges : [];
+			canvasNodes = Array.isArray(initialNodes) ? initialNodes : [];
+			canvasEdges = Array.isArray(initialEdges) ? initialEdges : [];
+
+			// Set up subscriptions for canvas nodes only
+			if (nodesService.subscribeToNodes && nodesService.subscribeToEdges) {
+				nodesService.subscribeToNodes((nodes) => {
+					canvasNodes = nodes;
+					updateWorkingNodes();
+				});
+				
+				nodesService.subscribeToEdges((edges) => {
+					canvasEdges = edges;
+				});
+			}
+
+			mounted = true;
+			updateWorkingNodes();
 		} catch (error) {
-			console.error('Failed to load initial canvas data:', error);
-			nodes = [];
-			edges = [];
+			console.error('Failed to initialize ProjectsCanvas:', error);
 		}
-	}
-
-	async function syncProjectNodes() {
-		if (!projects.length) return;
-
-		const existingProjectIds = new Set(
-			nodes
-				.filter(node => node.data?.templateType === 'project')
-				.map(node => (node.data?.nodeData as any)?.projectId)
-				.filter(Boolean)
-		);
-
-		const newNodes: Node[] = [];
-		
-		projects.forEach((project: Project, index: number) => {
-			if (!existingProjectIds.has(project.id)) {
-				newNodes.push(createProjectNode(project, index + nodes.length));
-			}
-		});
-
-		if (newNodes.length > 0) {
-			try {
-				await nodesService.saveBatch([...nodes, ...newNodes], edges);
-			} catch (error) {
-				console.error('Failed to sync project nodes:', error);
-			}
-		}
-	}
-
-	function createProjectNode(project: Project, gridIndex: number): Node {
-		const template = getTemplate('project');
-		
-		const nodeDataFields: Record<string, any> = {};
-		template.fields.forEach((field) => {
-			nodeDataFields[field.id] = field.type === 'tags' ? [] : '';
-		});
-
-		nodeDataFields.title = project.title;
-		nodeDataFields.status = project.status || 'To Do';
-		nodeDataFields.projectId = project.id;
-		nodeDataFields.projectSlug = project.slug;
-
-		const position = {
-			x: 150 + (gridIndex % 4) * 280,
-			y: 150 + Math.floor(gridIndex / 4) * 220
-		};
-
-		return {
-			id: `project-${project.id}`,
-			type: 'universal',
-			position,
-			data: {
-				templateType: 'project',
-				nodeData: nodeDataFields
-			},
-			draggable: true
-		};
-	}
+	});
 
 	function handleConnect(connection: Connection) {
 		if (!connection.source || !connection.target) return;
@@ -167,10 +151,11 @@
 	}
 
 	async function handleNodeDragStop() {
-		if (!initialized) return;
+		if (!mounted) return;
 		
 		try {
-			await nodesService.saveBatch(nodes, edges);
+			// Save all current node positions to canvas
+			await nodesService.saveBatch(workingNodes, canvasEdges);
 		} catch (error) {
 			console.error('Failed to save node positions:', error);
 		}
@@ -189,8 +174,17 @@
 		}
 	}
 
+	// Check for projects changes
 	$effect(() => {
-		if (!initialized) return;
+		if (mounted && projects.length !== lastProjectsLength) {
+			lastProjectsLength = projects.length;
+			updateWorkingNodes();
+		}
+	});
+
+	// Handle node events
+	$effect(() => {
+		if (!mounted) return;
 		
 		const handleNodeEdit = (event: Event) => {
 			const customEvent = event as CustomEvent;
@@ -204,6 +198,12 @@
 		const handleNodeDelete = async (event: Event) => {
 			const customEvent = event as CustomEvent;
 			const { nodeId } = customEvent.detail;
+			
+			// Don't allow deleting project nodes
+			if (nodeId?.startsWith('project-')) {
+				alert('Project nodes cannot be deleted as they sync with workspace metadata.');
+				return;
+			}
 			
 			if (nodeId && nodesService) {
 				try {
@@ -222,11 +222,6 @@
 			document.removeEventListener('nodeDelete', handleNodeDelete);
 		};
 	});
-
-	function cleanup() {
-		unsubscribeFunctions.forEach(unsub => unsub());
-		unsubscribeFunctions = [];
-	}
 </script>
 
 <SvelteFlowProvider>
@@ -238,8 +233,8 @@
 			
 			<SvelteFlow
 				class="h-full w-full bg-black"
-				bind:nodes
-				bind:edges
+				bind:nodes={workingNodes}
+				bind:edges={canvasEdges}
 				{nodeTypes}
 				onconnect={handleConnect}
 				onnodedragstop={handleNodeDragStop}
