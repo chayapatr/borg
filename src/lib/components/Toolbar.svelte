@@ -29,8 +29,8 @@
 	}
 </script>
 
-<div class="absolute top-1/2 left-4 z-10 -translate-y-1/2">
-	<div class="flex flex-col rounded-lg border border-black bg-borg-brown p-2">
+<div class="absolute top-1/2 left-4 z-20 -translate-y-1/2">
+	<div class="flex flex-col rounded-lg border border-black bg-borg-brown p-2 shadow-lg">
 		{#each toolbarItems as item}
 			<button
 				onclick={() => handleItemClick(item.id)}

@@ -145,7 +145,7 @@
 	</div>
 
 	<!-- Main Content -->
-	<div class="ml-64 flex h-full flex-1">
+	<div class="ml-64 flex h-screen flex-1">
 		{#if activeTab === 'projects'}
 			<ProjectsTab onCountsUpdate={updateGlobalCounts} />
 		{:else if activeTab === 'people'}
