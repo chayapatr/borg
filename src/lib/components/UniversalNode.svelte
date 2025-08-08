@@ -66,6 +66,11 @@
 	let noteContent = $state('');
 	let textarea: HTMLTextAreaElement;
 
+	// Title inline editing state
+	let isEditingTitle = $state(false);
+	let titleContent = $state('');
+	let titleInput: HTMLInputElement;
+
 	// Get tasks for this node from TaskService instead of embedded data
 	let tasks = $state<Task[]>([]);
 	let hasTasks = $derived(tasks.length > 0);
@@ -198,7 +203,7 @@
 			startInlineEdit();
 			return;
 		}
-		
+
 		// For other nodes, dispatch the edit event
 		const event = new CustomEvent('nodeEdit', {
 			detail: {
@@ -213,7 +218,7 @@
 	function startInlineEdit() {
 		isEditingNote = true;
 		noteContent = nodeData.content || '';
-		
+
 		// Focus the textarea after it's rendered
 		setTimeout(() => {
 			if (textarea) {
@@ -233,7 +238,7 @@
 			...nodeData,
 			content: noteContent
 		};
-		
+
 		// Dispatch update event to save the content to service
 		const event = new CustomEvent('nodeUpdate', {
 			detail: {
@@ -270,7 +275,7 @@
 
 	function handleSettingsClick(event: MouseEvent) {
 		event.stopPropagation();
-		
+
 		// Dispatch edit event for settings panel
 		const editEvent = new CustomEvent('nodeEdit', {
 			detail: {
@@ -280,6 +285,70 @@
 			}
 		});
 		document.dispatchEvent(editEvent);
+	}
+
+	function startTitleEdit() {
+		isEditingTitle = true;
+		titleContent = nodeData.title || '';
+
+		// Focus the input after it's rendered
+		setTimeout(() => {
+			if (titleInput) {
+				titleInput.focus();
+				titleInput.select();
+			}
+		}, 0);
+	}
+
+	function saveTitleContent() {
+		// Update the data prop immediately to reflect changes
+		data.nodeData = {
+			...nodeData,
+			title: titleContent
+		};
+
+		// Dispatch update event to save the title to service
+		const event = new CustomEvent('nodeUpdate', {
+			detail: {
+				nodeId: id,
+				data: {
+					nodeData: {
+						...nodeData,
+						title: titleContent
+					}
+				}
+			}
+		});
+		document.dispatchEvent(event);
+	}
+
+	function handleTitleBlur() {
+		// Save immediately when losing focus
+		saveTitleContent();
+		isEditingTitle = false;
+	}
+
+	function handleTitleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			// Save and exit on Enter
+			event.preventDefault();
+			handleTitleBlur();
+		} else if (event.key === 'Escape') {
+			// Cancel editing on Escape
+			event.preventDefault();
+			titleContent = nodeData.title || '';
+			isEditingTitle = false;
+		}
+	}
+
+	function handleTitleClick(event: MouseEvent) {
+		// Don't allow title editing for project nodes
+		if (data.templateType === 'project') {
+			return;
+		}
+
+		event.stopPropagation();
+		startTitleEdit();
 	}
 
 	function handleDelete(event: MouseEvent) {
@@ -462,20 +531,22 @@
 						oninput={handleNoteInput}
 						onblur={handleNoteBlur}
 						onkeydown={handleNoteKeydown}
-						class="h-full w-full resize-none border-none bg-transparent p-1 {fontSizeClass} leading-relaxed text-gray-800 outline-none placeholder:text-gray-500 break-words"
+						class="h-full w-full resize-none border-none bg-transparent p-1 {fontSizeClass} leading-relaxed break-words text-gray-800 outline-none placeholder:text-gray-500"
 						placeholder="Type your note..."
 						style="font-family: inherit;"
 					></textarea>
 				{:else}
 					<div
-						class="break-words flex h-full w-full items-center overflow-hidden p-1 {fontSizeClass} leading-relaxed text-balance whitespace-pre-wrap text-gray-800"
+						class="flex h-full w-full items-center overflow-hidden p-1 break-words {fontSizeClass} leading-relaxed text-balance whitespace-pre-wrap text-gray-800"
 					>
 						{nodeData.content || 'Click to edit...'}
 					</div>
 				{/if}
-				
+
 				<!-- Settings and Delete buttons for note nodes -->
-				<div class="absolute bottom-1 right-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+				<div
+					class="absolute right-1 bottom-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+				>
 					<button
 						onclick={handleSettingsClick}
 						aria-label="Edit settings"
@@ -500,14 +571,36 @@
 					{#each template.fields as field}
 						{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? field.id === 'title'}
 						{#if field.id !== 'status' && isVisible}
-							<FieldRenderer
-								{field}
-								value={nodeData[field.id]}
-								readonly={true}
-								mode="display"
-								{nodeData}
-								isProjectTitle={data.templateType === 'project' && field.id === 'title'}
-							/>
+							{#if field.id === 'title' && isEditingTitle}
+								<!-- Inline editable title input -->
+								<input
+									bind:this={titleInput}
+									bind:value={titleContent}
+									onblur={handleTitleBlur}
+									onkeydown={handleTitleKeydown}
+									class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none {data.templateType ===
+									'project'
+										? 'text-xl font-semibold'
+										: 'text-base'}"
+									placeholder={field.placeholder || 'Enter title...'}
+								/>
+							{:else}
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div
+									onclick={field.id === 'title' ? handleTitleClick : undefined}
+									class={field.id === 'title' ? 'cursor-text' : ''}
+								>
+									<FieldRenderer
+										{field}
+										value={nodeData[field.id]}
+										readonly={true}
+										mode="display"
+										{nodeData}
+										isProjectTitle={data.templateType === 'project' && field.id === 'title'}
+									/>
+								</div>
+							{/if}
 						{/if}
 					{/each}
 
@@ -515,14 +608,36 @@
 						{#each nodeData.customFields as field}
 							{@const isVisible = field.showInDisplay ?? field.id === 'title'}
 							{#if isVisible && field.id !== 'status'}
-								<FieldRenderer
-									{field}
-									value={nodeData[field.id]}
-									readonly={true}
-									mode="display"
-									{nodeData}
-									isProjectTitle={data.templateType === 'project' && field.id === 'title'}
-								/>
+								{#if field.id === 'title' && isEditingTitle}
+									<!-- Inline editable custom title input -->
+									<input
+										bind:this={titleInput}
+										bind:value={titleContent}
+										onblur={handleTitleBlur}
+										onkeydown={handleTitleKeydown}
+										class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none {data.templateType ===
+										'project'
+											? 'text-xl font-semibold'
+											: 'text-base'}"
+										placeholder={field.placeholder || 'Enter title...'}
+									/>
+								{:else}
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										onclick={field.id === 'title' ? handleTitleClick : undefined}
+										class={field.id === 'title' ? 'cursor-text' : ''}
+									>
+										<FieldRenderer
+											{field}
+											value={nodeData[field.id]}
+											readonly={true}
+											mode="display"
+											{nodeData}
+											isProjectTitle={data.templateType === 'project' && field.id === 'title'}
+										/>
+									</div>
+								{/if}
 							{/if}
 						{/each}
 					{/if}
