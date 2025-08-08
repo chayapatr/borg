@@ -28,24 +28,28 @@
 		showAddModal = false;
 	}
 
-	async function handleUpdateEvent(id: string, templateType: string, eventData: Record<string, any>) {
+	async function handleUpdateEvent(
+		id: string,
+		templateType: string,
+		eventData: Record<string, any>
+	) {
 		// Filter out undefined values and separate top-level fields from eventData
 		const { title, date, ...dynamicEventData } = eventData;
-		
+
 		const updates = {
 			templateType,
 			title: title || 'Untitled Event',
 			date: date || new Date().toISOString().split('T')[0],
 			eventData: dynamicEventData
 		};
-		
+
 		// Remove any undefined values
-		Object.keys(updates).forEach(key => {
+		Object.keys(updates).forEach((key) => {
 			if ((updates as any)[key] === undefined) {
 				delete (updates as any)[key];
 			}
 		});
-		
+
 		const result = timelineService.updateEvent(id, updates);
 		if (result instanceof Promise) await result;
 		await loadEvents();
@@ -116,7 +120,7 @@
 	<div class=" border-b bg-white px-6 py-4">
 		<div class="flex items-center justify-between">
 			<div>
-				<h2 class="rounded-md text-4xl font-semibold">🐟 TIMELINE</h2>
+				<h2 class="rounded-md text-4xl font-semibold">🐟 Timeline</h2>
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
 			<button
@@ -150,7 +154,7 @@
 				{#each events as event}
 					{@const template = getTemplateInfo(event.templateType)}
 					<div
-						class="box-shadow-black rounded-lg border border-black bg-white p-4 transition-colors cursor-pointer hover:bg-zinc-50"
+						class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-4 transition-colors hover:bg-zinc-50"
 						role="button"
 						tabindex="0"
 						onclick={() => handleEditEvent(event)}
@@ -241,10 +245,10 @@
 </div>
 
 {#if showAddModal}
-	<AddTimelineEventModal 
-		onAdd={handleAddEvent} 
+	<AddTimelineEventModal
+		onAdd={handleAddEvent}
 		onUpdate={handleUpdateEvent}
 		onClose={handleCloseModal}
-		editingEvent={editingEvent}
+		{editingEvent}
 	/>
 {/if}

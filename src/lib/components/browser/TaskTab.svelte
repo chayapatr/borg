@@ -244,7 +244,7 @@
 	<div class=" w-full border-b bg-white px-6 py-4">
 		<div class="flex items-center justify-between">
 			<div>
-				<h2 class="rounded-md text-4xl font-semibold">🦖 TASKS</h2>
+				<h2 class="rounded-md text-4xl font-semibold">🦖 Tasks</h2>
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
 			<div class="flex items-center gap-4">
