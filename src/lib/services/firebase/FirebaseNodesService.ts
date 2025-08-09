@@ -150,15 +150,22 @@ export class FirebaseNodesService implements INodesService {
 
 			console.log('Node updated successfully in Firestore');
 
-			// Refresh task titles to reflect any node title/type changes
-			try {
-				const taskService = ServiceFactory.createTaskService();
-				if (taskService.refreshNodeTitles) {
-					await taskService.refreshNodeTitles();
-					console.log('Task titles refreshed after node update');
+			// Only refresh task titles if title or template type actually changed
+			const titleChanged = 
+				(updates.nodeData?.title !== undefined) || 
+				(updates.data?.nodeData?.title !== undefined);
+			const typeChanged = updates.data?.templateType !== undefined;
+			
+			if (titleChanged || typeChanged) {
+				try {
+					const taskService = ServiceFactory.createTaskService();
+					if (taskService.refreshNodeTitles) {
+						await taskService.refreshNodeTitles();
+						console.log('Task titles refreshed after node update (title/type changed)');
+					}
+				} catch (error) {
+					console.warn('Failed to refresh task titles after node update:', error);
 				}
-			} catch (error) {
-				console.warn('Failed to refresh task titles after node update:', error);
 			}
 
 			// Note: We don't update local state here because the subscription will handle it

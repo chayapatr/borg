@@ -61,6 +61,14 @@
 	let showTaskModal = $state(false);
 	let taskModalNodeId = $state('');
 	let taskModalTask = $state<Task | undefined>(undefined); // undefined for add mode, Task for edit mode
+	
+	// Flag to prevent redundant auto-saves after explicit saves
+	let skipNextAutoSave = $state(false);
+	
+	// Project sync optimization
+	let lastProjectSyncTime = 0;
+	let lastKnownProjectData: any = null;
+	const PROJECT_SYNC_DEBOUNCE = 5000; // 5 seconds
 
 	// Get Svelte Flow helpers
 	const { screenToFlowPosition, getViewport } = useSvelteFlow();
@@ -87,6 +95,12 @@
 		if (nodesService) {
 			clearTimeout(saveTimeout);
 			saveTimeout = setTimeout(async () => {
+				// Skip auto-save if we just did an explicit save
+				if (skipNextAutoSave) {
+					skipNextAutoSave = false;
+					return;
+				}
+				
 				// Use optimized batch save if available, otherwise fall back to regular batch save
 				if (
 					'saveBatchOptimized' in nodesService &&
@@ -116,19 +130,15 @@
 		}
 	});
 
-	// Separate effect for immediate node count updates
-	$effect(() => {
-		if (projectSlug && projectsService && nodesService) {
-			projectsService.updateNodeCount(projectSlug, nodes.length);
-		}
-	});
+	// Removed duplicate node count update - handled in auto-save effect above
 
-	// Effect to sync project node when project data might have changed
+	// Optimized project sync - only when actually needed
 	$effect(() => {
 		if (projectSlug && projectsService && nodes.length > 0) {
+			// Much longer interval since project data rarely changes
 			const interval = setInterval(() => {
-				syncProjectNode();
-			}, 1000); // Check every second for project data changes
+				checkAndSyncProjectNode();
+			}, 10000); // Check every 10 seconds instead of 1 second
 
 			return () => clearInterval(interval);
 		}
@@ -422,6 +432,7 @@
 	function handleEditPanelSave(nodeId: string, data: any) {
 		console.log('Canvas.handleEditPanelSave called:', { nodeId, data });
 		nodesService.updateNode(nodeId, data);
+		skipNextAutoSave = true; // Skip the next auto-save since we just did an explicit save
 
 		// Check if status changed - if so, trigger project update to refresh status counts
 		const hasStatusChange = data.nodeData && data.nodeData.status !== undefined;
@@ -443,7 +454,10 @@
 				updates.collaborators = nodeData.collaborators;
 			}
 
-			if (Object.keys(updates).length > 0) {
+			// Include node count in the same update to batch requests
+			updates.nodeCount = nodes.length;
+
+			if (Object.keys(updates).length > 1) { // More than just nodeCount
 				projectsService.updateProject(projectSlug, updates);
 			}
 		}
@@ -496,7 +510,7 @@
 		);
 
 		if (nodesService) {
-			// Use optimized batch save if available for immediate drag save
+			// Single atomic save - use optimized batch save if available
 			if (
 				'saveBatchOptimized' in nodesService &&
 				typeof (nodesService as any).saveBatchOptimized === 'function'
@@ -511,17 +525,19 @@
 					result
 						.then(() => {
 							console.log('Positions saved after drag (optimized)');
-							// Update previous state after saving
+							// Update previous state and skip next auto-save
 							previousNodes = [...nodes];
 							previousEdges = [...edges];
+							skipNextAutoSave = true;
 						})
 						.catch((error) => {
 							console.error('Failed to save positions after drag:', error);
 						});
 				} else {
-					// Update previous state after saving
+					// Update previous state and skip next auto-save
 					previousNodes = [...nodes];
 					previousEdges = [...edges];
+					skipNextAutoSave = true;
 				}
 			} else if (nodesService.saveBatch) {
 				const result = nodesService.saveBatch(nodes, edges);
@@ -529,42 +545,25 @@
 					result
 						.then(() => {
 							console.log('Positions saved after drag');
-							// Update previous state after saving
+							// Update previous state and skip next auto-save
 							previousNodes = [...nodes];
 							previousEdges = [...edges];
+							skipNextAutoSave = true;
 						})
 						.catch((error) => {
 							console.error('Failed to save positions after drag:', error);
 						});
 				} else {
-					// Update previous state after saving
+					// Update previous state and skip next auto-save
 					previousNodes = [...nodes];
 					previousEdges = [...edges];
+					skipNextAutoSave = true;
 				}
 			}
 		}
-
-		// Also try to save individual node position if the dragged node is available
-		if (event && event.node) {
-			const draggedNode = event.node;
-			console.log('Dragged node:', draggedNode.id, 'new position:', draggedNode.position);
-
-			// Update the node in the service individually
-			if (nodesService.updateNode) {
-				const updateResult = nodesService.updateNode(draggedNode.id, {
-					position: draggedNode.position
-				});
-				if (updateResult instanceof Promise) {
-					updateResult
-						.then(() => {
-							console.log('Individual node position saved:', draggedNode.id);
-						})
-						.catch((error) => {
-							console.error('Failed to save individual node position:', error);
-						});
-				}
-			}
-		}
+		
+		// Removed individual node position save to prevent triple saves
+		// The batch save above handles all position updates atomically
 	}
 
 	// Function to refresh task sidebar data and node display
@@ -664,16 +663,56 @@
 		}
 	}
 
-	async function syncProjectNode() {
+	// Optimized project sync that only runs when project data actually changes
+	async function checkAndSyncProjectNode() {
 		if (!projectSlug || !projectsService) return;
+
+		const now = Date.now();
+		if (now - lastProjectSyncTime < PROJECT_SYNC_DEBOUNCE) {
+			return; // Skip if we synced recently
+		}
 
 		let project: any;
 		try {
 			const projectResult = projectsService.getProject(projectSlug);
 			project = projectResult instanceof Promise ? await projectResult : projectResult;
 		} catch (error) {
-			console.error('Failed to load project for sync:', error);
+			console.error('Failed to load project for sync check:', error);
 			return;
+		}
+
+		if (!project) return;
+
+		// Check if project data actually changed
+		const projectDataString = JSON.stringify({
+			title: project.title,
+			status: project.status,
+			collaborators: project.collaborators
+		});
+
+		if (lastKnownProjectData === projectDataString) {
+			return; // No changes, skip sync
+		}
+
+		console.log('Project data changed, syncing nodes...');
+		lastKnownProjectData = projectDataString;
+		lastProjectSyncTime = now;
+
+		await syncProjectNode(project);
+	}
+
+	async function syncProjectNode(project?: any) {
+		if (!projectSlug || !projectsService) return;
+
+		// Get project data if not provided
+		if (!project) {
+			try {
+				const projectResult = projectsService.getProject(projectSlug);
+				project = projectResult instanceof Promise ? await projectResult : projectResult;
+			} catch (error) {
+				console.error('Failed to load project for sync:', error);
+				return;
+			}
 		}
 
 		if (!project) return;
