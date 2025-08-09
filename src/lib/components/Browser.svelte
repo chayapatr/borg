@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { FolderOpen, Users, Calendar, CheckSquare, LogOut } from '@lucide/svelte';
+	import { FolderOpen, Users, Calendar, CheckSquare, LogOut, BookOpen } from '@lucide/svelte';
 	import ProjectsTab from './browser/ProjectsTab.svelte';
 	import PeopleTab from './browser/PeopleTab.svelte';
 	import TimelineTab from './browser/TimelineTab.svelte';
@@ -10,7 +10,7 @@
 
 	import { firebaseAuth } from '../stores/authStore';
 
-	type Tab = 'projects' | 'people' | 'timeline' | 'tasks';
+	type Tab = 'projects' | 'people' | 'timeline' | 'tasks' | 'resources';
 
 	let activeTab = $state<Tab>('projects');
 	
@@ -165,6 +165,14 @@
 				>
 					<CheckSquare class="h-5 w-5" />
 					Tasks
+				</button>
+
+				<button
+					onclick={() => window.open('https://borg.cyborglab.org/project/lab-resources', '_blank')}
+					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-borg-orange hover:text-white"
+				>
+					<BookOpen class="h-5 w-5" />
+					Resources
 				</button>
 			</div>
 			<button

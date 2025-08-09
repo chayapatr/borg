@@ -1,0 +1,159 @@
+<script lang="ts">
+	import { Handle, Position } from '@xyflow/svelte';
+	import { CircleDashed, PencilRuler, CheckCircle, Shield } from '@lucide/svelte';
+	import { ServiceFactory } from '../services/ServiceFactory';
+	import type { ITaskService, IProjectsService } from '../services/interfaces';
+
+	let { data, id } = $props<{ data: any; id: string }>();
+
+	let nodeData = $derived(data.nodeData || {});
+	
+	// Services
+	const taskService: ITaskService = ServiceFactory.createTaskService();
+	const projectsService: IProjectsService = ServiceFactory.createProjectsService();
+	
+	// Project counts (matching project card logic)
+	let projectStatusCounts = $state({ todo: 0, doing: 0, done: 0 });
+	let totalTaskCount = $state(0);
+	let refreshTrigger = $state(0);
+
+	// Listen for global task updates
+	$effect(() => {
+		const handleTasksUpdated = () => {
+			refreshTrigger += 1;
+		};
+
+		document.addEventListener('tasksUpdated', handleTasksUpdated);
+		return () => {
+			document.removeEventListener('tasksUpdated', handleTasksUpdated);
+		};
+	});
+
+	// Load project counts (matching project card logic)
+	$effect(() => {
+		refreshTrigger; // Include in dependencies
+
+		(async () => {
+			const projectSlug = nodeData.projectSlug;
+			if (!projectSlug) return;
+
+			try {
+				// Get node status counts (todo/doing/done) - same as project cards
+				const statusCounts = await projectsService.getProjectStatusCounts(projectSlug);
+				projectStatusCounts = statusCounts;
+				
+				// Get task counts - same as project cards
+				const taskCounts = await taskService.getTaskCounts(projectSlug);
+				totalTaskCount = taskCounts.total;
+			} catch (error) {
+				console.error('Failed to load project counts:', error);
+				projectStatusCounts = { todo: 0, doing: 0, done: 0 };
+				totalTaskCount = 0;
+			}
+		})();
+	});
+
+	// Helper function to get initials from name
+	function getInitials(name: string): string {
+		return name
+			.split(' ')
+			.map((n) => n[0])
+			.join('')
+			.toUpperCase()
+			.slice(0, 2);
+	}
+
+
+	// Determine border color based on status
+	let borderColor = $derived.by(() => {
+		const status = nodeData.status;
+		if (status === 'To Do') return '#9333ea'; // purple-600
+		if (status === 'Doing') return '#0284c7'; // sky-600
+		if (status === 'Done') return '#16a34a'; // green-600
+		return '#3f3f46'; // zinc-700 - default
+	});
+
+	function handleNodeClick() {
+		// Dispatch the edit event to navigate to project
+		const event = new CustomEvent('nodeEdit', {
+			detail: {
+				nodeId: id,
+				nodeData: nodeData,
+				templateType: data.templateType
+			}
+		});
+		document.dispatchEvent(event);
+	}
+</script>
+
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<div>
+	<!-- Main Node Container -->
+	<div
+		class="group relative cursor-pointer border rounded-lg max-w-64 min-w-48 bg-white transition-all duration-200"
+		style="border-color: {borderColor};"
+		onclick={handleNodeClick}
+	>
+		<div class="p-3">
+			<!-- Project Title -->
+			<h3 class="text-xl font-semibold text-black mb-3">{nodeData.title || 'Untitled Project'}</h3>
+
+			<!-- Collaborators -->
+			{#if nodeData.collaborators && nodeData.collaborators.length > 0}
+				<div class="flex gap-1 flex-wrap">
+					{#each nodeData.collaborators.slice(0, 5) as collaborator}
+						<div
+							class="flex h-8 w-8 items-center justify-center rounded-full bg-borg-green border border-black text-white text-xs font-medium"
+							title={collaborator.name || collaborator.email}
+						>
+							{getInitials(collaborator.name || collaborator.email || 'U')}
+						</div>
+					{/each}
+					{#if nodeData.collaborators.length > 5}
+						<div
+							class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 border border-black text-gray-700 text-xs font-medium"
+							title="{nodeData.collaborators.length - 5} more collaborators"
+						>
+							+{nodeData.collaborators.length - 5}
+						</div>
+					{/if}
+				</div>
+			{:else}
+				<div class="flex items-center gap-2 text-sm text-gray-500">
+					<Shield class="h-4 w-4" />
+					<span>No collaborators</span>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Task Counts Section (Bottom Box like UniversalNode) -->
+		{#if totalTaskCount > 0 || projectStatusCounts.todo > 0 || projectStatusCounts.doing > 0 || projectStatusCounts.done > 0}
+			<div
+				class="relative w-full cursor-pointer rounded-b-lg border-t bg-borg-beige p-3"
+				style="border-color: {borderColor};"
+				onclick={handleNodeClick}
+			>
+				<div class="text-xs text-zinc-600">
+					Task: {totalTaskCount} |
+					<span class="inline-flex items-center gap-1">
+						<span class="h-2 w-2 rounded-full border border-black bg-sky-500"></span>
+						{projectStatusCounts.todo}
+					</span>
+					<span class="inline-flex items-center gap-1">
+						<span class="h-2 w-2 rounded-full border border-black bg-purple-500"></span>
+						{projectStatusCounts.doing}
+					</span>
+					<span class="inline-flex items-center gap-1">
+						<span class="h-2 w-2 rounded-full border border-black bg-green-500"></span>
+						{projectStatusCounts.done}
+					</span>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Connection Handles -->
+		<Handle type="target" position={Position.Left} class="!bg-zinc-600" />
+		<Handle type="source" position={Position.Right} class="!bg-zinc-600" />
+	</div>
+</div>

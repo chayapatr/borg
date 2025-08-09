@@ -11,6 +11,7 @@
 		type Connection
 	} from '@xyflow/svelte';
 	import UniversalNode from '../UniversalNode.svelte';
+	import ProjectCanvasNode from '../ProjectCanvasNode.svelte';
 	import Toolbar from '../Toolbar.svelte';
 	import EditPanel from '../EditPanel.svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
@@ -26,7 +27,8 @@
 	}>();
 
 	const nodeTypes = {
-		universal: UniversalNode
+		universal: UniversalNode,
+		projectCanvas: ProjectCanvasNode
 	};
 
 	let canvasNodes = $state<Node[]>([]);
@@ -58,7 +60,7 @@
 		// Create project nodes from projects array
 		const projectNodes: Node[] = projects.map((project, index) => ({
 			id: `project-${project.id}`,
-			type: 'universal',
+			type: 'projectCanvas',
 			position: getProjectNodePosition(project.id, index),
 			data: {
 				templateType: 'project',
