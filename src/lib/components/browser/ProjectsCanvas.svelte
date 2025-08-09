@@ -159,6 +159,34 @@
 		nodesService.addEdge(edge);
 	}
 
+	function handleBeforeDelete({
+		nodes: nodesToDelete,
+		edges: edgesToDelete
+	}: {
+		nodes: Node[];
+		edges: Edge[];
+	}) {
+		// Prevent node deletion by returning false if any nodes would be deleted
+		if (nodesToDelete.length > 0) {
+			return false; // This should prevent the deletion
+		}
+		// Allow edge deletion
+		return true;
+	}
+
+	function handleDelete({
+		nodes: nodesToDelete,
+		edges: edgesToDelete
+	}: {
+		nodes: Node[];
+		edges: Edge[];
+	}) {
+		// This should only be called for edges now due to onbeforedelete
+		edgesToDelete.forEach((edge) => {
+			nodesService.deleteEdge(edge.id);
+		});
+	}
+
 	function handleNodeDragStart(event: any) {
 		console.log('ProjectsCanvas: Node drag started, bringing to front...', event);
 		if (event && event.node) {
@@ -308,11 +336,14 @@
 				bind:edges={canvasEdges}
 				{nodeTypes}
 				onconnect={handleConnect}
+				onbeforedelete={handleBeforeDelete}
+				ondelete={handleDelete}
 				onnodedragstart={handleNodeDragStart}
 				onnodedragstop={handleNodeDragStop}
 				nodesDraggable={true}
 				nodesConnectable={true}
 				elevateNodesOnSelect={true}
+				deleteKey={['Delete', 'Backspace']}
 			>
 				<Background />
 				<Controls />
