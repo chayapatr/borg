@@ -2,7 +2,8 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { CircleDashed, PencilRuler, CheckCircle, Shield } from '@lucide/svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
-	import type { ITaskService, IProjectsService } from '../services/interfaces';
+	import type { ITaskService, IProjectsService, IPeopleService } from '../services/interfaces';
+	import type { Person } from '../services/local/PeopleService';
 
 	let { data, id } = $props<{ data: any; id: string }>();
 
@@ -11,11 +12,15 @@
 	// Services
 	const taskService: ITaskService = ServiceFactory.createTaskService();
 	const projectsService: IProjectsService = ServiceFactory.createProjectsService();
+	const peopleService: IPeopleService = ServiceFactory.createPeopleService();
 
 	// Project counts (matching project card logic)
 	let projectStatusCounts = $state({ todo: 0, doing: 0, done: 0 });
 	let totalTaskCount = $state(0);
 	let refreshTrigger = $state(0);
+
+	// Collaborator data
+	let collaboratorsData = $state<Person[]>([]);
 
 	// Listen for global task updates
 	$effect(() => {
@@ -49,6 +54,60 @@
 				console.error('Failed to load project counts:', error);
 				projectStatusCounts = { todo: 0, doing: 0, done: 0 };
 				totalTaskCount = 0;
+			}
+		})();
+	});
+
+	// Fetch collaborator data when collaborators change
+	$effect(() => {
+		const collaboratorIds = nodeData.collaborators;
+		const projectSlug = nodeData.projectSlug;
+		
+		if (!collaboratorIds || !Array.isArray(collaboratorIds) || collaboratorIds.length === 0) {
+			collaboratorsData = [];
+			return;
+		}
+
+		(async () => {
+			try {
+				const fetchedCollaborators: Person[] = [];
+				
+				for (const collaboratorId of collaboratorIds) {
+					if (typeof collaboratorId === 'string') {
+						// Try to get person by ID, first from project scope then global
+						let person = await peopleService.getPerson(collaboratorId, projectSlug);
+						if (!person) {
+							person = await peopleService.getPerson(collaboratorId);
+						}
+						
+						if (person) {
+							fetchedCollaborators.push(person);
+						} else {
+							// Fallback: create a placeholder person with the ID as name
+							fetchedCollaborators.push({
+								id: collaboratorId,
+								name: collaboratorId,
+								email: undefined,
+								photoUrl: undefined,
+								createdAt: new Date().toISOString(),
+								updatedAt: new Date().toISOString()
+							});
+						}
+					}
+				}
+				
+				collaboratorsData = fetchedCollaborators;
+			} catch (error) {
+				console.error('Failed to fetch collaborator data:', error);
+				// Fallback: use collaborator IDs as names
+				collaboratorsData = collaboratorIds.map((id: string) => ({
+					id,
+					name: id,
+					email: undefined,
+					photoUrl: undefined,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString()
+				}));
 			}
 		})();
 	});
@@ -101,12 +160,22 @@
 			<!-- Collaborators -->
 			{#if nodeData.collaborators && nodeData.collaborators.length > 0}
 				<div class="mt-2 flex flex-wrap gap-1">
-					{#each nodeData.collaborators.slice(0, 5) as collaborator}
+					{#each collaboratorsData.slice(0, 5) as collaborator}
 						<div
-							class="flex h-6 w-6 items-center justify-center rounded-full border border-black bg-borg-green text-xs font-medium text-white"
-							title={collaborator.name || collaborator.email}
+							class="flex h-6 w-6 items-center justify-center rounded-full border border-black overflow-hidden"
+							title={collaborator.name || collaborator.email || 'User'}
 						>
-							{getInitials(collaborator.name || collaborator.email || 'U')}
+							{#if collaborator.photoUrl}
+								<img
+									src={collaborator.photoUrl}
+									alt={collaborator.name || collaborator.email || 'User'}
+									class="h-full w-full object-cover"
+								/>
+							{:else}
+								<div class="flex h-full w-full items-center justify-center bg-borg-green text-xs font-medium text-white">
+									{getInitials(collaborator.name || collaborator.email || 'U')}
+								</div>
+							{/if}
 						</div>
 					{/each}
 					{#if nodeData.collaborators.length > 5}

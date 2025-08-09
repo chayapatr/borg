@@ -1,25 +1,31 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { FolderOpen, Users, Calendar, CheckSquare, LogOut, BookOpen } from '@lucide/svelte';
+	import { FolderOpen, Users, Calendar, CheckSquare, LogOut, BookOpen, User } from '@lucide/svelte';
 	import ProjectsTab from './browser/ProjectsTab.svelte';
 	import PeopleTab from './browser/PeopleTab.svelte';
 	import TimelineTab from './browser/TimelineTab.svelte';
 	import TaskTab from './browser/TaskTab.svelte';
+	import PersonalTab from './browser/PersonalTab.svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
-	import type { IProjectsService, ITaskService, IPeopleService, ITimelineService } from '../services/interfaces';
+	import type {
+		IProjectsService,
+		ITaskService,
+		IPeopleService,
+		ITimelineService
+	} from '../services/interfaces';
 
 	import { firebaseAuth } from '../stores/authStore';
 
-	type Tab = 'projects' | 'people' | 'timeline' | 'tasks' | 'resources';
+	type Tab = 'projects' | 'people' | 'timeline' | 'tasks' | 'personal' | 'resources';
 
 	let activeTab = $state<Tab>('projects');
-	
+
 	// Shared services - created once and passed to children
 	let projectsService: IProjectsService;
 	let taskService: ITaskService;
 	let peopleService: IPeopleService;
 	let timelineService: ITimelineService;
-	
+
 	let globalCounts = $state({ todo: 0, doing: 0, done: 0 });
 	let servicesInitialized = $state(false);
 	let cachedProjects = $state<any[]>([]);
@@ -30,9 +36,9 @@
 		taskService = ServiceFactory.createTaskService();
 		peopleService = ServiceFactory.createPeopleService();
 		timelineService = ServiceFactory.createTimelineService();
-		
+
 		servicesInitialized = true;
-		
+
 		// Only load data for the initial tab (projects)
 		if (activeTab === 'projects') {
 			updateGlobalCounts();
@@ -54,7 +60,7 @@
 
 	function setActiveTab(tab: Tab) {
 		activeTab = tab;
-		
+
 		// Trigger global counts update when switching to projects tab
 		if (tab === 'projects' && servicesInitialized) {
 			updateGlobalCounts();
@@ -67,7 +73,7 @@
 			if (cachedProjects.length === 0 || forceRefresh) {
 				cachedProjects = await projectsService.getAllProjects();
 			}
-			
+
 			// Calculate counts from cached projects to avoid duplicate getAllProjects call
 			const counts = { todo: 0, doing: 0, done: 0 };
 			for (const project of cachedProjects) {
@@ -168,6 +174,17 @@
 				</button>
 
 				<button
+					onclick={() => setActiveTab('personal')}
+					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
+					'personal'
+						? 'bg-black text-white '
+						: 'hover:bg-borg-orange hover:text-white'}"
+				>
+					<User class="h-5 w-5" />
+					Personal
+				</button>
+
+				<button
 					onclick={() => window.open('https://borg.cyborglab.org/project/lab-resources', '_blank')}
 					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-borg-orange hover:text-white"
 				>
@@ -199,11 +216,15 @@
 				<TimelineTab {timelineService} {activeTab} />
 			{:else if activeTab === 'tasks'}
 				<TaskTab {taskService} {peopleService} {activeTab} />
+			{:else if activeTab === 'personal'}
+				<PersonalTab {taskService} {activeTab} />
 			{/if}
 		{:else}
 			<div class="flex h-screen w-full items-center justify-center">
 				<div class="text-center">
-					<div class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-black border-t-transparent"></div>
+					<div
+						class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-black border-t-transparent"
+					></div>
 					<p class="text-zinc-600">Initializing services...</p>
 				</div>
 			</div>

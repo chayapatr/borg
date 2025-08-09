@@ -48,13 +48,22 @@ export class FirebaseAuth {
 			await setDoc(userRef, {
 				name: user.displayName || '',
 				email: user.email || '',
+				photoUrl: user.photoURL || '',
 				createdAt: new Date(),
 				isApproved: false, // Must be manually approved
 				lastLoginAt: new Date()
 			});
 		} else {
-			// Update last login
-			await setDoc(userRef, { lastLoginAt: new Date() }, { merge: true });
+			// Update last login and sync photoUrl if it has changed
+			const userData = userDoc.data();
+			const updateData: any = { lastLoginAt: new Date() };
+			
+			// Only update photoUrl if it has changed
+			if (userData?.photoUrl !== user.photoURL) {
+				updateData.photoUrl = user.photoURL || '';
+			}
+			
+			await setDoc(userRef, updateData, { merge: true });
 		}
 	}
 

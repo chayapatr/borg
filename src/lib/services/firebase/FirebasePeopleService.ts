@@ -35,6 +35,7 @@ export class FirebasePeopleService implements IPeopleService {
 					id: doc.id,
 					name: userData.name || userData.email || 'Unknown User',
 					email: userData.email,
+					photoUrl: userData.photoUrl,
 					createdAt: userData.createdAt || new Date().toISOString(),
 					updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString()
 				} as Person;
@@ -63,6 +64,7 @@ export class FirebasePeopleService implements IPeopleService {
 					id: doc.id,
 					name: userData.name || userData.email || 'Unknown User',
 					email: userData.email,
+					photoUrl: userData.photoUrl,
 					createdAt: userData.createdAt || new Date().toISOString(),
 					updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString(),
 					lastUsedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString(),
@@ -88,6 +90,7 @@ export class FirebasePeopleService implements IPeopleService {
 					id: userDocSnap.id,
 					name: userData.name || userData.email || 'Unknown User',
 					email: userData.email,
+					photoUrl: userData.photoUrl,
 					createdAt: userData.createdAt || new Date().toISOString(),
 					updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString()
 				};
@@ -119,6 +122,7 @@ export class FirebasePeopleService implements IPeopleService {
 						id: snapshot.docs[0].id,
 						name: userData.name || userData.email || 'Unknown User',
 						email: userData.email,
+						photoUrl: userData.photoUrl,
 						createdAt: userData.createdAt || new Date().toISOString(),
 						updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString()
 					};
@@ -139,10 +143,13 @@ export class FirebasePeopleService implements IPeopleService {
 			// Only allow updating name field, other fields are managed by authentication
 			const userDocRef = doc(db, 'users', personId);
 			
-			// Filter updates to only allow name changes
+			// Filter updates to only allow name and photoUrl changes
 			const allowedUpdates: any = {};
 			if (updates.name !== undefined) {
 				allowedUpdates.name = updates.name;
+			}
+			if (updates.photoUrl !== undefined) {
+				allowedUpdates.photoUrl = updates.photoUrl;
 			}
 
 			if (Object.keys(allowedUpdates).length > 0) {
@@ -211,6 +218,7 @@ export class FirebasePeopleService implements IPeopleService {
 				id: gp.id,
 				name: gp.name,
 				email: gp.email,
+				photoUrl: gp.photoUrl,
 				createdAt: gp.createdAt,
 				updatedAt: gp.updatedAt
 			}));
@@ -242,6 +250,7 @@ export class FirebasePeopleService implements IPeopleService {
 			id: gp.id,
 			name: gp.name,
 			email: gp.email,
+			photoUrl: gp.photoUrl,
 			createdAt: gp.createdAt,
 			updatedAt: gp.updatedAt
 		}));
@@ -262,6 +271,7 @@ export class FirebasePeopleService implements IPeopleService {
 					id: doc.id,
 					name: userData.name || userData.email || 'Unknown User',
 					email: userData.email,
+					photoUrl: userData.photoUrl,
 					createdAt: userData.createdAt || new Date().toISOString(),
 					updatedAt: userData.lastLoginAt || userData.createdAt || new Date().toISOString()
 				} as Person;
