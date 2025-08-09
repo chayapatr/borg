@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { Person } from '../../services/local/PeopleService';
 	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
 	import type { ITaskService } from '../../services/interfaces/ITaskService';
@@ -8,53 +6,64 @@
 	import type { TaskWithContext } from '../../types/task';
 	import { PersonStandingIcon } from '@lucide/svelte';
 
-	let peopleService: IPeopleService;
-	let taskService: ITaskService;
+	let { peopleService, taskService, activeTab } = $props<{
+		peopleService: IPeopleService;
+		taskService: ITaskService;
+		activeTab: string;
+	}>();
+
 	let people = $state<Person[]>([]);
 	let showAddModal = $state(false);
 	let searchQuery = $state('');
 	let personTasks = $state<Map<string, TaskWithContext[]>>(new Map());
+	let dataLoaded = $state(false);
+	let expandedPeople = $state<Set<string>>(new Set());
 
-	onMount(() => {
-		peopleService = ServiceFactory.createPeopleService();
-		taskService = ServiceFactory.createTaskService();
-		loadPeople();
-
-		// Listen for visibility changes to refresh data
-		function handleVisibilityChange() {
-			if (!document.hidden) {
-				loadPeople();
-			}
+	// Lazy load data when tab becomes active
+	$effect(() => {
+		if (activeTab === 'people' && !dataLoaded) {
+			loadPeople();
 		}
-
-		document.addEventListener('visibilitychange', handleVisibilityChange);
-
-		return () => {
-			document.removeEventListener('visibilitychange', handleVisibilityChange);
-		};
 	});
 
-	async function loadPeople() {
+	async function loadPeople(force = false) {
+		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
+		
 		const result = peopleService.getAllPeople();
 		people = result instanceof Promise ? await result : result;
-		loadPersonTasks();
+		
+		// Load person tasks on demand instead of all at once
+		dataLoaded = true;
 	}
 
-	async function loadPersonTasks() {
-		const taskMap = new Map<string, TaskWithContext[]>();
-		for (const person of people) {
-			const result = taskService.getPersonTasks(person.id);
-			const tasks = result instanceof Promise ? await result : result;
-			taskMap.set(person.id, tasks);
+	// Load tasks for a specific person when they expand their section
+	async function loadPersonTasks(personId: string) {
+		if (personTasks.has(personId)) return; // Already loaded
+		
+		const result = taskService.getPersonTasks(personId);
+		const tasks = result instanceof Promise ? await result : result;
+		
+		// Update the map reactively
+		personTasks = new Map(personTasks.set(personId, tasks));
+	}
+
+	// Handle expanding/collapsing person sections
+	function togglePersonExpansion(personId: string) {
+		if (expandedPeople.has(personId)) {
+			expandedPeople.delete(personId);
+		} else {
+			expandedPeople.add(personId);
+			// Load tasks when expanding for the first time
+			loadPersonTasks(personId);
 		}
-		personTasks = taskMap;
+		expandedPeople = new Set(expandedPeople); // Trigger reactivity
 	}
 
 	async function handleAddPerson(personData: { name: string; email?: string }) {
 		try {
 			const result = peopleService.addPerson(personData);
 			if (result instanceof Promise) await result;
-			await loadPeople();
+			await loadPeople(true); // Force reload
 			showAddModal = false;
 		} catch (error) {
 			console.error('Failed to add person:', error);
@@ -68,7 +77,7 @@
 				const result = peopleService.deletePerson(id);
 				const success = result instanceof Promise ? await result : result;
 				if (success) {
-					await loadPeople();
+					await loadPeople(true); // Force reload
 				} else {
 					alert(
 						'Cannot delete authenticated users. They must be deactivated through user management.'

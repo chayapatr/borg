@@ -6,19 +6,37 @@
 	import TimelineTab from './browser/TimelineTab.svelte';
 	import TaskTab from './browser/TaskTab.svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
-	import type { IProjectsService } from '../services/interfaces';
+	import type { IProjectsService, ITaskService, IPeopleService, ITimelineService } from '../services/interfaces';
 
 	import { firebaseAuth } from '../stores/authStore';
 
 	type Tab = 'projects' | 'people' | 'timeline' | 'tasks';
 
 	let activeTab = $state<Tab>('projects');
+	
+	// Shared services - created once and passed to children
 	let projectsService: IProjectsService;
+	let taskService: ITaskService;
+	let peopleService: IPeopleService;
+	let timelineService: ITimelineService;
+	
 	let globalCounts = $state({ todo: 0, doing: 0, done: 0 });
+	let servicesInitialized = $state(false);
+	let cachedProjects = $state<any[]>([]);
 
 	onMount(() => {
+		// Initialize all services once
 		projectsService = ServiceFactory.createProjectsService();
-		updateGlobalCounts();
+		taskService = ServiceFactory.createTaskService();
+		peopleService = ServiceFactory.createPeopleService();
+		timelineService = ServiceFactory.createTimelineService();
+		
+		servicesInitialized = true;
+		
+		// Only load data for the initial tab (projects)
+		if (activeTab === 'projects') {
+			updateGlobalCounts();
+		}
 
 		// Update counts when returning from project pages
 		const handleVisibilityChange = () => {
@@ -36,11 +54,29 @@
 
 	function setActiveTab(tab: Tab) {
 		activeTab = tab;
+		
+		// Trigger global counts update when switching to projects tab
+		if (tab === 'projects' && servicesInitialized) {
+			updateGlobalCounts();
+		}
 	}
 
-	async function updateGlobalCounts() {
+	async function updateGlobalCounts(forceRefresh = false) {
 		if (projectsService) {
-			globalCounts = await projectsService.getGlobalStatusCounts();
+			// Load projects once and reuse for counts (unless forced to refresh)
+			if (cachedProjects.length === 0 || forceRefresh) {
+				cachedProjects = await projectsService.getAllProjects();
+			}
+			
+			// Calculate counts from cached projects to avoid duplicate getAllProjects call
+			const counts = { todo: 0, doing: 0, done: 0 };
+			for (const project of cachedProjects) {
+				const projectCounts = await projectsService.getProjectStatusCounts(project.slug);
+				counts.todo += projectCounts.todo;
+				counts.doing += projectCounts.doing;
+				counts.done += projectCounts.done;
+			}
+			globalCounts = counts;
 		}
 	}
 
@@ -146,14 +182,23 @@
 
 	<!-- Main Content -->
 	<div class="ml-64 flex h-screen flex-1">
-		{#if activeTab === 'projects'}
-			<ProjectsTab onCountsUpdate={updateGlobalCounts} />
-		{:else if activeTab === 'people'}
-			<PeopleTab />
-		{:else if activeTab === 'timeline'}
-			<TimelineTab />
-		{:else if activeTab === 'tasks'}
-			<TaskTab />
+		{#if servicesInitialized}
+			{#if activeTab === 'projects'}
+				<ProjectsTab {projectsService} {cachedProjects} onCountsUpdate={updateGlobalCounts} />
+			{:else if activeTab === 'people'}
+				<PeopleTab {peopleService} {taskService} {activeTab} />
+			{:else if activeTab === 'timeline'}
+				<TimelineTab {timelineService} {activeTab} />
+			{:else if activeTab === 'tasks'}
+				<TaskTab {taskService} {peopleService} {activeTab} />
+			{/if}
+		{:else}
+			<div class="flex h-screen w-full items-center justify-center">
+				<div class="text-center">
+					<div class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-black border-t-transparent"></div>
+					<p class="text-zinc-600">Initializing services...</p>
+				</div>
+			</div>
 		{/if}
 	</div>
 </div>

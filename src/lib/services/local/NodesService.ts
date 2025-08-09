@@ -136,12 +136,12 @@ export class NodesService {
 		const counts = { todo: 0, doing: 0, done: 0 };
 		
 		nodes.forEach(node => {
-			const status = node.data?.nodeData?.status?.toLowerCase();
-			if (status === 'to do') {
+			const status = node.data?.nodeData?.status;
+			if (status === 'To Do') {
 				counts.todo++;
-			} else if (status === 'doing') {
+			} else if (status === 'Doing') {
 				counts.doing++;
-			} else if (status === 'done') {
+			} else if (status === 'Done') {
 				counts.done++;
 			}
 		});

@@ -1,28 +1,39 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { IProjectsService } from '../../services/interfaces';
 	import CreateProjectModal from './CreateProjectModal.svelte';
 	import ProjectsCanvas from './ProjectsCanvas.svelte';
 	import { Plus, FolderOpen, Trash2, Grid, Network } from '@lucide/svelte';
 
-	let { onCountsUpdate = () => {} } = $props<{ onCountsUpdate?: () => void }>();
+	let { projectsService, cachedProjects = [], onCountsUpdate = () => {} } = $props<{ 
+		projectsService: IProjectsService;
+		cachedProjects?: any[];
+		onCountsUpdate?: () => void;
+	}>();
 
-	let projectsService: IProjectsService;
 	let projects = $state<any[]>([]);
 	let showCreateModal = $state(false);
 	let projectCounts = $state<Record<string, { todo: number; doing: number; done: number }>>({});
 	let viewMode = $state<'list' | 'canvas'>('canvas');
+	let dataLoaded = $state(false);
 
 	onMount(() => {
-		projectsService = ServiceFactory.createProjectsService();
 		loadProjects();
 	});
 
-	async function loadProjects() {
-		projects = await projectsService.getAllProjects();
+	async function loadProjects(force = false) {
+		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
+		
+		// Use cached projects if available, otherwise fetch (unless forced)
+		if (cachedProjects.length > 0 && !force) {
+			projects = cachedProjects;
+		} else {
+			projects = await projectsService.getAllProjects();
+		}
+		
 		await updateProjectCounts();
+		dataLoaded = true;
 	}
 
 	async function updateProjectCounts() {
@@ -43,7 +54,7 @@
 
 	async function handleCreateProject(projectData: any) {
 		const project = await projectsService.createProject(projectData);
-		projects = await projectsService.getAllProjects();
+		await loadProjects(true); // Force reload to get new project
 		showCreateModal = false;
 
 		// Navigate to the new project

@@ -142,12 +142,12 @@ export class FirebaseProjectsService implements IProjectsService {
 			const counts = { todo: 0, doing: 0, done: 0 };
 			
 			snapshot.docs.forEach((doc) => {
-				const status = doc.data().status?.toLowerCase();
-				if (status === 'to do') {
+				const status = doc.data().status;
+				if (status === 'To Do') {
 					counts.todo++;
-				} else if (status === 'doing') {
+				} else if (status === 'Doing') {
 					counts.doing++;
-				} else if (status === 'done') {
+				} else if (status === 'Done') {
 					counts.done++;
 				}
 			});

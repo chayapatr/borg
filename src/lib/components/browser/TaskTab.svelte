@@ -12,31 +12,39 @@
 		Folder,
 		FolderOpen
 	} from '@lucide/svelte';
-	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
 	import type { Task, TaskWithContext } from '../../types/task';
 	import { goto } from '$app/navigation';
 
-	const taskService: ITaskService = ServiceFactory.createTaskService();
-	const peopleService: IPeopleService = ServiceFactory.createPeopleService();
+	let { taskService, peopleService, activeTab: currentTab } = $props<{
+		taskService: ITaskService;
+		peopleService: IPeopleService;
+		activeTab: string;
+	}>();
 
 	let activeTasks = $state<TaskWithContext[]>([]);
 	let resolvedTasks = $state<TaskWithContext[]>([]);
 	let filteredActiveTasks = $state<TaskWithContext[]>([]);
 	let filteredResolvedTasks = $state<TaskWithContext[]>([]);
-	let activeTab = $state<'active' | 'resolved'>('active');
+	let viewTab = $state<'active' | 'resolved'>('active');
 	let searchQuery = $state('');
+	let dataLoaded = $state(false);
 
 	// Tree expansion state
 	let expandedProjects = $state<Set<string>>(new Set());
 	let expandedNodes = $state<Set<string>>(new Set());
 
-	onMount(() => {
-		loadTasks();
+	// Lazy load data when tab becomes active
+	$effect(() => {
+		if (currentTab === 'tasks' && !dataLoaded) {
+			loadTasks();
+		}
 	});
 
-	async function loadTasks() {
+	async function loadTasks(force = false) {
+		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
+		
 		const activeResult = taskService.getActiveTasks();
 		activeTasks = activeResult instanceof Promise ? await activeResult : activeResult;
 
@@ -44,6 +52,7 @@
 		resolvedTasks = resolvedResult instanceof Promise ? await resolvedResult : resolvedResult;
 
 		applyFilters();
+		dataLoaded = true;
 	}
 
 	async function applyFilters() {
@@ -108,14 +117,14 @@
 		if (confirm('Are you sure you want to delete this task permanently?')) {
 			const result = taskService.deleteTask(task.nodeId, task.id, task.projectSlug);
 			if (result instanceof Promise) await result;
-			await loadTasks();
+			await loadTasks(true); // Force reload
 		}
 	}
 
 	async function handleResolveTask(task: TaskWithContext) {
 		const result = taskService.resolveTask(task.nodeId, task.id, task.projectSlug);
 		if (result instanceof Promise) await result;
-		await loadTasks();
+		await loadTasks(true); // Force reload
 	}
 
 	async function handleReactivateTask(task: TaskWithContext) {
@@ -126,7 +135,7 @@
 			task.projectSlug
 		);
 		if (result instanceof Promise) await result;
-		await loadTasks();
+		await loadTasks(true); // Force reload
 	}
 
 	// Tree expansion functions
@@ -285,16 +294,16 @@
 	<div class="mt-4 px-6">
 		<div class="flex border-b border-zinc-200">
 			<button
-				onclick={() => (activeTab = 'active')}
-				class="px-4 py-2 text-sm font-medium transition-colors {activeTab === 'active'
+				onclick={() => (viewTab = 'active')}
+				class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'active'
 					? 'border-b-2 border-borg-orange text-borg-orange'
 					: 'text-zinc-500 hover:text-zinc-700'}"
 			>
 				Active Tasks ({taskStats.active})
 			</button>
 			<button
-				onclick={() => (activeTab = 'resolved')}
-				class="px-4 py-2 text-sm font-medium transition-colors {activeTab === 'resolved'
+				onclick={() => (viewTab = 'resolved')}
+				class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'resolved'
 					? 'border-b-2 border-green-600 text-green-600'
 					: 'text-zinc-500 hover:text-zinc-700'}"
 			>
@@ -305,7 +314,7 @@
 
 	<!-- Content -->
 	<div class="flex-1 overflow-auto">
-		{#if activeTab === 'active'}
+		{#if viewTab === 'active'}
 			{#if filteredActiveTasks.length === 0}
 				<div class="mt-12 flex h-full items-center justify-center">
 					<div class="text-center">

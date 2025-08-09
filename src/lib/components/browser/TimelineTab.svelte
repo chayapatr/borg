@@ -1,30 +1,38 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { ITimelineService } from '../../services/interfaces/ITimelineService';
 	import type { TimelineEvent } from '../../services/local/TimelineService';
 	import AddTimelineEventModal from './AddTimelineEventModal.svelte';
 	import { CalendarPlus, Calendar, DollarSign, Clock, Fish } from '@lucide/svelte';
 
-	let timelineService: ITimelineService;
+	let { timelineService, activeTab } = $props<{
+		timelineService: ITimelineService;
+		activeTab: string;
+	}>();
+
 	let events = $state<TimelineEvent[]>([]);
 	let showAddModal = $state(false);
 	let editingEvent = $state<TimelineEvent | undefined>(undefined);
+	let dataLoaded = $state(false);
 
-	onMount(() => {
-		timelineService = ServiceFactory.createTimelineService();
-		loadEvents();
+	// Lazy load data when tab becomes active
+	$effect(() => {
+		if (activeTab === 'timeline' && !dataLoaded) {
+			loadEvents();
+		}
 	});
 
-	async function loadEvents() {
+	async function loadEvents(force = false) {
+		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
+		
 		const result = timelineService.getEventsSortedByDate();
 		events = result instanceof Promise ? await result : result;
+		dataLoaded = true;
 	}
 
 	async function handleAddEvent(templateType: string, eventData: Record<string, any>) {
 		const result = timelineService.addEvent(templateType, eventData);
 		if (result instanceof Promise) await result;
-		await loadEvents();
+		await loadEvents(true); // Force reload to get new event
 		showAddModal = false;
 	}
 
@@ -52,7 +60,7 @@
 
 		const result = timelineService.updateEvent(id, updates);
 		if (result instanceof Promise) await result;
-		await loadEvents();
+		await loadEvents(true); // Force reload
 		showAddModal = false;
 		editingEvent = undefined;
 	}
@@ -71,7 +79,7 @@
 		if (confirm('Are you sure you want to delete this event?')) {
 			const result = timelineService.deleteEvent(id);
 			if (result instanceof Promise) await result;
-			await loadEvents();
+			await loadEvents(true); // Force reload
 		}
 	}
 
