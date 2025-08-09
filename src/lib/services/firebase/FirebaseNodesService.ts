@@ -201,6 +201,22 @@ export class FirebaseNodesService implements INodesService {
 
 			await batch.commit();
 
+			// Clean up associated tasks
+			try {
+				const taskService = ServiceFactory.createTaskService();
+				const nodeTasks = await taskService.getNodeTasks(nodeId, this.projectSlug);
+				
+				// Delete all tasks associated with this node
+				const deletePromises = nodeTasks.map(task => 
+					taskService.deleteTask(nodeId, task.id, this.projectSlug)
+				);
+				await Promise.all(deletePromises);
+				
+				console.log(`Deleted ${nodeTasks.length} tasks associated with node ${nodeId}`);
+			} catch (error) {
+				console.warn('Failed to delete tasks when deleting node:', error);
+			}
+
 			return true;
 		} catch (error) {
 			console.error('Failed to delete node:', error);

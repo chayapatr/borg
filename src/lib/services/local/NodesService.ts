@@ -106,6 +106,22 @@ export class NodesService {
 		this.setEdges(updatedEdges);
 		this.saveToStorage(updatedNodes, updatedEdges);
 		
+		// Clean up associated tasks
+		try {
+			const taskService = ServiceFactory.createTaskService();
+			const nodeTasks = taskService.getNodeTasks(nodeId, this.projectSlug);
+			const tasks = nodeTasks instanceof Promise ? [] : nodeTasks; // For local service, it's synchronous
+			
+			// Delete all tasks associated with this node
+			tasks.forEach(task => {
+				taskService.deleteTask(nodeId, task.id, this.projectSlug);
+			});
+			
+			console.log(`Deleted ${tasks.length} tasks associated with node ${nodeId}`);
+		} catch (error) {
+			console.warn('Failed to delete tasks when deleting node:', error);
+		}
+		
 		return true;
 	}
 
