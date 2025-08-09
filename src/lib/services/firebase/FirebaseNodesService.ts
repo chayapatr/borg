@@ -367,6 +367,7 @@ export class FirebaseNodesService implements INodesService {
 				}
 				
 				const nodeRef = doc(db, 'projects', this.projectId, 'nodes', node.id);
+				
 				batch.set(nodeRef, {
 					position: node.position,
 					updatedAt: new Date()
@@ -461,7 +462,8 @@ export class FirebaseNodesService implements INodesService {
 		console.log('Setting up Firebase nodes subscription for project:', this.projectId);
 		
 		const nodesCollection = collection(db, 'projects', this.projectId, 'nodes');
-		const q = query(nodesCollection, orderBy('updatedAt', 'desc'));
+		// Order by updatedAt ascending (older/less recently updated nodes first, so newer ones render on top)
+		const q = query(nodesCollection, orderBy('updatedAt', 'asc'));
 
 		const unsubscribe = onSnapshot(q, (snapshot) => {
 			console.log('Firebase nodes subscription received update:', snapshot.docs.length, 'nodes');
@@ -480,15 +482,18 @@ export class FirebaseNodesService implements INodesService {
 						templateType: data.templateType,
 						nodeData: data.nodeData,
 						projectSlug: data.projectSlug
-					}
-				} as Node;
+					},
+					// Include metadata for sorting purposes
+					updatedAt: data.updatedAt,
+					createdAt: data.createdAt
+				} as Node & { updatedAt: any, createdAt: any };
 				
 				console.log('Mapped node:', node);
 				return node;
 			});
 			
-			// Only call the callback - don't update local state directly
-			// The Canvas component will handle state updates through the callback
+			// Nodes are already ordered by updatedAt from Firestore query
+			// Older nodes come first (render behind), newer/recently updated nodes come last (render on top)
 			callback(nodes);
 		}, (error) => {
 			console.error('Firebase nodes subscription error:', error);

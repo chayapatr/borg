@@ -470,6 +470,23 @@
 		}
 	}
 
+	// Handle node drag start to bring node to front by reordering array
+	function handleNodeDragStart(event: any) {
+		console.log('Node drag started, bringing to front...', event);
+		if (event && event.node) {
+			const draggedNodeId = event.node.id;
+			// Remove the dragged node from its current position
+			const draggedNode = nodes.find(node => node.id === draggedNodeId);
+			const otherNodes = nodes.filter(node => node.id !== draggedNodeId);
+			
+			if (draggedNode) {
+				// Move dragged node to the end of the array (renders on top)
+				// The updatedAt will be set when saving, which will persist this ordering
+				nodes = [...otherNodes, draggedNode];
+			}
+		}
+	}
+
 	// Handle node drag stop to save position immediately
 	function handleNodeDragStop(event: any) {
 		console.log('Node drag stopped, saving positions...', event);
@@ -710,9 +727,11 @@
 			onconnect={handleConnect}
 			onbeforedelete={handleBeforeDelete}
 			ondelete={handleDelete}
+			onnodedragstart={handleNodeDragStart}
 			onnodedragstop={handleNodeDragStop}
 			nodesDraggable={true}
 			nodesConnectable={true}
+			elevateNodesOnSelect={true}
 			deleteKey={['Delete', 'Backspace']}
 		>
 			<Background />

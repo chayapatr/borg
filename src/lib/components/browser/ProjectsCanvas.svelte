@@ -159,6 +159,21 @@
 		nodesService.addEdge(edge);
 	}
 
+	function handleNodeDragStart(event: any) {
+		console.log('ProjectsCanvas: Node drag started, bringing to front...', event);
+		if (event && event.node) {
+			const draggedNodeId = event.node.id;
+			// Remove the dragged node from its current position
+			const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
+			const otherNodes = workingNodes.filter(node => node.id !== draggedNodeId);
+			
+			if (draggedNode) {
+				// Move dragged node to the end of the array (renders on top)
+				workingNodes = [...otherNodes, draggedNode];
+			}
+		}
+	}
+
 	async function handleNodeDragStop() {
 		if (!mounted) return;
 
@@ -293,9 +308,11 @@
 				bind:edges={canvasEdges}
 				{nodeTypes}
 				onconnect={handleConnect}
+				onnodedragstart={handleNodeDragStart}
 				onnodedragstop={handleNodeDragStop}
 				nodesDraggable={true}
 				nodesConnectable={true}
+				elevateNodesOnSelect={true}
 			>
 				<Background />
 				<Controls />
