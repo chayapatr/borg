@@ -50,8 +50,9 @@
 	}
 
 	function handleTitleClick(event: MouseEvent) {
-		if (isProjectNode) return;
-		event.stopPropagation();
+		if (isProjectNode) return; // Project titles can't be edited
+		
+		event.stopPropagation(); // Prevent node click when clicking title
 		startTitleEdit();
 	}
 </script>

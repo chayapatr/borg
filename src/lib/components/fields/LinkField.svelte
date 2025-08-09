@@ -54,7 +54,7 @@
 		{#if value}
 			{@const icon = getFieldIcon(field.label)}
 			<button
-				onclick={() => window.open(value, '_blank')}
+				onclick={(e) => { e.stopPropagation(); window.open(value, '_blank'); }}
 				class="flex w-full items-center justify-center gap-1 rounded-lg bg-borg-brown/80 p-2 text-xs font-medium transition-colors hover:bg-borg-brown/60 focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 			>
 				{#if icon.type === 'svg'}

@@ -54,7 +54,7 @@
 		{#if value}
 			{@const icon = getFieldIcon(field.label)}
 			<button
-				onclick={() => window.open(value, '_blank')}
+				onclick={(e) => { e.stopPropagation(); window.open(value, '_blank'); }}
 				class="flex w-full items-center justify-center gap-1 rounded-lg bg-black px-2 py-1.5 text-xs font-medium text-white transition-colors hover:bg-borg-violet focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 			>
 				{#if icon.type === 'svg'}
@@ -72,7 +72,7 @@
 		{#if value}
 			{@const icon = getFieldIcon(field.label)}
 			<button
-				onclick={() => window.open(value, '_blank')}
+				onclick={(e) => { e.stopPropagation(); window.open(value, '_blank'); }}
 				class="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-600 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-500 focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 			>
 				{#if icon.type === 'svg'}

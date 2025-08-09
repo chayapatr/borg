@@ -96,11 +96,11 @@
 	>
 		<div class="p-3">
 			<!-- Project Title -->
-			<h3 class="mb-3 text-xl font-semibold text-black">{nodeData.title || 'Untitled Project'}</h3>
+			<h3 class="text-xl font-semibold text-black">{nodeData.title || 'Untitled Project'}</h3>
 
 			<!-- Collaborators -->
 			{#if nodeData.collaborators && nodeData.collaborators.length > 0}
-				<div class="flex flex-wrap gap-1">
+				<div class="mt-2 flex flex-wrap gap-1">
 					{#each nodeData.collaborators.slice(0, 5) as collaborator}
 						<div
 							class="flex h-6 w-6 items-center justify-center rounded-full border border-black bg-borg-green text-xs font-medium text-white"

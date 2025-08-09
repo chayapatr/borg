@@ -54,7 +54,7 @@
 				{#each field.options || [] as option}
 					<button
 						type="button"
-						onclick={() => (value = value === option ? '' : option)}
+						onclick={(e) => { e.stopPropagation(); value = value === option ? '' : option; }}
 						class="inline-flex items-center rounded-full border border-black px-3 py-1 text-xs font-medium transition-colors {value ===
 						option
 							? getStatusColor(option)

@@ -10,7 +10,8 @@
 		ChevronDown,
 		ChevronRight,
 		Folder,
-		FolderOpen
+		FolderOpen,
+		CheckSquare
 	} from '@lucide/svelte';
 	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
@@ -253,7 +254,10 @@
 	<div class=" w-full border-b bg-white px-6 py-4">
 		<div class="flex items-center justify-between">
 			<div>
-				<h2 class="rounded-md text-4xl font-semibold">🦖 Tasks</h2>
+				<div class="flex items-center gap-3">
+					<CheckSquare class="h-10 w-10" />
+					<h2 class="rounded-md text-4xl font-semibold">Tasks</h2>
+				</div>
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
 			<div class="flex items-center gap-4">

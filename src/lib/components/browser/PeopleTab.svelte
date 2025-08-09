@@ -4,7 +4,7 @@
 	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import AddPersonModal from './AddPersonModal.svelte';
 	import type { TaskWithContext } from '../../types/task';
-	import { PersonStandingIcon, UserCheck, UserX, Shield } from '@lucide/svelte';
+	import { PersonStandingIcon, UserCheck, UserX, Shield, Users } from '@lucide/svelte';
 	import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
 	import { db } from '../../firebase/config';
 
@@ -161,7 +161,10 @@
 	<div class=" border-b bg-white px-6 py-4">
 		<div class="flex items-center justify-between">
 			<div>
-				<h2 class="rounded-md text-4xl font-semibold">👽 People</h2>
+				<div class="flex items-center gap-3">
+					<Users class="h-10 w-10" />
+					<h2 class="rounded-md text-4xl font-semibold">People</h2>
+				</div>
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
 			<!-- <button
@@ -244,7 +247,7 @@
 		{/if}
 
 		<!-- Allow People Section -->
-		<div class="mt-8 border-t pt-6">
+		<div class="mt-8 border-t border-zinc-300 pt-6">
 			<div class="mb-4 flex items-center gap-2">
 				<Shield class="h-5 w-5 text-borg-orange" />
 				<h3 class="text-xl font-semibold text-black">Allow People</h3>
@@ -258,9 +261,10 @@
 					<span class="ml-2 text-sm text-gray-600">Loading pending approvals...</span>
 				</div>
 			{:else if unapprovedUsers.length === 0}
-				<div class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-					<UserCheck class="mx-auto h-8 w-8 text-gray-400" />
-					<p class="mt-2 text-sm text-gray-600">No pending user approvals</p>
+				<div class="flex h-32 flex-col items-center justify-center text-center">
+					<UserCheck class="mb-4 h-8 w-8" />
+					<h3 class="mb-2 text-lg font-medium text-black">No pending user approvals</h3>
+					<p class="text-sm text-zinc-500">All users have been approved</p>
 				</div>
 			{:else}
 				<div class="space-y-3">

@@ -128,7 +128,10 @@
 	<div class=" border-b bg-white px-6 py-4">
 		<div class="flex items-center justify-between">
 			<div>
-				<h2 class="rounded-md text-4xl font-semibold">🐟 Timeline</h2>
+				<div class="flex items-center gap-3">
+					<Calendar class="h-10 w-10" />
+					<h2 class="rounded-md text-4xl font-semibold">Timeline</h2>
+				</div>
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
 			<button

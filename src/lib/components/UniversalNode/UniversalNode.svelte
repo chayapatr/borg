@@ -178,7 +178,10 @@
 			/>
 		{/if}
 
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
+			onclick={handleNodeClick}
 			class="group relative cursor-pointer border transition-all duration-200 {template.id === 'note'
 				? `aspect-square ${nodeSizeClass} rounded-lg p-1`
 				: 'max-w-64 min-w-48'} {hasTasks && template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
