@@ -18,7 +18,11 @@
 	import type { Task, TaskWithContext } from '../../types/task';
 	import { goto } from '$app/navigation';
 
-	let { taskService, peopleService, activeTab: currentTab } = $props<{
+	let {
+		taskService,
+		peopleService,
+		activeTab: currentTab
+	} = $props<{
 		taskService: ITaskService;
 		peopleService: IPeopleService;
 		activeTab: string;
@@ -45,7 +49,7 @@
 
 	async function loadTasks(force = false) {
 		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
-		
+
 		const activeResult = taskService.getActiveTasks();
 		activeTasks = activeResult instanceof Promise ? await activeResult : activeResult;
 
@@ -251,12 +255,12 @@
 		</div>
 	</div> -->
 
-	<div class=" w-full border-b bg-white px-6 py-4">
+	<div class=" flex h-16 flex-col justify-center border-b bg-white px-6">
 		<div class="flex items-center justify-between">
 			<div>
 				<div class="flex items-center gap-3">
-					<CheckSquare class="h-10 w-10" />
-					<h2 class="rounded-md text-4xl font-semibold">Tasks</h2>
+					<CheckSquare class="h-8 w-8" />
+					<h2 class="rounded-md text-3xl font-semibold">Tasks</h2>
 				</div>
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>

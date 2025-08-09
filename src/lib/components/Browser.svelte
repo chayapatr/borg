@@ -1,6 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { FolderOpen, Users, Calendar, CheckSquare, LogOut, BookOpen, User } from '@lucide/svelte';
+	import {
+		FolderOpen,
+		Users,
+		Calendar,
+		CheckSquare,
+		LogOut,
+		BookOpen,
+		User,
+		ExternalLink
+	} from '@lucide/svelte';
 	import ProjectsTab from './browser/ProjectsTab.svelte';
 	import PeopleTab from './browser/PeopleTab.svelte';
 	import TimelineTab from './browser/TimelineTab.svelte';
@@ -189,7 +198,9 @@
 					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-borg-orange hover:text-white"
 				>
 					<BookOpen class="h-5 w-5" />
-					Resources
+					<div class="flex items-center gap-1">
+						Resources <ExternalLink strokeWidth={2.5} class="mt-0.5 h-3 w-3" />
+					</div>
 				</button>
 			</div>
 			<button

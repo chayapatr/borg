@@ -123,7 +123,7 @@
 
 <div class="flex flex-1 flex-col">
 	<!-- Header -->
-	<div class="border-b bg-white px-6 py-4">
+	<div class=" flex h-16 flex-col justify-center border-b bg-white px-6">
 		<div class="flex items-center gap-3">
 			<User class="h-8 w-8" />
 			<h2 class="text-3xl font-semibold">Personal</h2>

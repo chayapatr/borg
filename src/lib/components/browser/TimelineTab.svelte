@@ -23,7 +23,7 @@
 
 	async function loadEvents(force = false) {
 		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
-		
+
 		const result = timelineService.getEventsSortedByDate();
 		events = result instanceof Promise ? await result : result;
 		dataLoaded = true;
@@ -125,12 +125,12 @@
 			</button>
 		</div>
 	</div> -->
-	<div class=" border-b bg-white px-6 py-4">
+	<div class=" flex h-16 flex-col justify-center border-b bg-white px-6">
 		<div class="flex items-center justify-between">
 			<div>
 				<div class="flex items-center gap-3">
-					<Calendar class="h-10 w-10" />
-					<h2 class="rounded-md text-4xl font-semibold">Timeline</h2>
+					<Calendar class="h-8 w-8" />
+					<h2 class="rounded-md text-3xl font-semibold">Timeline</h2>
 				</div>
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
