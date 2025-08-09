@@ -179,7 +179,7 @@
 					class="flex items-center gap-2 rounded-lg bg-black px-3 py-2 text-sm text-white transition-colors hover:bg-borg-orange"
 				>
 					<CheckSquare class="h-4 w-4" />
-					Tasks ({projectTasks.filter((t) => !t.resolvedAt).length})
+					Tasks ({projectTasks.filter((t) => (t.status || 'active') === 'active').length})
 				</button>
 
 				<!-- <div class="h-4 w-px bg-black"></div> -->

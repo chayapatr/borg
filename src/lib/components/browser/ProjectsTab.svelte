@@ -1,12 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import type { IProjectsService } from '../../services/interfaces';
+	import type { IProjectsService, ITaskService } from '../../services/interfaces';
 	import CreateProjectModal from './CreateProjectModal.svelte';
 	import ProjectsCanvas from './ProjectsCanvas.svelte';
 	import { Plus, FolderOpen, Trash2, Grid, Network } from '@lucide/svelte';
+	import { ServiceFactory } from '../../services/ServiceFactory';
 
-	let { projectsService, cachedProjects = [], onCountsUpdate = () => {} } = $props<{ 
+	let {
+		projectsService,
+		cachedProjects = [],
+		onCountsUpdate = () => {}
+	} = $props<{
 		projectsService: IProjectsService;
 		cachedProjects?: any[];
 		onCountsUpdate?: () => void;
@@ -15,40 +20,63 @@
 	let projects = $state<any[]>([]);
 	let showCreateModal = $state(false);
 	let projectCounts = $state<Record<string, { todo: number; doing: number; done: number }>>({});
+	let projectTaskCounts = $state<Record<string, number>>({});
 	let viewMode = $state<'list' | 'canvas'>('canvas');
 	let dataLoaded = $state(false);
+	let updatingCounts = $state(false);
+	
+	let taskService: ITaskService;
 
 	onMount(() => {
+		taskService = ServiceFactory.createTaskService();
 		loadProjects();
 	});
 
 	async function loadProjects(force = false) {
 		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
-		
+
 		// Use cached projects if available, otherwise fetch (unless forced)
 		if (cachedProjects.length > 0 && !force) {
 			projects = cachedProjects;
 		} else {
 			projects = await projectsService.getAllProjects();
 		}
-		
+
 		await updateProjectCounts();
 		dataLoaded = true;
 	}
 
 	async function updateProjectCounts() {
-		const counts: Record<string, { todo: number; doing: number; done: number }> = {};
-		for (const project of projects) {
-			counts[project.slug] = await projectsService.getProjectStatusCounts(project.slug);
+		if (updatingCounts) return; // Prevent concurrent updates
+
+		updatingCounts = true;
+		try {
+			const counts: Record<string, { todo: number; doing: number; done: number }> = {};
+			const taskCounts: Record<string, number> = {};
+			
+			for (const project of projects) {
+				// Get node status counts (todo/doing/done)
+				counts[project.slug] = await projectsService.getProjectStatusCounts(project.slug);
+				
+				// Get task counts
+				const projectTaskCount = await taskService.getTaskCounts(project.slug);
+				taskCounts[project.slug] = projectTaskCount.total;
+			}
+			
+			projectCounts = counts;
+			projectTaskCounts = taskCounts;
+			onCountsUpdate(); // Notify parent to update global counts
+		} finally {
+			updatingCounts = false;
 		}
-		projectCounts = counts;
-		onCountsUpdate(); // Notify parent to update global counts
 	}
 
 	// Listen for project updates when returning from project pages
 	function handleVisibilityChange() {
 		if (!document.hidden) {
-			loadProjects();
+			// Invalidate caches and force refresh when returning from project pages
+			projectsService.invalidateAllStatusCaches();
+			loadProjects(true);
 		}
 	}
 
@@ -169,23 +197,28 @@
 
 							<h3 class="mb-2 line-clamp-2 text-xl font-semibold">{project.title}</h3>
 
-							<!-- Status Counts -->
-							{#if projectCounts[project.slug]}
-								<div class="mb-3 flex items-center gap-2">
-									<div class="flex items-center gap-1">
+							<!-- Task Counts -->
+							<div class="mb-3 text-xs text-zinc-600">
+								{#if updatingCounts && !projectCounts[project.slug] && !projectTaskCounts[project.slug]}
+									<div class="animate-pulse">Task: Loading...</div>
+								{:else}
+									{@const taskCount = projectTaskCounts[project.slug] || 0}
+									{@const counts = projectCounts[project.slug] || { todo: 0, doing: 0, done: 0 }}
+									Task: {taskCount} |
+									<span class="inline-flex items-center gap-1">
 										<span class="h-2 w-2 rounded-full border border-black bg-sky-500"></span>
-										<span class="text-xs">{projectCounts[project.slug].todo}</span>
-									</div>
-									<div class="flex items-center gap-1">
+										{counts.todo}
+									</span>
+									<span class="inline-flex items-center gap-1">
 										<span class="h-2 w-2 rounded-full border border-black bg-purple-500"></span>
-										<span class="text-xs">{projectCounts[project.slug].doing}</span>
-									</div>
-									<div class="flex items-center gap-1">
+										{counts.doing}
+									</span>
+									<span class="inline-flex items-center gap-1">
 										<span class="h-2 w-2 rounded-full border border-black bg-green-500"></span>
-										<span class="text-xs">{projectCounts[project.slug].done}</span>
-									</div>
-								</div>
-							{/if}
+										{counts.done}
+									</span>
+								{/if}
+							</div>
 
 							<div class="flex justify-end text-xs text-zinc-500">
 								<div class="capitalize">
