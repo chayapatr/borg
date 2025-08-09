@@ -153,42 +153,40 @@
 		style="border-color: {borderColor};"
 		onclick={handleNodeClick}
 	>
-		<div class="p-3">
+		<div class="flex flex-1 items-center gap-2 p-3">
 			<!-- Project Title -->
-			<h3 class="text-2xl font-semibold text-black">{nodeData.title || 'Untitled Project'}</h3>
+			<h3 class="mr-1 text-2xl font-semibold text-black">{nodeData.title || 'Untitled Project'}</h3>
 
 			<!-- Collaborators -->
 			{#if nodeData.collaborators && nodeData.collaborators.length > 0}
-				<div class="mt-2 flex flex-wrap gap-1">
-					{#each collaboratorsData.slice(0, 5) as collaborator}
-						<div
-							class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-black"
-							title={collaborator.name || collaborator.email || 'User'}
-						>
-							{#if collaborator.photoUrl}
-								<img
-									src={collaborator.photoUrl}
-									alt={collaborator.name || collaborator.email || 'User'}
-									class="h-full w-full object-cover"
-								/>
-							{:else}
-								<div
-									class="flex h-full w-full items-center justify-center bg-borg-green text-xs font-medium text-white"
-								>
-									{getInitials(collaborator.name || collaborator.email || 'U')}
-								</div>
-							{/if}
-						</div>
-					{/each}
-					{#if nodeData.collaborators.length > 5}
-						<div
-							class="flex h-8 w-8 items-center justify-center rounded-full border border-black bg-gray-300 text-xs font-medium text-gray-700"
-							title="{nodeData.collaborators.length - 5} more collaborators"
-						>
-							+{nodeData.collaborators.length - 5}
-						</div>
-					{/if}
-				</div>
+				{#each collaboratorsData.slice(0, 5) as collaborator}
+					<div
+						class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-black"
+						title={collaborator.name || collaborator.email || 'User'}
+					>
+						{#if collaborator.photoUrl}
+							<img
+								src={collaborator.photoUrl}
+								alt={collaborator.name || collaborator.email || 'User'}
+								class="h-full w-full object-cover"
+							/>
+						{:else}
+							<div
+								class="flex h-full w-full items-center justify-center bg-borg-green text-xs font-medium text-white"
+							>
+								{getInitials(collaborator.name || collaborator.email || 'U')}
+							</div>
+						{/if}
+					</div>
+				{/each}
+				{#if nodeData.collaborators.length > 5}
+					<div
+						class="flex h-8 w-8 items-center justify-center rounded-full border border-black bg-gray-300 text-xs font-medium text-gray-700"
+						title="{nodeData.collaborators.length - 5} more collaborators"
+					>
+						+{nodeData.collaborators.length - 5}
+					</div>
+				{/if}
 			{:else}
 				<!-- <div class="flex items-center gap-2 text-sm text-gray-500">
 					<Shield class="h-4 w-4" />
