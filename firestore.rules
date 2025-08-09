@@ -9,10 +9,13 @@ service cloud.firestore {
     }
 
     // Users can read/update their own profile, approved users can read others
+    // Approved users can also approve other users (update isApproved field)
     match /users/{userId} {
       allow read: if request.auth != null &&
         (request.auth.uid == userId || isApprovedUser());
       allow write: if request.auth != null && request.auth.uid == userId;
+      allow update: if isApprovedUser() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isApproved', 'approvedAt']);
     }
 
     // All data accessible to approved users only
