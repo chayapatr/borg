@@ -62,7 +62,7 @@
 	$effect(() => {
 		const collaboratorIds = nodeData.collaborators;
 		const projectSlug = nodeData.projectSlug;
-		
+
 		if (!collaboratorIds || !Array.isArray(collaboratorIds) || collaboratorIds.length === 0) {
 			collaboratorsData = [];
 			return;
@@ -71,7 +71,7 @@
 		(async () => {
 			try {
 				const fetchedCollaborators: Person[] = [];
-				
+
 				for (const collaboratorId of collaboratorIds) {
 					if (typeof collaboratorId === 'string') {
 						// Try to get person by ID, first from project scope then global
@@ -79,7 +79,7 @@
 						if (!person) {
 							person = await peopleService.getPerson(collaboratorId);
 						}
-						
+
 						if (person) {
 							fetchedCollaborators.push(person);
 						} else {
@@ -95,7 +95,7 @@
 						}
 					}
 				}
-				
+
 				collaboratorsData = fetchedCollaborators;
 			} catch (error) {
 				console.error('Failed to fetch collaborator data:', error);
@@ -155,14 +155,14 @@
 	>
 		<div class="p-3">
 			<!-- Project Title -->
-			<h3 class="text-xl font-semibold text-black">{nodeData.title || 'Untitled Project'}</h3>
+			<h3 class="text-2xl font-semibold text-black">{nodeData.title || 'Untitled Project'}</h3>
 
 			<!-- Collaborators -->
 			{#if nodeData.collaborators && nodeData.collaborators.length > 0}
 				<div class="mt-2 flex flex-wrap gap-1">
 					{#each collaboratorsData.slice(0, 5) as collaborator}
 						<div
-							class="flex h-6 w-6 items-center justify-center rounded-full border border-black overflow-hidden"
+							class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-black"
 							title={collaborator.name || collaborator.email || 'User'}
 						>
 							{#if collaborator.photoUrl}
@@ -172,7 +172,9 @@
 									class="h-full w-full object-cover"
 								/>
 							{:else}
-								<div class="flex h-full w-full items-center justify-center bg-borg-green text-xs font-medium text-white">
+								<div
+									class="flex h-full w-full items-center justify-center bg-borg-green text-xs font-medium text-white"
+								>
 									{getInitials(collaborator.name || collaborator.email || 'U')}
 								</div>
 							{/if}

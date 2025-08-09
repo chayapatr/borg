@@ -22,7 +22,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="relative w-full cursor-pointer rounded-b-lg border border-t-0 bg-borg-beige p-3"
+		class="relative max-w-64 min-w-48 cursor-pointer rounded-b-lg border border-t-0 bg-borg-beige p-3"
 		style="border-color: {borderColor};"
 		onclick={onTaskClick}
 	>
