@@ -1,8 +1,13 @@
 <script lang="ts">
-	import { getTemplate, getSuggestedFields, type NodeTemplate, type TemplateField } from '../templates';
-	import FieldRenderer from './FieldRenderer.svelte';
-	import CustomFieldManager from './CustomFieldManager.svelte';
-	import FieldVisibilityManager from './FieldVisibilityManager.svelte';
+	import {
+		getTemplate,
+		getSuggestedFields,
+		type NodeTemplate,
+		type TemplateField
+	} from '../templates';
+	import FieldRenderer from './fields/FieldRenderer.svelte';
+	import CustomFieldManager from './fields/CustomFieldManager.svelte';
+	import FieldVisibilityManager from './fields/FieldVisibilityManager.svelte';
 	import { X } from '@lucide/svelte';
 
 	let {
@@ -47,7 +52,7 @@
 
 	function handleDelete() {
 		console.log('EditPanel.handleDelete called for:', { nodeId, templateType });
-		
+
 		// Additional safety check for project nodes
 		if (templateType === 'project') {
 			alert('Project nodes cannot be deleted as they sync with workspace metadata.');
@@ -78,11 +83,11 @@
 
 	function addSuggestedField(suggestedField: TemplateField) {
 		// Check if field already exists in custom fields
-		const existsInCustom = customFields.some(field => field.id === suggestedField.id);
+		const existsInCustom = customFields.some((field) => field.id === suggestedField.id);
 		if (existsInCustom) return;
 
 		// Check if field already exists in template fields
-		const existsInTemplate = template.fields.some(field => field.id === suggestedField.id);
+		const existsInTemplate = template.fields.some((field) => field.id === suggestedField.id);
 		if (existsInTemplate) return;
 
 		// Add the suggested field to custom fields
@@ -91,9 +96,9 @@
 
 	// Get available suggested fields (not already added)
 	let availableSuggestedFields = $derived(
-		suggestedFields.filter(suggestedField => {
-			const existsInCustom = customFields.some(field => field.id === suggestedField.id);
-			const existsInTemplate = template.fields.some(field => field.id === suggestedField.id);
+		suggestedFields.filter((suggestedField) => {
+			const existsInCustom = customFields.some((field) => field.id === suggestedField.id);
+			const existsInTemplate = template.fields.some((field) => field.id === suggestedField.id);
 			return !existsInCustom && !existsInTemplate;
 		})
 	);
@@ -157,14 +162,18 @@
 							</div>
 							<button
 								type="button"
-								class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {editableData.countdownMode ? 'bg-blue-600' : 'bg-gray-200'}"
+								class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none {editableData.countdownMode
+									? 'bg-blue-600'
+									: 'bg-gray-200'}"
 								onclick={() => {
 									editableData.countdownMode = !editableData.countdownMode;
 								}}
 							>
 								<span class="sr-only">Toggle countdown mode</span>
 								<span
-									class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {editableData.countdownMode ? 'translate-x-5' : 'translate-x-0'}"
+									class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {editableData.countdownMode
+										? 'translate-x-5'
+										: 'translate-x-0'}"
 								></span>
 							</button>
 						</div>
@@ -172,7 +181,13 @@
 				{/if}
 
 				{#each customFields as field}
-					<FieldRenderer {field} bind:value={editableData[field.id]} readonly={false} mode="edit" nodeData={editableData} />
+					<FieldRenderer
+						{field}
+						bind:value={editableData[field.id]}
+						readonly={false}
+						mode="edit"
+						nodeData={editableData}
+					/>
 				{/each}
 
 				<!-- Suggested Fields -->
@@ -184,7 +199,7 @@
 								<button
 									type="button"
 									onclick={() => addSuggestedField(suggestedField)}
-									class="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+									class="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 								>
 									<span>+</span>
 									{suggestedField.label}

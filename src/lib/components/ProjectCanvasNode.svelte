@@ -7,11 +7,11 @@
 	let { data, id } = $props<{ data: any; id: string }>();
 
 	let nodeData = $derived(data.nodeData || {});
-	
+
 	// Services
 	const taskService: ITaskService = ServiceFactory.createTaskService();
 	const projectsService: IProjectsService = ServiceFactory.createProjectsService();
-	
+
 	// Project counts (matching project card logic)
 	let projectStatusCounts = $state({ todo: 0, doing: 0, done: 0 });
 	let totalTaskCount = $state(0);
@@ -41,7 +41,7 @@
 				// Get node status counts (todo/doing/done) - same as project cards
 				const statusCounts = await projectsService.getProjectStatusCounts(projectSlug);
 				projectStatusCounts = statusCounts;
-				
+
 				// Get task counts - same as project cards
 				const taskCounts = await taskService.getTaskCounts(projectSlug);
 				totalTaskCount = taskCounts.total;
@@ -62,7 +62,6 @@
 			.toUpperCase()
 			.slice(0, 2);
 	}
-
 
 	// Determine border color based on status
 	let borderColor = $derived.by(() => {
@@ -91,20 +90,20 @@
 <div>
 	<!-- Main Node Container -->
 	<div
-		class="group relative cursor-pointer border rounded-lg max-w-64 min-w-48 bg-white transition-all duration-200"
+		class="group relative max-w-64 min-w-48 cursor-pointer rounded-lg border bg-white transition-all duration-200"
 		style="border-color: {borderColor};"
 		onclick={handleNodeClick}
 	>
 		<div class="p-3">
 			<!-- Project Title -->
-			<h3 class="text-xl font-semibold text-black mb-3">{nodeData.title || 'Untitled Project'}</h3>
+			<h3 class="mb-3 text-xl font-semibold text-black">{nodeData.title || 'Untitled Project'}</h3>
 
 			<!-- Collaborators -->
 			{#if nodeData.collaborators && nodeData.collaborators.length > 0}
-				<div class="flex gap-1 flex-wrap">
+				<div class="flex flex-wrap gap-1">
 					{#each nodeData.collaborators.slice(0, 5) as collaborator}
 						<div
-							class="flex h-8 w-8 items-center justify-center rounded-full bg-borg-green border border-black text-white text-xs font-medium"
+							class="flex h-6 w-6 items-center justify-center rounded-full border border-black bg-borg-green text-xs font-medium text-white"
 							title={collaborator.name || collaborator.email}
 						>
 							{getInitials(collaborator.name || collaborator.email || 'U')}
@@ -112,7 +111,7 @@
 					{/each}
 					{#if nodeData.collaborators.length > 5}
 						<div
-							class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 border border-black text-gray-700 text-xs font-medium"
+							class="flex h-8 w-8 items-center justify-center rounded-full border border-black bg-gray-300 text-xs font-medium text-gray-700"
 							title="{nodeData.collaborators.length - 5} more collaborators"
 						>
 							+{nodeData.collaborators.length - 5}
@@ -120,10 +119,10 @@
 					{/if}
 				</div>
 			{:else}
-				<div class="flex items-center gap-2 text-sm text-gray-500">
+				<!-- <div class="flex items-center gap-2 text-sm text-gray-500">
 					<Shield class="h-4 w-4" />
 					<span>No collaborators</span>
-				</div>
+				</div> -->
 			{/if}
 		</div>
 

@@ -1,8 +1,5 @@
 <script lang="ts">
-	let {
-		onCreate,
-		onClose
-	} = $props<{
+	let { onCreate, onClose } = $props<{
 		onCreate: (data: { title: string }) => void;
 		onClose: () => void;
 	}>();
@@ -11,7 +8,7 @@
 
 	function handleSubmit(event: Event) {
 		event.preventDefault();
-		
+
 		if (!title.trim()) return;
 
 		onCreate({
@@ -40,12 +37,12 @@
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 	onclick={handleBackdropClick}
 >
-	<div class="w-full max-w-md rounded-lg border border-zinc-700 bg-zinc-900 p-6 shadow-xl">
-		<h2 class="mb-4 text-lg font-semibold text-zinc-100">Create New Project</h2>
+	<div class="w-full max-w-md rounded-lg border border-zinc-700 bg-borg-beige p-6 shadow-xl">
+		<h2 class="mb-4 text-lg font-semibold text-black">Create New Project</h2>
 
 		<form onsubmit={handleSubmit} class="space-y-4">
 			<div>
-				<label for="title" class="mb-1 block text-sm font-medium text-zinc-300">
+				<label for="title" class="mb-1 block text-sm font-medium text-zinc-700">
 					Project Name
 				</label>
 				<input
@@ -54,7 +51,7 @@
 					type="text"
 					placeholder="Enter project name"
 					required
-					class="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded border border-zinc-700 bg-white px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
 					autofocus
 				/>
 			</div>
@@ -63,14 +60,14 @@
 				<button
 					type="button"
 					onclick={onClose}
-					class="flex-1 rounded bg-zinc-700 px-4 py-2 text-zinc-300 transition-colors hover:bg-zinc-600"
+					class="flex-1 rounded bg-borg-brown px-4 py-2 text-zinc-700 transition-colors hover:bg-borg-brown/80"
 				>
 					Cancel
 				</button>
 				<button
 					type="submit"
 					disabled={!title.trim()}
-					class="flex-1 rounded bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex-1 rounded bg-borg-violet px-4 py-2 text-white transition-colors hover:bg-borg-blue disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					Create Project
 				</button>

@@ -10,7 +10,8 @@
 		type Edge,
 		type Connection
 	} from '@xyflow/svelte';
-	import UniversalNode from './UniversalNode.svelte';
+	import UniversalNode from './UniversalNode/UniversalNode.svelte';
+	import NoteNode from './UniversalNode/NoteNode.svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
 	import type { INodesService, IProjectsService, ITaskService } from '../services/interfaces';
 	import CreateNodeModal from './CreateNodeModal.svelte';

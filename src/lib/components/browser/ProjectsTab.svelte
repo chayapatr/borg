@@ -24,7 +24,7 @@
 	let viewMode = $state<'list' | 'canvas'>('canvas');
 	let dataLoaded = $state(false);
 	let updatingCounts = $state(false);
-	
+
 	let taskService: ITaskService;
 
 	onMount(() => {
@@ -53,16 +53,16 @@
 		try {
 			const counts: Record<string, { todo: number; doing: number; done: number }> = {};
 			const taskCounts: Record<string, number> = {};
-			
+
 			for (const project of projects) {
 				// Get node status counts (todo/doing/done)
 				counts[project.slug] = await projectsService.getProjectStatusCounts(project.slug);
-				
+
 				// Get task counts
 				const projectTaskCount = await taskService.getTaskCounts(project.slug);
 				taskCounts[project.slug] = projectTaskCount.total;
 			}
-			
+
 			projectCounts = counts;
 			projectTaskCounts = taskCounts;
 			onCountsUpdate(); // Notify parent to update global counts
@@ -86,7 +86,7 @@
 		showCreateModal = false;
 
 		// Navigate to the new project
-		goto(`/project/${project.slug}`);
+		// goto(`/project/${project.slug}`);
 	}
 
 	function handleOpenProject(slug: string) {

@@ -10,7 +10,8 @@
 		type Edge,
 		type Connection
 	} from '@xyflow/svelte';
-	import UniversalNode from '../UniversalNode.svelte';
+	import UniversalNode from '../UniversalNode/UniversalNode.svelte';
+	import NoteNode from '../UniversalNode/NoteNode.svelte';
 	import ProjectCanvasNode from '../ProjectCanvasNode.svelte';
 	import Toolbar from '../Toolbar.svelte';
 	import EditPanel from '../EditPanel.svelte';
