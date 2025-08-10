@@ -219,13 +219,6 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				type: 'color-picker',
 				placeholder: 'Choose background color'
 			},
-			{
-				id: 'size',
-				label: 'Size',
-				type: 'select',
-				options: ['Small', 'Medium', 'Large'],
-				placeholder: 'Choose size'
-			}
 		]
 	},
 
