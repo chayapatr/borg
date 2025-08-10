@@ -44,6 +44,17 @@
 	// Get font weight class
 	let fontWeightClass = $derived(fontWeight === 'bold' ? 'font-semibold' : 'font-normal');
 
+	// Get background style based on selection
+	let backgroundStyle = $derived.by(() => {
+		const bgValue = nodeData.backgroundColor || '#fef08a';
+		
+		if (bgValue.startsWith('linear-gradient')) {
+			return `background: ${bgValue}`;
+		} else {
+			return `background-color: ${bgValue}`;
+		}
+	});
+
 	// Resize state
 	let isResizing = $state(false);
 	let resizeStartX = $state(0);
@@ -231,8 +242,7 @@
 <div>
 	<div
 		class="group relative cursor-pointer rounded-lg border border-black p-1 transition-all duration-200"
-		style="background-color: {nodeData.backgroundColor ||
-			'#fef08a'}; width: {width}px; height: {height}px;"
+		style="{backgroundStyle}; width: {width}px; height: {height}px;"
 		onclick={handleNodeClick}
 	>
 		<!-- Post-it note content -->
