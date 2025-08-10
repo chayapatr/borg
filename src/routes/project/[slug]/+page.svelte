@@ -117,7 +117,7 @@
 </script>
 
 <svelte:head>
-	<title>{project?.title || 'Project'} - Things</title>
+	<title>{project?.title || 'Project'} | BORG</title>
 </svelte:head>
 
 {#if loading}

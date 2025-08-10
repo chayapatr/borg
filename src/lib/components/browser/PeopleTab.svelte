@@ -207,9 +207,13 @@
 						<div class="mb-4 flex items-start justify-between">
 							<div class="flex items-center gap-3">
 								<div
-									class="flex h-10 w-10 items-center justify-center rounded-full border border-black bg-borg-green"
+									class="flex h-10 w-10 items-center justify-center rounded-full border border-black bg-borg-green overflow-hidden"
 								>
-									<span class="text-sm font-medium text-white">{getInitials(person.name)}</span>
+									{#if person.photoUrl}
+										<img src={person.photoUrl} alt={person.name} class="h-full w-full object-cover" />
+									{:else}
+										<span class="text-sm font-medium text-white">{getInitials(person.name)}</span>
+									{/if}
 								</div>
 								<div>
 									<h3 class="font-medium text-black">{person.name}</h3>
@@ -273,10 +277,14 @@
 							class="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 p-4"
 						>
 							<div class="flex items-center gap-3">
-								<div class="flex h-8 w-8 items-center justify-center rounded-full bg-orange-200">
-									<span class="text-sm font-medium text-orange-800"
-										>{getInitials(user.name || user.email || 'U')}</span
-									>
+								<div class="flex h-8 w-8 items-center justify-center rounded-full bg-orange-200 overflow-hidden">
+									{#if user.photoUrl}
+										<img src={user.photoUrl} alt={user.name || user.email} class="h-full w-full object-cover" />
+									{:else}
+										<span class="text-sm font-medium text-orange-800"
+											>{getInitials(user.name || user.email || 'U')}</span
+										>
+									{/if}
 								</div>
 								<div>
 									<h4 class="font-medium text-black">{user.name || 'Unnamed User'}</h4>

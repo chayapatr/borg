@@ -1,22 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import {
-		Calendar,
-		StickyNote,
-		ExternalLink,
-		CheckCircle,
-		Trash2,
-		RotateCcw,
-		ChevronDown,
-		ChevronRight,
-		Folder,
-		FolderOpen,
-		CheckSquare
-	} from '@lucide/svelte';
+	import { CheckSquare } from '@lucide/svelte';
 	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
 	import type { Task, TaskWithContext } from '../../types/task';
 	import { goto } from '$app/navigation';
+	import HierarchicalTaskView from '../tasks/HierarchicalTaskView.svelte';
 
 	let {
 		taskService,
@@ -35,10 +24,6 @@
 	let viewTab = $state<'active' | 'resolved'>('active');
 	let searchQuery = $state('');
 	let dataLoaded = $state(false);
-
-	// Tree expansion state
-	let expandedProjects = $state<Set<string>>(new Set());
-	let expandedNodes = $state<Set<string>>(new Set());
 
 	// Lazy load data when tab becomes active
 	$effect(() => {
@@ -104,20 +89,6 @@
 		applyFilters();
 	});
 
-	function formatDate(dateString: string) {
-		return new Date(dateString).toLocaleDateString();
-	}
-
-	function isOverdue(dueDate: string) {
-		return new Date(dueDate) < new Date();
-	}
-
-	function handleTaskClick(task: TaskWithContext) {
-		if (task.projectSlug) {
-			goto(`/project/${task.projectSlug}`);
-		}
-	}
-
 	async function handleDeleteTask(task: TaskWithContext) {
 		if (confirm('Are you sure you want to delete this task permanently?')) {
 			const result = taskService.deleteTask(task.nodeId, task.id, task.projectSlug);
@@ -143,81 +114,12 @@
 		await loadTasks(true); // Force reload
 	}
 
-	// Tree expansion functions
-	function toggleProject(projectSlug: string) {
-		if (expandedProjects.has(projectSlug)) {
-			expandedProjects.delete(projectSlug);
-		} else {
-			expandedProjects.add(projectSlug);
-		}
-		expandedProjects = new Set(expandedProjects);
-	}
-
-	function toggleNode(nodeId: string) {
-		if (expandedNodes.has(nodeId)) {
-			expandedNodes.delete(nodeId);
-		} else {
-			expandedNodes.add(nodeId);
-		}
-		expandedNodes = new Set(expandedNodes);
-	}
-
-	// Group tasks hierarchically: Project -> Node -> Task
-	function groupTasksHierarchically(tasks: TaskWithContext[]) {
-		const hierarchy: Record<
-			string,
-			{
-				project: { slug: string; title: string };
-				nodes: Record<
-					string,
-					{
-						node: { id: string; title: string; type: string };
-						tasks: TaskWithContext[];
-					}
-				>;
-			}
-		> = {};
-
-		for (const task of tasks) {
-			const projectSlug = task.projectSlug || 'unknown';
-			const projectTitle = task.projectTitle || 'Unknown Project';
-			const nodeId = task.nodeId;
-			const nodeTitle = task.nodeTitle;
-			const nodeType = task.nodeType;
-
-			// Initialize project if not exists
-			if (!hierarchy[projectSlug]) {
-				hierarchy[projectSlug] = {
-					project: { slug: projectSlug, title: projectTitle },
-					nodes: {}
-				};
-			}
-
-			// Initialize node if not exists
-			if (!hierarchy[projectSlug].nodes[nodeId]) {
-				hierarchy[projectSlug].nodes[nodeId] = {
-					node: { id: nodeId, title: nodeTitle, type: nodeType },
-					tasks: []
-				};
-			}
-
-			// Add task to node
-			hierarchy[projectSlug].nodes[nodeId].tasks.push(task);
-		}
-
-		return hierarchy;
-	}
-
 	// Get task stats
 	let taskStats = $derived({
 		active: activeTasks.length,
 		resolved: resolvedTasks.length,
-		overdue: activeTasks.filter((t) => t.dueDate && isOverdue(t.dueDate)).length
+		overdue: activeTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date()).length
 	});
-
-	// Get hierarchical task structures
-	let activeTasksHierarchy = $derived(groupTasksHierarchically(filteredActiveTasks));
-	let resolvedTasksHierarchy = $derived(groupTasksHierarchically(filteredResolvedTasks));
 </script>
 
 <div class="flex flex-1 flex-col">
@@ -322,319 +224,26 @@
 
 	<!-- Content -->
 	<div class="flex-1 overflow-auto">
-		{#if viewTab === 'active'}
-			{#if filteredActiveTasks.length === 0}
-				<div class="mt-12 flex h-full items-center justify-center">
-					<div class="text-center">
-						<CheckCircle class="mx-auto h-12 w-12 text-zinc-600" />
-						<h3 class="mt-4 text-lg font-medium text-black">No active tasks found</h3>
-						<p class="mt-2 text-sm text-zinc-500">
-							Tasks will appear here when you add them to nodes
-						</p>
-					</div>
-				</div>
+		<div class="p-6">
+			{#if viewTab === 'active'}
+				<HierarchicalTaskView
+					tasks={filteredActiveTasks}
+					{peopleService}
+					showActions={true}
+					isResolved={false}
+					onResolveTask={handleResolveTask}
+					onDeleteTask={handleDeleteTask}
+				/>
 			{:else}
-				<div class="p-6">
-					<!-- Hierarchical Tree View -->
-					{#each Object.entries(activeTasksHierarchy) as [projectSlug, projectData]}
-						{@const isProjectExpanded = expandedProjects.has(projectSlug)}
-						{@const projectTaskCount = Object.values(projectData.nodes).reduce(
-							(sum, nodeData) => sum + nodeData.tasks.length,
-							0
-						)}
-
-						<!-- Project Level -->
-						<div class="mb-4">
-							<button
-								onclick={() => toggleProject(projectSlug)}
-								class="flex w-full items-center gap-2 rounded-md border border-black bg-white p-3 text-left transition-colors hover:bg-borg-beige"
-							>
-								{#if isProjectExpanded}
-									<ChevronDown class="h-4 w-4 text-black" />
-									<FolderOpen class="h-4 w-4 text-black" />
-								{:else}
-									<ChevronRight class="h-4 w-4 text-black" />
-									<Folder class="h-4 w-4 text-black" />
-								{/if}
-								<span class="font-semibold text-black">{projectData.project.title}</span>
-								<span
-									class="ml-auto rounded-full border border-black bg-borg-orange px-2 py-1 text-xs font-bold text-white"
-									>{projectTaskCount}</span
-								>
-							</button>
-
-							{#if isProjectExpanded}
-								<div class="mt-2 ml-6 space-y-2">
-									<!-- Node Level -->
-									{#each Object.entries(projectData.nodes) as [nodeId, nodeData]}
-										{@const isNodeExpanded = expandedNodes.has(nodeId)}
-										{@const nodeTaskCount = nodeData.tasks.length}
-
-										<div class="mb-2">
-											<button
-												onclick={() => toggleNode(nodeId)}
-												class="flex w-full items-center gap-2 rounded-md border border-black bg-white p-2 text-left transition-colors hover:bg-borg-beige"
-											>
-												{#if isNodeExpanded}
-													<ChevronDown class="h-3 w-3 text-black" />
-												{:else}
-													<ChevronRight class="h-3 w-3 text-black" />
-												{/if}
-												<span class="font-medium text-black">{nodeData.node.title}</span>
-												<span
-													class="rounded-md border border-black bg-white px-1.5 py-0.5 text-xs font-medium text-black"
-												>
-													{nodeData.node.type}
-												</span>
-												<span
-													class="ml-auto rounded-full border border-black bg-white px-2 py-1 text-xs font-medium text-black"
-													>{nodeTaskCount}</span
-												>
-											</button>
-
-											{#if isNodeExpanded}
-												<div class="mt-2 ml-6 space-y-2">
-													<!-- Task Level -->
-													{#each nodeData.tasks as task}
-														{@const personResult = peopleService.getPerson(task.assignee)}
-														{#await personResult instanceof Promise ? personResult : Promise.resolve(personResult) then person}
-															{@const overdue = task.dueDate && isOverdue(task.dueDate)}
-
-															<div
-																class="group rounded-md border border-black bg-white p-3 transition-colors"
-															>
-																<div class="flex items-start justify-between gap-3">
-																	<div class="min-w-0 flex-1">
-																		<!-- Task info -->
-																		<div class="mb-2 flex items-start justify-between gap-2">
-																			<h4 class="font-medium text-black">{task.title}</h4>
-																			<div class="flex items-center gap-1">
-																				<button
-																					onclick={() => handleResolveTask(task)}
-																					class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
-																					title="Mark as resolved"
-																				>
-																					<CheckCircle
-																						class="h-3.5 w-3.5 text-zinc-500 hover:text-green-500"
-																					/>
-																				</button>
-																				<button
-																					onclick={() => handleDeleteTask(task)}
-																					class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
-																					title="Delete task permanently"
-																				>
-																					<Trash2
-																						class="h-3.5 w-3.5 text-zinc-500 hover:text-rose-500"
-																					/>
-																				</button>
-																				<!-- <button
-																					onclick={() => handleTaskClick(task)}
-																					class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
-																					title="Go to project"
-																				>
-																					<ExternalLink
-																						class="h-3.5 w-3.5 text-zinc-500 hover:text-borg-purple"
-																					/>
-																				</button> -->
-																			</div>
-																		</div>
-
-																		<!-- Assignee and meta info -->
-																		<div class="flex items-center gap-4 text-xs text-zinc-500">
-																			<span
-																				class=" rounded-full bg-borg-orange px-2 py-[0.15rem] text-white"
-																				>{person?.name || 'Unassigned'}</span
-																			>
-
-																			{#if task.dueDate}
-																				<div
-																					class="flex items-center gap-1 {overdue
-																						? 'text-rose-400'
-																						: ''}"
-																				>
-																					<Calendar class="h-3 w-3" />
-																					<span>Due {formatDate(task.dueDate)}</span>
-																					{#if overdue}
-																						<span class="text-rose-400">(Overdue)</span>
-																					{/if}
-																				</div>
-																			{/if}
-
-																			{#if task.notes}
-																				<div class="flex items-center gap-1">
-																					<StickyNote class="h-3 w-3" />
-																					<span>Has notes</span>
-																				</div>
-																			{/if}
-																		</div>
-																	</div>
-																</div>
-															</div>
-														{/await}
-													{/each}
-												</div>
-											{/if}
-										</div>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					{/each}
-				</div>
+				<HierarchicalTaskView
+					tasks={filteredResolvedTasks}
+					{peopleService}
+					showActions={true}
+					isResolved={true}
+					onReactivateTask={handleReactivateTask}
+					onDeleteTask={handleDeleteTask}
+				/>
 			{/if}
-		{:else if filteredResolvedTasks.length === 0}
-			<div class="mt-12 flex h-full items-center justify-center">
-				<div class="text-center">
-					<CheckCircle class="mx-auto h-12 w-12 text-zinc-600" />
-					<h3 class="mt-4 text-lg font-medium text-black">No resolved tasks found</h3>
-					<p class="mt-2 text-sm text-zinc-500">
-						Resolved tasks will appear here when you mark tasks as complete
-					</p>
-				</div>
-			</div>
-		{:else}
-			<div class="p-6">
-				<!-- Hierarchical Tree View for Resolved Tasks -->
-				{#each Object.entries(resolvedTasksHierarchy) as [projectSlug, projectData]}
-					{@const isProjectExpanded = expandedProjects.has(projectSlug)}
-					{@const projectTaskCount = Object.values(projectData.nodes).reduce(
-						(sum, nodeData) => sum + nodeData.tasks.length,
-						0
-					)}
-
-					<!-- Project Level -->
-					<div class="mb-4 opacity-75">
-						<button
-							onclick={() => toggleProject(projectSlug)}
-							class="flex w-full items-center gap-2 rounded-md border border-black bg-white p-3 text-left transition-colors hover:bg-borg-beige"
-						>
-							{#if isProjectExpanded}
-								<ChevronDown class="h-4 w-4 text-black" />
-								<FolderOpen class="h-4 w-4 text-black" />
-							{:else}
-								<ChevronRight class="h-4 w-4 text-black" />
-								<Folder class="h-4 w-4 text-black" />
-							{/if}
-							<span class="font-semibold text-black">{projectData.project.title}</span>
-							<span
-								class="ml-auto rounded-full border border-black bg-borg-green px-2 py-1 text-xs font-bold text-white"
-								>{projectTaskCount}</span
-							>
-						</button>
-
-						{#if isProjectExpanded}
-							<div class="mt-2 ml-6 space-y-2">
-								<!-- Node Level -->
-								{#each Object.entries(projectData.nodes) as [nodeId, nodeData]}
-									{@const isNodeExpanded = expandedNodes.has(nodeId)}
-									{@const nodeTaskCount = nodeData.tasks.length}
-
-									<div class="mb-2">
-										<button
-											onclick={() => toggleNode(nodeId)}
-											class="flex w-full items-center gap-2 rounded-md border border-black bg-white p-2 text-left transition-colors hover:bg-borg-beige"
-										>
-											{#if isNodeExpanded}
-												<ChevronDown class="h-3 w-3 text-black" />
-											{:else}
-												<ChevronRight class="h-3 w-3 text-black" />
-											{/if}
-											<span class="font-medium text-black line-through">{nodeData.node.title}</span>
-											<span
-												class="rounded-md border border-black bg-white px-1.5 py-0.5 text-xs font-medium text-black opacity-75"
-											>
-												{nodeData.node.type}
-											</span>
-											<span
-												class="ml-auto rounded-full border border-black bg-white px-2 py-1 text-xs font-medium text-black"
-												>{nodeTaskCount}</span
-											>
-										</button>
-
-										{#if isNodeExpanded}
-											<div class="mt-2 ml-6 space-y-2">
-												<!-- Task Level -->
-												{#each nodeData.tasks as task}
-													{@const personResult = peopleService.getPerson(task.assignee)}
-													{#await personResult instanceof Promise ? personResult : Promise.resolve(personResult) then person}
-														<div
-															class="group rounded-md border border-black bg-white p-3 opacity-75 transition-colors"
-														>
-															<div class="flex items-start justify-between gap-3">
-																<div class="min-w-0 flex-1">
-																	<!-- Task info -->
-																	<div class="mb-2 flex items-start justify-between gap-2">
-																		<h4 class="font-medium text-black line-through">
-																			{task.title}
-																		</h4>
-																		<div class="flex items-center gap-1">
-																			<button
-																				onclick={() => handleReactivateTask(task)}
-																				class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
-																				title="Reactivate task"
-																			>
-																				<RotateCcw
-																					class="h-3.5 w-3.5 text-zinc-500 hover:text-borg-orange"
-																				/>
-																			</button>
-																			<button
-																				onclick={() => handleDeleteTask(task)}
-																				class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
-																				title="Delete task permanently"
-																			>
-																				<Trash2
-																					class="h-3.5 w-3.5 text-zinc-500 hover:text-rose-500"
-																				/>
-																			</button>
-																			<!-- <button
-																				onclick={() => handleTaskClick(task)}
-																				class="rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
-																				title="Go to project"
-																			>
-																				<ExternalLink
-																					class="h-3.5 w-3.5 text-zinc-500 hover:text-borg-purple"
-																				/>
-																			</button> -->
-																		</div>
-																	</div>
-
-																	<!-- Assignee and meta info -->
-																	<div class="flex items-center gap-4 text-xs text-zinc-500">
-																		<span>👤 {person?.name || 'Unassigned'}</span>
-
-																		{#if task.dueDate}
-																			<div class="flex items-center gap-1">
-																				<Calendar class="h-3 w-3" />
-																				<span>Due {formatDate(task.dueDate)}</span>
-																			</div>
-																		{/if}
-
-																		{#if task.notes}
-																			<div class="flex items-center gap-1">
-																				<StickyNote class="h-3 w-3" />
-																				<span>Has notes</span>
-																			</div>
-																		{/if}
-
-																		<div class="flex items-center gap-1 text-green-600">
-																			<CheckCircle class="h-3 w-3" />
-																			<span>Resolved</span>
-																		</div>
-																	</div>
-																</div>
-															</div>
-														</div>
-													{/await}
-												{/each}
-											</div>
-										{/if}
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
-		{/if}
+		</div>
 	</div>
 </div>

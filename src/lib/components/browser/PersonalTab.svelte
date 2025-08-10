@@ -5,7 +5,7 @@
 	import { authStore } from '../../stores/authStore';
 	import { doc, updateDoc, getDoc } from 'firebase/firestore';
 	import { db } from '../../firebase/config';
-	import TaskPill from '../tasks/TaskPill.svelte';
+	import HierarchicalTaskView from '../tasks/HierarchicalTaskView.svelte';
 
 	let { taskService, activeTab } = $props<{
 		taskService: ITaskService;
@@ -79,7 +79,11 @@
 		if (!currentUser) return;
 
 		try {
-			const result = taskService.getPersonTasks(currentUser.email || '');
+			// In Firebase mode, person ID is the user's Firebase UID
+			// In local mode, it might be email or another identifier
+			let personId = currentUser.uid || currentUser.email || '';
+
+			const result = taskService.getPersonTasks(personId);
 			const tasks = result instanceof Promise ? await result : result;
 			userTasks = tasks.filter((task: any) => !task.resolvedAt);
 		} catch (error) {
@@ -138,9 +142,9 @@
 			<span class="ml-2 text-sm text-gray-600">Loading...</span>
 		</div>
 	{:else}
-		<div class="flex-1 overflow-y-auto p-6">
+		<div class="flex-1 overflow-y-auto">
 			<!-- Personal Profile Card -->
-			<div class="box-shadow-black mb-6 rounded-lg border border-zinc-800 bg-white p-6">
+			<div class="box-shadow-black mx-6 mt-6 mb-6 rounded-lg border border-zinc-800 bg-white p-6">
 				<div class="flex items-center gap-4">
 					{#if profileImageUrl}
 						<div class="h-16 w-16 overflow-hidden rounded-full border border-black">
@@ -210,42 +214,16 @@
 			</div>
 
 			<!-- My Tasks Section -->
-			<div class="box-shadow-black rounded-lg border border-zinc-800 bg-white p-6">
-				<div class="mb-4 flex items-center gap-3">
-					<CheckSquare class="h-6 w-6" />
-					<h3 class="text-2xl font-semibold text-black">My Tasks</h3>
-					<span class="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">
-						{userTasks.length}
-					</span>
-				</div>
+			<div class="mt-8 flex items-center gap-3 px-6">
+				<CheckSquare class="h-6 w-6" />
+				<h3 class="text-2xl font-semibold text-black">My Tasks</h3>
+				<span class="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">
+					{userTasks.length}
+				</span>
+			</div>
 
-				{#if userTasks.length === 0}
-					<div class="flex h-32 flex-col items-center justify-center text-center">
-						<CheckSquare class="mb-2 h-8 w-8 text-gray-400" />
-						<p class="text-zinc-600">No active tasks assigned to you</p>
-					</div>
-				{:else}
-					<div class="space-y-3">
-						{#each userTasks as task}
-							<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
-								<div class="flex items-start justify-between">
-									<div class="flex-1">
-										<h4 class="font-medium text-black">{task.title}</h4>
-										{#if task.description}
-											<p class="mt-1 text-sm text-zinc-600">{task.description}</p>
-										{/if}
-										{#if task.project}
-											<p class="mt-2 text-xs text-zinc-500">
-												Project: {task.project.name}
-											</p>
-										{/if}
-									</div>
-									<TaskPill status={task.status} />
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
+			<div class="p-6 pt-4">
+				<HierarchicalTaskView tasks={userTasks} showActions={false} isResolved={false} />
 			</div>
 		</div>
 	{/if}
