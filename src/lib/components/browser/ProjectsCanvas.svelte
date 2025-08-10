@@ -116,26 +116,12 @@
 			}
 		}
 
-		// Sort canvas nodes by Firebase's updatedAt timestamp
-		console.log('🟦 Canvas nodes with updatedAt:',
-			nonProjectCanvasNodes.map(n => ({
-				id: n.id, 
-				updatedAt: n.updatedAt?.toMillis ? n.updatedAt.toMillis() : 0
-			}))
-		);
-		
+		// Sort canvas nodes by Firebase's updatedAt timestamp (most recent last = on top)
 		const sortedCanvasNodes = nonProjectCanvasNodes.sort((a, b) => {
 			const aTime = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : 0;
 			const bTime = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
 			return aTime - bTime;
 		});
-		
-		console.log('🟦 Canvas nodes after sorting:',
-			sortedCanvasNodes.map(n => ({
-				id: n.id, 
-				updatedAt: n.updatedAt?.toMillis ? n.updatedAt.toMillis() : 0
-			}))
-		);
 		
 		workingNodes = [...orderedUpdatedProjectNodes, ...sortedCanvasNodes];
 	}
@@ -242,10 +228,8 @@
 
 
 	function handleNodeDragStart(event: any) {
-		console.log('Node drag started, bringing to front...', event);
 		if (event && event.node) {
 			const draggedNodeId = event.node.id;
-			// Remove the dragged node from its current position
 			const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
 			const otherNodes = workingNodes.filter(node => node.id !== draggedNodeId);
 			
@@ -257,20 +241,16 @@
 	}
 
 	async function handleNodeDragStop(event: any) {
-		console.log('🔴 Node drag stopped, saving positions...', event);
 		if (!mounted) return;
 
 		try {
 			if (event?.targetNode && !event.targetNode.id.startsWith('project-')) {
 				const draggedNodeId = event.targetNode.id;
-				console.log('🔴 Saving only dragged node:', draggedNodeId);
-				
-				// Find the dragged node in workingNodes and save just that one
 				const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
+				
 				if (draggedNode) {
-					// Save only the dragged node without edges - this will give it a unique updatedAt timestamp
+					// Save only the dragged node - Firebase will set updatedAt for ordering
 					await nodesService.saveBatch([draggedNode], []);
-					console.log('🔴 Save completed for:', draggedNodeId);
 				}
 			}
 		} catch (error) {
