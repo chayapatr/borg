@@ -152,14 +152,6 @@
 						List
 					</button>
 				</div>
-				<button
-					onclick={() => (showCreateModal = true)}
-					class="transition- flex h-10 items-center gap-2 rounded-full border border-white bg-borg-violet px-4 text-white transition-all hover:cursor-pointer hover:bg-black
-					"
-				>
-					<Plus class="h-4 w-4" />
-					New Project
-				</button>
 			</div>
 		</div>
 	</div>
@@ -239,6 +231,7 @@
 					{projects}
 					onProjectClick={handleOpenProject}
 					onProjectUpdate={loadProjects}
+					onCreateProject={() => (showCreateModal = true)}
 				/>
 			</div>
 		{/if}

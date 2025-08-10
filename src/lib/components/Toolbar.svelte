@@ -7,13 +7,15 @@
 		StickyNote,
 		Link,
 		Square,
-		Sticker
+		Sticker,
+		FolderPlus
 	} from '@lucide/svelte';
 	import { nodeTemplates } from '../templates';
 
-	let { view = 'projects', onCreateNode, onShowStickers } = $props<{
+	let { view = 'projects', onCreateNode, onShowStickers, onCreateProject } = $props<{
 		onCreateNode: (templateType: string) => void;
 		onShowStickers?: () => void;
+		onCreateProject?: () => void;
 		view: 'projects' | 'project';
 	}>();
 
@@ -34,16 +36,23 @@
 		{ id: 'stickers', icon: Sticker, name: 'Stickers', action: 'showStickers' }
 	];
 
+	// Special items for projects view only
+	const projectsSpecialItems = [
+		{ id: 'newProject', icon: FolderPlus, name: 'New Project', action: 'createProject' }
+	];
+
 	function handleItemClick(templateType: string) {
 		onCreateNode(templateType);
 	}
 
 	function handleSpecialItemClick(action: string) {
 		console.log('🎨 Toolbar handleSpecialItemClick called with action:', action);
-		console.log('🎨 onShowStickers function available:', !!onShowStickers);
 		if (action === 'showStickers' && onShowStickers) {
 			console.log('🎨 Calling onShowStickers...');
 			onShowStickers();
+		} else if (action === 'createProject' && onCreateProject) {
+			console.log('📁 Calling onCreateProject...');
+			onCreateProject();
 		}
 	}
 
@@ -60,6 +69,23 @@
 		tabindex="0"
 		aria-label="Node creation toolbar"
 	>
+		<!-- New Project button - only show in projects view -->
+		{#if view === 'projects'}
+			{#each projectsSpecialItems as item}
+				<button
+					onclick={() => handleSpecialItemClick(item.action)}
+					class="group flex h-10 items-center rounded-md hover:bg-white transition-all duration-300 ease-in-out {isToolbarHovered ? 'w-auto pl-2 pr-3 justify-start gap-2' : 'w-10 justify-center'}"
+					aria-label="{item.name}"
+				>
+					<item.icon class="h-5 w-5 text-gray-700 group-hover:text-gray-900 flex-shrink-0" />
+					<span class="text-sm text-gray-700 group-hover:text-gray-900 whitespace-nowrap transition-all duration-300 ease-in-out {isToolbarHovered ? 'opacity-100 max-w-none' : 'opacity-0 max-w-0 overflow-hidden'}">
+						{item.name}
+					</span>
+				</button>
+			{/each}
+			<div class="w-full border-t border-gray-300 my-1"></div>
+		{/if}
+
 		{#each view === 'projects' ? projectsToolbarItems : projectToolbarItems as item}
 			<button
 				onclick={() => handleItemClick(item.id)}

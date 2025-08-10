@@ -24,9 +24,11 @@
 	import '@xyflow/svelte/dist/style.css';
 	import '../svelteflow.css';
 
-	let { projects, onProjectClick } = $props<{
+	let { projects, onProjectClick, onCreateProject, onProjectUpdate } = $props<{
 		projects: Project[];
 		onProjectClick: (slug: string) => void;
+		onCreateProject?: () => void;
+		onProjectUpdate?: () => void;
 	}>();
 
 	const nodeTypes = {
@@ -395,7 +397,7 @@
 		<!-- Canvas -->
 		<div class="relative flex-1">
 			<!-- Floating Toolbar -->
-			<Toolbar view="projects" onCreateNode={handleToolbarCreateNode} onShowStickers={handleShowStickers} />
+			<Toolbar view="projects" onCreateNode={handleToolbarCreateNode} onShowStickers={handleShowStickers} onCreateProject={onCreateProject} />
 
 			<SvelteFlow
 				class="h-full w-full bg-black"
