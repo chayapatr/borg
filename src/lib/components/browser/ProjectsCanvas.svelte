@@ -45,7 +45,6 @@
 	// Current working nodes (mutable for SvelteFlow)
 	let workingNodes = $state<Node[]>([]);
 	let lastProjectsLength = 0;
-	let skipNextUpdate = $state(false);
 
 	// Edit panel state
 	let showEditPanel = $state(false);
@@ -57,19 +56,13 @@
 	let showStickerPanel = $state(false);
 
 	function updateWorkingNodes() {
-		console.log('🔄 updateWorkingNodes called');
-		console.log('🔄 mounted:', mounted, 'projects.length:', projects.length);
-		console.log('🔄 Current workingNodes order:', workingNodes.map(n => n.id));
-		
 		if (!mounted) {
 			workingNodes = canvasNodes.slice();
-			console.log('🔄 Not mounted, using canvasNodes');
 			return;
 		}
 
 		if (!projects.length) {
 			workingNodes = canvasNodes.slice();
-			console.log('🔄 No projects, using canvasNodes');
 			return;
 		}
 
@@ -123,9 +116,28 @@
 			}
 		}
 
-		workingNodes = [...orderedUpdatedProjectNodes, ...nonProjectCanvasNodes];
+		// Sort canvas nodes by Firebase's updatedAt timestamp
+		console.log('🟦 Canvas nodes with updatedAt:',
+			nonProjectCanvasNodes.map(n => ({
+				id: n.id, 
+				updatedAt: n.updatedAt?.toMillis ? n.updatedAt.toMillis() : 0
+			}))
+		);
 		
-		console.log('🔄 Final workingNodes order:', workingNodes.map(n => n.id));
+		const sortedCanvasNodes = nonProjectCanvasNodes.sort((a, b) => {
+			const aTime = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : 0;
+			const bTime = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
+			return aTime - bTime;
+		});
+		
+		console.log('🟦 Canvas nodes after sorting:',
+			sortedCanvasNodes.map(n => ({
+				id: n.id, 
+				updatedAt: n.updatedAt?.toMillis ? n.updatedAt.toMillis() : 0
+			}))
+		);
+		
+		workingNodes = [...orderedUpdatedProjectNodes, ...sortedCanvasNodes];
 	}
 
 	function getProjectNodePosition(projectId: string, defaultIndex: number) {
@@ -171,12 +183,7 @@
 			if (nodesService.subscribeToNodes && nodesService.subscribeToEdges) {
 				nodesService.subscribeToNodes((nodes) => {
 					canvasNodes = nodes;
-					if (skipNextUpdate) {
-						console.log('🚫 Skipping updateWorkingNodes due to skipNextUpdate flag');
-						skipNextUpdate = false;
-					} else {
-						updateWorkingNodes();
-					}
+					updateWorkingNodes();
 				});
 
 				nodesService.subscribeToEdges((edges) => {
@@ -235,17 +242,14 @@
 
 
 	function handleNodeDragStart(event: any) {
-		console.log('🟡 ProjectsCanvas: Node drag started', event);
+		console.log('Node drag started, bringing to front...', event);
 		if (event && event.node) {
 			const draggedNodeId = event.node.id;
-			console.log('🟡 Dragged node ID:', draggedNodeId);
-			
-			// Simple approach: just reorder in workingNodes like Canvas.svelte does
+			// Remove the dragged node from its current position
 			const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
 			const otherNodes = workingNodes.filter(node => node.id !== draggedNodeId);
 			
 			if (draggedNode) {
-				console.log('🟡 Moving node to front in workingNodes');
 				// Move dragged node to the end of the array (renders on top)
 				workingNodes = [...otherNodes, draggedNode];
 			}
@@ -253,19 +257,24 @@
 	}
 
 	async function handleNodeDragStop(event: any) {
-		console.log('🔴 ProjectsCanvas: Node drag stopped', event);
+		console.log('🔴 Node drag stopped, saving positions...', event);
 		if (!mounted) return;
 
 		try {
-			console.log('🔴 Saving workingNodes:', workingNodes.length);
-			// Set flag to skip the next updateWorkingNodes call from subscription
-			skipNextUpdate = true;
-			// Save all current node positions to canvas - this matches Canvas.svelte behavior
-			await nodesService.saveBatch(workingNodes, canvasEdges);
-			console.log('🔴 Save completed successfully');
+			if (event?.targetNode && !event.targetNode.id.startsWith('project-')) {
+				const draggedNodeId = event.targetNode.id;
+				console.log('🔴 Saving only dragged node:', draggedNodeId);
+				
+				// Find the dragged node in workingNodes and save just that one
+				const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
+				if (draggedNode) {
+					// Save only the dragged node - this will give it a unique updatedAt timestamp
+					await nodesService.saveBatch([draggedNode], canvasEdges);
+					console.log('🔴 Save completed for:', draggedNodeId);
+				}
+			}
 		} catch (error) {
-			console.error('🔴 Failed to save node positions:', error);
-			skipNextUpdate = false; // Reset flag on error
+			console.error('Failed to save node positions:', error);
 		}
 	}
 
@@ -386,18 +395,14 @@
 	}
 
 	function handleShowStickers() {
-		console.log('🎨 ProjectsCanvas.handleShowStickers called');
 		showStickerPanel = true;
 	}
 
 	function handleCloseStickerPanel() {
-		console.log('🎨 ProjectsCanvas.handleCloseStickerPanel called');
 		showStickerPanel = false;
 	}
 
 	async function handleAddSticker(event: CustomEvent) {
-		console.log('🎨 ProjectsCanvas received add sticker event:', event.detail);
-		
 		if (!nodesService) return;
 		
 		try {
@@ -412,7 +417,6 @@
 				
 				// First create a basic sticker node using the service
 				const baseNode = await nodesService.addNode('sticker', position);
-				console.log('🎨 Created base sticker node:', baseNode);
 				
 				// Then immediately update it with the sticker-specific data
 				const stickerNodeData = {
@@ -425,14 +429,12 @@
 					rotation: 0
 				};
 				
-				const success = await nodesService.updateNode(baseNode.id, {
+				await nodesService.updateNode(baseNode.id, {
 					nodeData: stickerNodeData
 				});
-				
-				console.log('🎨 Updated sticker node with data:', success);
 			}
 		} catch (error) {
-			console.error('🎨 Failed to create sticker:', error);
+			console.error('Failed to create sticker:', error);
 		}
 	}
 </script>
