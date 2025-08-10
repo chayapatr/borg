@@ -161,7 +161,7 @@
 			<span class="bg-white text-sm font-medium">{template.name}</span>
 		</div>
 
-		<div class="flex items-center gap-1">
+		<div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
 			<button
 				onclick={handleDelete}
 				aria-label="Delete node"

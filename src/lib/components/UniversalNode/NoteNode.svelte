@@ -240,7 +240,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div>
 	<div
-		class="group relative cursor-pointer rounded-lg border p-1 {isResizing ? '' : 'transition-all duration-200'} {isEditingNote ? 'border-black border-2 shadow-lg' : 'border-black'}"
+		class="group relative cursor-pointer rounded-lg border border-black p-1 {isResizing || isEditingNote ? '' : 'transition-all duration-200'} {isEditingNote ? 'border-2 shadow-lg' : ''}"
 		style="{backgroundStyle}; width: {width}px; height: {height}px;"
 		onclick={handleNodeClick}
 	>
@@ -270,6 +270,7 @@
 		<div
 			class="nodrag absolute right-0 bottom-0 z-10 h-4 w-4 cursor-se-resize bg-transparent opacity-0 transition-opacity group-hover:opacity-100"
 			onmousedown={startResize}
+			onclick={(e) => e.stopPropagation()}
 			aria-label="Resize note"
 			role="button"
 			tabindex="-1"

@@ -73,21 +73,19 @@
 			</button>
 		{/each}
 
-		<!-- Special items (like stickers) - only show in project view -->
-		{#if view === 'project'}
-			<div class="w-full border-t border-gray-300 my-1"></div>
-			{#each specialItems as item}
-				<button
-					onclick={() => handleSpecialItemClick(item.action)}
-					class="group flex h-10 items-center rounded-md hover:bg-white transition-all duration-300 ease-in-out {isToolbarHovered ? 'w-auto pl-2 pr-3 justify-start gap-2' : 'w-10 justify-center'}"
-					aria-label="{item.name}"
-				>
-					<item.icon class="h-5 w-5 text-gray-700 group-hover:text-gray-900 flex-shrink-0" />
-					<span class="text-sm text-gray-700 group-hover:text-gray-900 whitespace-nowrap transition-all duration-300 ease-in-out {isToolbarHovered ? 'opacity-100 max-w-none' : 'opacity-0 max-w-0 overflow-hidden'}">
-						{item.name}
-					</span>
-				</button>
-			{/each}
-		{/if}
+		<!-- Special items (like stickers) - show in both project and projects view -->
+		<div class="w-full border-t border-gray-300 my-1"></div>
+		{#each specialItems as item}
+			<button
+				onclick={() => handleSpecialItemClick(item.action)}
+				class="group flex h-10 items-center rounded-md hover:bg-white transition-all duration-300 ease-in-out {isToolbarHovered ? 'w-auto pl-2 pr-3 justify-start gap-2' : 'w-10 justify-center'}"
+				aria-label="{item.name}"
+			>
+				<item.icon class="h-5 w-5 text-gray-700 group-hover:text-gray-900 flex-shrink-0" />
+				<span class="text-sm text-gray-700 group-hover:text-gray-900 whitespace-nowrap transition-all duration-300 ease-in-out {isToolbarHovered ? 'opacity-100 max-w-none' : 'opacity-0 max-w-0 overflow-hidden'}">
+					{item.name}
+				</span>
+			</button>
+		{/each}
 	</div>
 </div>

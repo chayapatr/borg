@@ -13,8 +13,10 @@
 	import UniversalNode from '../UniversalNode/UniversalNode.svelte';
 	import NoteNode from '../UniversalNode/NoteNode.svelte';
 	import ProjectCanvasNode from '../ProjectCanvasNode.svelte';
+	import StickerNode from '../UniversalNode/StickerNode.svelte';
 	import Toolbar from '../Toolbar.svelte';
 	import EditPanel from '../EditPanel.svelte';
+	import StickerPanel from '../stickers/StickerPanel.svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { INodesService } from '../../services/interfaces';
 	import type { Project } from '../../services/local/ProjectsService';
@@ -29,7 +31,8 @@
 
 	const nodeTypes = {
 		universal: UniversalNode,
-		projectCanvas: ProjectCanvasNode
+		projectCanvas: ProjectCanvasNode,
+		sticker: StickerNode
 	};
 
 	let canvasNodes = $state<Node[]>([]);
@@ -47,6 +50,9 @@
 	let editNodeData = $state({});
 	let editTemplateType = $state('');
 
+	// Sticker panel state
+	let showStickerPanel = $state(false);
+
 	function updateWorkingNodes() {
 		if (!mounted) {
 			workingNodes = canvasNodes.slice();
@@ -59,7 +65,7 @@
 		}
 
 		// Create project nodes from projects array
-		const projectNodes: Node[] = projects.map((project, index) => ({
+		const projectNodes: Node[] = projects.map((project: any, index: number) => ({
 			id: `project-${project.id}`,
 			type: 'projectCanvas',
 			position: getProjectNodePosition(project.id, index),
@@ -168,13 +174,13 @@
 	}: {
 		nodes: Node[];
 		edges: Edge[];
-	}) {
+	}): Promise<boolean> {
 		// Prevent node deletion by returning false if any nodes would be deleted
 		if (nodesToDelete.length > 0) {
-			return false; // This should prevent the deletion
+			return Promise.resolve(false); // This should prevent the deletion
 		}
 		// Allow edge deletion
-		return true;
+		return Promise.resolve(true);
 	}
 
 	function handleDelete({
@@ -290,14 +296,21 @@
 			}
 		};
 
+		const handleAddStickerEvent = (event: Event) => {
+			const customEvent = event as CustomEvent;
+			handleAddSticker(customEvent);
+		};
+
 		document.addEventListener('nodeEdit', handleNodeEdit);
 		document.addEventListener('nodeDelete', handleNodeDelete);
 		document.addEventListener('nodeUpdate', handleNodeUpdate);
+		document.addEventListener('addSticker', handleAddStickerEvent);
 
 		return () => {
 			document.removeEventListener('nodeEdit', handleNodeEdit);
 			document.removeEventListener('nodeDelete', handleNodeDelete);
 			document.removeEventListener('nodeUpdate', handleNodeUpdate);
+			document.removeEventListener('addSticker', handleAddStickerEvent);
 		};
 	});
 
@@ -324,6 +337,57 @@
 			alert('Failed to delete node. Check console for details.');
 		}
 	}
+
+	function handleShowStickers() {
+		console.log('🎨 ProjectsCanvas.handleShowStickers called');
+		showStickerPanel = true;
+	}
+
+	function handleCloseStickerPanel() {
+		console.log('🎨 ProjectsCanvas.handleCloseStickerPanel called');
+		showStickerPanel = false;
+	}
+
+	async function handleAddSticker(event: CustomEvent) {
+		console.log('🎨 ProjectsCanvas received add sticker event:', event.detail);
+		
+		if (!nodesService) return;
+		
+		try {
+			const stickerData = event.detail;
+			
+			if (stickerData.type === 'sticker') {
+				// Create sticker at center of viewport with some randomization
+				const position = {
+					x: Math.random() * 600 + 200,
+					y: Math.random() * 400 + 200
+				};
+				
+				// First create a basic sticker node using the service
+				const baseNode = await nodesService.addNode('sticker', position);
+				console.log('🎨 Created base sticker node:', baseNode);
+				
+				// Then immediately update it with the sticker-specific data
+				const stickerNodeData = {
+					title: stickerData.name,
+					stickerUrl: stickerData.stickerUrl,
+					category: stickerData.category,
+					filename: stickerData.filename,
+					width: 100,
+					height: 100,
+					rotation: 0
+				};
+				
+				const success = await nodesService.updateNode(baseNode.id, {
+					nodeData: stickerNodeData
+				});
+				
+				console.log('🎨 Updated sticker node with data:', success);
+			}
+		} catch (error) {
+			console.error('🎨 Failed to create sticker:', error);
+		}
+	}
 </script>
 
 <SvelteFlowProvider>
@@ -331,7 +395,7 @@
 		<!-- Canvas -->
 		<div class="relative flex-1">
 			<!-- Floating Toolbar -->
-			<Toolbar view="projects" onCreateNode={handleToolbarCreateNode} />
+			<Toolbar view="projects" onCreateNode={handleToolbarCreateNode} onShowStickers={handleShowStickers} />
 
 			<SvelteFlow
 				class="h-full w-full bg-black"
@@ -363,6 +427,14 @@
 				bind:isOpen={showEditPanel}
 				onSave={handleEditPanelSave}
 				onDelete={handleEditPanelDelete}
+			/>
+		{/if}
+
+		<!-- Sticker Panel -->
+		{#if showStickerPanel}
+			<StickerPanel 
+				bind:isOpen={showStickerPanel} 
+				onClose={handleCloseStickerPanel}
 			/>
 		{/if}
 	</div>
