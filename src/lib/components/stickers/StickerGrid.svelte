@@ -7,11 +7,11 @@
 	}>();
 </script>
 
-<div class="sticker-grid-container h-full flex flex-col">
+<div class="sticker-grid-container h-full flex flex-col min-h-0">
 	<!-- Stickers grid with scroll -->
-	<div class="flex-1 overflow-y-auto p-4">
+	<div class="flex-1 overflow-y-auto p-4 min-h-0">
 		<div class="grid grid-cols-4 gap-3">
-			{#each category.stickers as sticker}
+			{#each category.stickers as sticker (sticker.filename)}
 				<StickerItem {sticker} category={category.name} />
 			{/each}
 		</div>

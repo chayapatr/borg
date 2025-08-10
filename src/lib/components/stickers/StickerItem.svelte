@@ -61,34 +61,38 @@
 </script>
 
 <div
-	class="sticker-item group relative cursor-pointer hover:bg-zinc-700 rounded-lg p-1 transition-colors"
-	title={sticker.name}
+	class="sticker-item group relative cursor-pointer hover:bg-gray-100 rounded-lg p-1 transition-colors"
 	onclick={handleClick}
 >
-	{#if !imageUrl && !imageError}
-		<!-- Loading placeholder -->
-		<div class="w-16 h-16 bg-zinc-800 rounded-lg flex items-center justify-center">
-			<div class="w-4 h-4 border-2 border-zinc-600 border-t-zinc-400 rounded-full animate-spin"></div>
-		</div>
-	{:else if imageError}
+	{#if imageError}
 		<!-- Error placeholder -->
-		<div class="w-16 h-16 bg-red-900/20 border border-red-500/30 rounded-lg flex items-center justify-center">
-			<span class="text-xs text-red-400">✗</span>
+		<div class="w-16 h-16 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
+			<span class="text-xs text-red-500">✗</span>
+		</div>
+	{:else if !imageUrl}
+		<!-- Loading URL placeholder -->
+		<div class="w-16 h-16 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
+			<div class="w-4 h-4 border-2 border-gray-300 border-t-black rounded-full animate-spin"></div>
 		</div>
 	{:else}
-		<!-- Sticker image -->
-		<img
-			src={imageUrl}
-			alt={sticker.name}
-			class="w-16 h-16 object-contain rounded-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg {imageLoaded ? 'opacity-100' : 'opacity-0'}"
-			onload={handleImageLoad}
-			onerror={handleImageError}
-			draggable="false"
-		/>
-		
-		<!-- Hover overlay with name -->
-		<div class="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-			<span class="text-xs text-white font-medium text-center px-1 leading-tight">{sticker.name}</span>
+		<!-- Image container with loading overlay -->
+		<div class="relative w-16 h-16">
+			<!-- Loading spinner overlay (shown while image loads) -->
+			{#if !imageLoaded}
+				<div class="absolute inset-0 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center z-10">
+					<div class="w-4 h-4 border-2 border-gray-300 border-t-black rounded-full animate-spin"></div>
+				</div>
+			{/if}
+			
+			<!-- Sticker image -->
+			<img
+				src={imageUrl}
+				alt=""
+				class="w-16 h-16 object-contain rounded-lg transition-all duration-200 group-hover:scale-105 {imageLoaded ? 'opacity-100' : 'opacity-0'}"
+				onload={handleImageLoad}
+				onerror={handleImageError}
+				draggable="false"
+			/>
 		</div>
 	{/if}
 </div>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import { Trash2, RotateCw, Pencil } from '@lucide/svelte';
+	import { Trash2 } from '@lucide/svelte';
 
 	let { data, id } = $props<{ data: any; id: string }>();
 
@@ -22,6 +22,18 @@
 	let stickerUrl = $derived(nodeData.stickerUrl || '');
 	let category = $derived(nodeData.category || '');
 	let filename = $derived(nodeData.filename || '');
+	
+	// Image loading state
+	let imageLoaded = $state(false);
+	let imageError = $state(false);
+	
+	// Reset loading state when stickerUrl changes
+	$effect(() => {
+		if (stickerUrl) {
+			imageLoaded = false;
+			imageError = false;
+		}
+	});
 
 	// Debug logging
 	$effect(() => {
@@ -104,27 +116,7 @@
 		document.dispatchEvent(event);
 	}
 
-	// Handle rotation
-	function handleRotate(event: MouseEvent) {
-		event.stopPropagation();
-		rotation = (rotation + 90) % 360;
-		updateNodeData();
-	}
 
-	// Handle settings click
-	function handleSettingsClick(event: MouseEvent) {
-		event.stopPropagation();
-
-		// Dispatch edit event for settings panel
-		const editEvent = new CustomEvent('nodeEdit', {
-			detail: {
-				nodeId: id,
-				nodeData: nodeData,
-				templateType: data.templateType
-			}
-		});
-		document.dispatchEvent(editEvent);
-	}
 
 	// Handle delete
 	function handleDelete(event: MouseEvent) {
@@ -142,6 +134,16 @@
 	function handleContextMenu(event: MouseEvent) {
 		event.preventDefault();
 	}
+	
+	// Handle image load
+	function handleImageLoad() {
+		imageLoaded = true;
+	}
+	
+	// Handle image error
+	function handleImageError() {
+		imageError = true;
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -154,17 +156,29 @@
 	>
 		<!-- Main sticker image -->
 		{#if stickerUrl}
+			<!-- Loading state -->
+			{#if !imageLoaded && !imageError}
+				<div class="w-full h-full flex items-center justify-center">
+					<div class="w-8 h-8 border-2 border-gray-300 border-t-black rounded-full animate-spin"></div>
+				</div>
+			{/if}
+			
+			<!-- Error state -->
+			{#if imageError}
+				<div class="w-full h-full bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
+					<span class="text-red-500">✗</span>
+				</div>
+			{/if}
+			
+			<!-- Sticker image -->
 			<img 
 				src={stickerUrl}
 				alt="{category} sticker"
-				class="w-full h-full object-contain rounded-lg shadow-lg transition-all duration-200 group-hover:shadow-xl"
-				style="transform: rotate({rotation}deg);"
+				class="w-full h-full object-contain transition-all duration-200 {imageLoaded ? 'opacity-100' : 'opacity-0'}"
+				onload={handleImageLoad}
+				onerror={handleImageError}
 				draggable="false"
 			/>
-		{:else}
-			<div class="w-full h-full bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-500 text-sm">
-				No Image
-			</div>
 		{/if}
 
 		<!-- Resize handle (bottom-right corner) -->
@@ -183,35 +197,15 @@
 			</div>
 		</div>
 
-		<!-- Toolbar (visible on hover) -->
-		<div
-			class="absolute -top-8 left-0 flex items-center gap-1 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1 shadow-lg opacity-0 transition-opacity group-hover:opacity-100"
+		<!-- Delete button (top-right corner) -->
+		<button
+			class="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50"
+			title="Delete sticker"
+			aria-label="Delete sticker"
+			onclick={handleDelete}
 		>
-			<button
-				onclick={handleRotate}
-				class="p-1 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded transition-colors"
-				title="Rotate 90°"
-				aria-label="Rotate sticker"
-			>
-				<RotateCw class="w-3 h-3" />
-			</button>
-			<button
-				onclick={handleSettingsClick}
-				class="p-1 text-zinc-400 hover:text-blue-400 hover:bg-zinc-700 rounded transition-colors"
-				title="Edit settings"
-				aria-label="Edit sticker settings"
-			>
-				<Pencil class="w-3 h-3" />
-			</button>
-			<button
-				onclick={handleDelete}
-				class="p-1 text-zinc-400 hover:text-red-400 hover:bg-zinc-700 rounded transition-colors"
-				title="Delete sticker"
-				aria-label="Delete sticker"
-			>
-				<Trash2 class="w-3 h-3" />
-			</button>
-		</div>
+			<Trash2 class="w-2 h-2 text-gray-700 hover:text-red-600" />
+		</button>
 
 		<!-- Connection handles (hidden by default for stickers) -->
 		<Handle type="target" position={Position.Left} class="!opacity-0 !pointer-events-none" />

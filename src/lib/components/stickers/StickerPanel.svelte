@@ -56,8 +56,10 @@
 	);
 
 	function handleCategoryClick(categorySlug: string) {
-		activeCategory = categorySlug;
-		searchTerm = ''; // Clear search when switching categories
+		if (activeCategory !== categorySlug) {
+			activeCategory = categorySlug;
+			searchTerm = ''; // Clear search when switching categories
+		}
 	}
 
 	function handleClose() {
@@ -73,7 +75,7 @@
 </script>
 
 {#if isOpen}
-	<div class="flex h-full w-80 flex-col border-l border-black bg-white"
+	<div class="flex h-[calc(100vh-64px)] w-80 flex-col border-l border-black bg-white overflow-hidden"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="sticker-panel-title"
@@ -114,8 +116,8 @@
 		<!-- Loading state -->
 		{#if loading}
 			<div class="flex-1 flex items-center justify-center">
-				<div class="flex items-center gap-3 text-zinc-500">
-					<div class="w-6 h-6 border-2 border-zinc-300 border-t-black rounded-full animate-spin"></div>
+				<div class="flex items-center gap-3 text-black">
+					<div class="w-6 h-6 border-2 border-gray-300 border-t-black rounded-full animate-spin"></div>
 					<span>Loading stickers...</span>
 				</div>
 			</div>
@@ -135,9 +137,9 @@
 			</div>
 		{:else}
 			<!-- Category tabs and content -->
-			<div class="flex-1 flex flex-col min-h-0">
+			<div class="flex-1 flex flex-col min-h-0 overflow-hidden">
 				<!-- Category tabs -->
-				<div class="flex overflow-x-auto border-b border-black">
+				<div class="flex overflow-x-auto border-b border-black flex-shrink-0">
 					{#each filteredCategories as category}
 						<button
 							onclick={() => handleCategoryClick(category.slug)}
@@ -153,7 +155,9 @@
 
 				<!-- Active category content -->
 				{#if activeCategoryData}
-					<StickerGrid category={activeCategoryData} />
+					{#key activeCategory}
+						<StickerGrid category={activeCategoryData} />
+					{/key}
 				{:else}
 					<div class="flex-1 flex items-center justify-center text-zinc-500">
 						<span>No category selected</span>
