@@ -248,6 +248,21 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				options: ['To Do', 'Doing', 'Done']
 			}
 		]
+	},
+
+	sticker: {
+		id: 'sticker',
+		name: 'Sticker',
+		color: '#f59e0b',
+		fields: [
+			{
+				id: 'title',
+				label: 'Sticker Name',
+				type: 'text',
+				placeholder: 'Enter sticker name...',
+				required: true
+			}
+		]
 	}
 };
 

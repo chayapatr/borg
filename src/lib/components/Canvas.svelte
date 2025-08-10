@@ -12,6 +12,7 @@
 	} from '@xyflow/svelte';
 	import UniversalNode from './UniversalNode/UniversalNode.svelte';
 	import NoteNode from './UniversalNode/NoteNode.svelte';
+	import StickerNode from './UniversalNode/StickerNode.svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
 	import type { INodesService, IProjectsService, ITaskService } from '../services/interfaces';
 	import CreateNodeModal from './CreateNodeModal.svelte';
@@ -19,6 +20,7 @@
 	import NodeTaskSidebar from './tasks/NodeTaskSidebar.svelte';
 	import TaskModal from './tasks/TaskModal.svelte';
 	import Toolbar from './Toolbar.svelte';
+	import StickerPanel from './stickers/StickerPanel.svelte';
 	import type { Task } from '../types/task';
 	import '@xyflow/svelte/dist/style.css';
 	import './svelteflow.css';
@@ -62,6 +64,9 @@
 	let showTaskModal = $state(false);
 	let taskModalNodeId = $state('');
 	let taskModalTask = $state<Task | undefined>(undefined); // undefined for add mode, Task for edit mode
+	
+	// Sticker panel state
+	let showStickerPanel = $state(false);
 	
 	// Flag to prevent redundant auto-saves after explicit saves
 	let skipNextAutoSave = $state(false);
@@ -280,8 +285,9 @@
 			editNodeData = event.detail.nodeData;
 			editTemplateType = event.detail.templateType;
 			showEditPanel = true;
-			// Close task sidebar if open to avoid conflicts
+			// Close other panels if open to avoid conflicts
 			showNodeTaskSidebar = false;
+			showStickerPanel = false;
 		};
 
 		const handleNodeTasksOpenEvent = (event: CustomEvent) => {
@@ -308,8 +314,9 @@
 				);
 			}
 
-			// Close edit panel if open to avoid conflicts
+			// Close other panels if open to avoid conflicts
 			showEditPanel = false;
+			showStickerPanel = false;
 		};
 
 		const handleAddTaskEvent = (event: CustomEvent) => {
@@ -318,11 +325,16 @@
 			showTaskModal = true;
 		};
 
+		const handleAddStickerEvent = (event: CustomEvent) => {
+			handleAddSticker(event);
+		};
+
 		document.addEventListener('nodeDelete', handleNodeDeleteEvent as EventListener);
 		document.addEventListener('nodeUpdate', handleNodeUpdateEvent as EventListener);
 		document.addEventListener('nodeEdit', handleNodeEditEvent as EventListener);
 		document.addEventListener('nodeTasksOpen', handleNodeTasksOpenEvent as EventListener);
 		document.addEventListener('addTask', handleAddTaskEvent as EventListener);
+		document.addEventListener('addSticker', handleAddStickerEvent as EventListener);
 
 		return () => {
 			document.removeEventListener('nodeDelete', handleNodeDeleteEvent as EventListener);
@@ -330,6 +342,7 @@
 			document.removeEventListener('nodeEdit', handleNodeEditEvent as EventListener);
 			document.removeEventListener('nodeTasksOpen', handleNodeTasksOpenEvent as EventListener);
 			document.removeEventListener('addTask', handleAddTaskEvent as EventListener);
+			document.removeEventListener('addSticker', handleAddStickerEvent as EventListener);
 
 			// Clean up task subscription
 			if (taskSubscriptionCleanup) {
@@ -375,6 +388,58 @@
 		// Get the center of the viewport for toolbar-created nodes
 		const centerPosition = getViewportCenterPosition();
 		(nodesService as any).addNode(templateType, centerPosition);
+	}
+
+	function handleShowStickers() {
+		console.log('🎨 handleShowStickers called, current state:', showStickerPanel);
+		// Close other drawers/panels when opening sticker panel
+		showEditPanel = false;
+		showNodeTaskSidebar = false;
+		showStickerPanel = true;
+		console.log('🎨 showStickerPanel set to:', showStickerPanel);
+	}
+
+	// Handle add sticker event (click-based)
+	async function handleAddSticker(event: CustomEvent) {
+		console.log('🎨 Canvas received add sticker event:', event.detail);
+		
+		if (!nodesService) return;
+		
+		try {
+			const stickerData = event.detail;
+			
+			if (stickerData.type === 'sticker') {
+				// Create sticker at center of viewport
+				const position = getViewportCenterPosition();
+				
+				// First create a basic sticker node using the service
+				const baseNode = await (nodesService as any).addNode('sticker', position);
+				console.log('🎨 Created base sticker node:', baseNode);
+				
+				// Then immediately update it with the sticker-specific data
+				const stickerNodeData = {
+					title: stickerData.name,
+					stickerUrl: stickerData.stickerUrl,
+					category: stickerData.category,
+					filename: stickerData.filename,
+					width: 100,
+					height: 100,
+					rotation: 0
+				};
+				
+				const success = await (nodesService as any).updateNode(baseNode.id, {
+					nodeData: stickerNodeData
+				});
+				
+				if (success) {
+					console.log('✅ Sticker node created and updated with data');
+				} else {
+					console.error('❌ Failed to update sticker node with data');
+				}
+			}
+		} catch (error) {
+			console.error('❌ Failed to add sticker:', error);
+		}
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -758,26 +823,28 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="relative flex-1" onclick={handleCanvasClick}>
 		<!-- Floating Toolbar -->
-		<Toolbar view="project" onCreateNode={handleToolbarCreateNode} />
-		<SvelteFlow
-			class="bg-black"
-			bind:nodes
-			bind:edges
-			{nodeTypes}
-			onconnect={handleConnect}
-			onbeforedelete={handleBeforeDelete}
-			ondelete={handleDelete}
-			onnodedragstart={handleNodeDragStart}
-			onnodedragstop={handleNodeDragStop}
-			nodesDraggable={true}
-			nodesConnectable={true}
-			elevateNodesOnSelect={true}
-			deleteKey={['Delete', 'Backspace']}
-		>
-			<Background />
-			<Controls />
-			<MiniMap class="border border-black" />
-		</SvelteFlow>
+		<Toolbar view="project" onCreateNode={handleToolbarCreateNode} onShowStickers={handleShowStickers} />
+		<div class="h-full w-full">
+			<SvelteFlow
+				class="bg-black"
+				bind:nodes
+				bind:edges
+				{nodeTypes}
+				onconnect={handleConnect}
+				onbeforedelete={handleBeforeDelete}
+				ondelete={handleDelete}
+				onnodedragstart={handleNodeDragStart}
+				onnodedragstop={handleNodeDragStop}
+				nodesDraggable={true}
+				nodesConnectable={true}
+				elevateNodesOnSelect={true}
+				deleteKey={['Delete', 'Backspace']}
+			>
+				<Background />
+				<Controls />
+				<MiniMap class="border border-black" />
+			</SvelteFlow>
+		</div>
 	</div>
 
 	<!-- Edit Sidebar -->
@@ -808,6 +875,14 @@
 				showNodeTaskSidebar = false;
 			}}
 			onTasksUpdated={handleTasksUpdated}
+		/>
+	{/if}
+
+	<!-- Sticker Panel -->
+	{#if showStickerPanel}
+		<StickerPanel 
+			bind:isOpen={showStickerPanel} 
+			onClose={() => showStickerPanel = false} 
 		/>
 	{/if}
 </div>

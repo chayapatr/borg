@@ -2,6 +2,7 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { getTemplate, type NodeTemplate } from '../../templates';
 	import NoteNode from './NoteNode.svelte';
+	import StickerNode from './StickerNode.svelte';
 	import NodeHeader from './components/NodeHeader.svelte';
 	import NodeContent from './components/NodeContent.svelte';
 	import NodeTasks from './components/NodeTasks.svelte';
@@ -166,6 +167,9 @@
 {#if template.id === 'note'}
 	<!-- Delegate entirely to NoteNode for note types -->
 	<NoteNode {data} {id} />
+{:else if template.id === 'sticker'}
+	<!-- Delegate entirely to StickerNode for sticker types -->
+	<StickerNode {data} {id} />
 {:else}
 	<div>
 		<!-- Project Node Header (outside the main node box) -->

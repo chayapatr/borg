@@ -6,12 +6,14 @@
 		Calendar,
 		StickyNote,
 		Link,
-		Square
+		Square,
+		Sticker
 	} from '@lucide/svelte';
 	import { nodeTemplates } from '../templates';
 
-	let { view = 'projects', onCreateNode } = $props<{
+	let { view = 'projects', onCreateNode, onShowStickers } = $props<{
 		onCreateNode: (templateType: string) => void;
+		onShowStickers?: () => void;
 		view: 'projects' | 'project';
 	}>();
 
@@ -27,8 +29,22 @@
 		{ id: 'blank', icon: Square, template: nodeTemplates.blank }
 	];
 
+	// Special items (not templates)
+	const specialItems = [
+		{ id: 'stickers', icon: Sticker, name: 'Stickers', action: 'showStickers' }
+	];
+
 	function handleItemClick(templateType: string) {
 		onCreateNode(templateType);
+	}
+
+	function handleSpecialItemClick(action: string) {
+		console.log('🎨 Toolbar handleSpecialItemClick called with action:', action);
+		console.log('🎨 onShowStickers function available:', !!onShowStickers);
+		if (action === 'showStickers' && onShowStickers) {
+			console.log('🎨 Calling onShowStickers...');
+			onShowStickers();
+		}
 	}
 
 	// Track if the toolbar is being hovered
@@ -56,5 +72,22 @@
 				</span>
 			</button>
 		{/each}
+
+		<!-- Special items (like stickers) - only show in project view -->
+		{#if view === 'project'}
+			<div class="w-full border-t border-gray-300 my-1"></div>
+			{#each specialItems as item}
+				<button
+					onclick={() => handleSpecialItemClick(item.action)}
+					class="group flex h-10 items-center rounded-md hover:bg-white transition-all duration-300 ease-in-out {isToolbarHovered ? 'w-auto pl-2 pr-3 justify-start gap-2' : 'w-10 justify-center'}"
+					aria-label="{item.name}"
+				>
+					<item.icon class="h-5 w-5 text-gray-700 group-hover:text-gray-900 flex-shrink-0" />
+					<span class="text-sm text-gray-700 group-hover:text-gray-900 whitespace-nowrap transition-all duration-300 ease-in-out {isToolbarHovered ? 'opacity-100 max-w-none' : 'opacity-0 max-w-0 overflow-hidden'}">
+						{item.name}
+					</span>
+				</button>
+			{/each}
+		{/if}
 	</div>
 </div>

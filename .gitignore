@@ -30,3 +30,7 @@ docs
 # Firebase
 firebase-debug.log
 firestore-debug.log
+
+# Misc.
+src/lib/data
+scripts
