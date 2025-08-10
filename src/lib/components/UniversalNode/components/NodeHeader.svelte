@@ -6,7 +6,7 @@
 		Code,
 		Calendar,
 		StickyNote,
-		HardDrive,
+		Link,
 		Square,
 		CircleDashed,
 		PencilRuler,
@@ -63,8 +63,8 @@
 			case 'note':
 				component = StickyNote;
 				break;
-			case 'storage':
-				component = HardDrive;
+			case 'link':
+				component = Link;
 				break;
 			case 'blank':
 				component = Square;

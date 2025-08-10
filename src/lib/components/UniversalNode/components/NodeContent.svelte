@@ -49,7 +49,7 @@
 		<!-- Normal mode: show all fields -->
 		<div class="mt-2 space-y-3">
 			{#each template.fields as field}
-				{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? field.id === 'title'}
+				{@const isVisible = nodeData.fieldVisibility?.[field.id] ?? (field.id === 'title' || field.type === 'link')}
 				{#if field.id !== 'status' && isVisible}
 					{#if field.id === 'title'}
 						<TitleEditor
@@ -73,7 +73,7 @@
 
 			{#if nodeData.customFields && Array.isArray(nodeData.customFields)}
 				{#each nodeData.customFields as field}
-					{@const isVisible = field.showInDisplay ?? field.id === 'title'}
+					{@const isVisible = field.showInDisplay ?? (field.id === 'title' || field.type === 'link')}
 					{#if isVisible && field.id !== 'status'}
 						{#if field.id === 'title'}
 							<TitleEditor

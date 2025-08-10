@@ -33,9 +33,9 @@
 
 	function getFieldVisibility(field: TemplateField, isCustom: boolean = false): boolean {
 		if (isCustom) {
-			return field.showInDisplay ?? (field.id === 'title');
+			return field.showInDisplay ?? (field.id === 'title' || field.type === 'link');
 		} else {
-			return nodeData.fieldVisibility?.[field.id] ?? (field.id === 'title');
+			return nodeData.fieldVisibility?.[field.id] ?? (field.id === 'title' || field.type === 'link');
 		}
 	}
 

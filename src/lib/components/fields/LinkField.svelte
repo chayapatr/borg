@@ -15,14 +15,31 @@
 	}>();
 
 	// Function to get the appropriate icon for a field
-	function getFieldIcon(fieldLabel: string): {
+	function getFieldIcon(fieldLabel: string, url: string = ''): {
 		type: 'svg' | 'lucide';
 		path?: string;
 		component?: any;
 	} {
 		const label = fieldLabel.toLowerCase();
+		const urlLower = url.toLowerCase();
 
-		// Check for static SVG logos first
+		// First check URL for Google services
+		if (url) {
+			if (urlLower.includes('docs.google.com/document') || urlLower.includes('docs.google.com')) {
+				return { type: 'svg', path: '/docs.svg' };
+			}
+			if (urlLower.includes('docs.google.com/spreadsheets') || urlLower.includes('sheets.google.com')) {
+				return { type: 'svg', path: '/sheets.svg' };
+			}
+			if (urlLower.includes('docs.google.com/presentation') || urlLower.includes('slides.google.com')) {
+				return { type: 'svg', path: '/slides.svg' };
+			}
+			if (urlLower.includes('drive.google.com')) {
+				return { type: 'svg', path: '/googledrive.svg' };
+			}
+		}
+
+		// Check for static SVG logos from field label
 		if (label.includes('github')) {
 			return { type: 'svg', path: '/github.svg' };
 		}
@@ -52,7 +69,7 @@
 <div class="field-container">
 	{#if mode === 'display'}
 		{#if value}
-			{@const icon = getFieldIcon(field.label)}
+			{@const icon = getFieldIcon(field.label, value)}
 			<button
 				onclick={(e) => { e.stopPropagation(); window.open(value, '_blank'); }}
 				class="flex w-full items-center justify-center gap-1 rounded-lg bg-borg-brown/80 p-2 text-xs font-medium transition-colors hover:bg-borg-brown/60 focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"

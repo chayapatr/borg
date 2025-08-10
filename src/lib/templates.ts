@@ -174,18 +174,24 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 		]
 	},
 
-	storage: {
-		id: 'storage',
-		name: 'Storage',
+	link: {
+		id: 'link',
+		name: 'Link',
 		color: '#52525b',
 		fields: [
 			{
 				id: 'title',
-				label: 'Storage Name',
+				label: 'Link Name',
 				type: 'text',
-				placeholder: 'Enter storage name...',
+				placeholder: 'Enter link name...',
 				required: true
 			},
+			// {
+			// 	id: 'url',
+			// 	label: 'URL',
+			// 	type: 'link',
+			// 	placeholder: 'https://...'
+			// },
 			{
 				id: 'status',
 				label: 'Status',
@@ -275,12 +281,36 @@ export const suggestedCustomFields: Record<string, TemplateField[]> = {
 			placeholder: 'https://...'
 		}
 	],
-	storage: [
+	link: [
+		{
+			id: 'google_docs',
+			label: 'Google Docs',
+			type: 'link',
+			placeholder: 'https://docs.google.com/document/...'
+		},
+		{
+			id: 'google_sheets',
+			label: 'Google Sheets',
+			type: 'link',
+			placeholder: 'https://docs.google.com/spreadsheets/...'
+		},
+		{
+			id: 'google_slides',
+			label: 'Google Slides',
+			type: 'link',
+			placeholder: 'https://docs.google.com/presentation/...'
+		},
 		{
 			id: 'google_drive',
 			label: 'Google Drive',
 			type: 'link',
 			placeholder: 'https://drive.google.com/...'
+		},
+		{
+			id: 'website',
+			label: 'Website',
+			type: 'link',
+			placeholder: 'https://...'
 		},
 		{
 			id: 'dropbox',

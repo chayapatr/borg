@@ -7,7 +7,7 @@
 		Code,
 		Calendar,
 		StickyNote,
-		HardDrive,
+		Link,
 		Square
 	} from '@lucide/svelte';
 
@@ -58,8 +58,8 @@
 				return Calendar;
 			case 'note':
 				return StickyNote;
-			case 'storage':
-				return HardDrive;
+			case 'link':
+				return Link;
 			case 'blank':
 				return Square;
 			default:
