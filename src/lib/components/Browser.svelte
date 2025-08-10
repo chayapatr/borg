@@ -206,7 +206,7 @@
 			<button
 				onclick={handleLogout}
 				class="flex w-fit grow-0 items-center gap-1
-        rounded-md border border-black bg-white px-3 py-1.5
+        rounded-md border border-black bg-white px-3 py-1.5 font-medium
         text-black transition-colors hover:bg-borg-beige"
 				title="Log out"
 			>

@@ -147,7 +147,7 @@
 				<!-- <p class="border-zinc-600 mt-1">Manage your research projects</p> -->
 			</div>
 			<button
-				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-blue px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
+				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-violet px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
 				"
 				onclick={() => (showAddModal = true)}
 			>
