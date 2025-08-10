@@ -10,6 +10,29 @@
 	let width = $state(nodeData.width || 128); // Default 128px (w-32)
 	let height = $state(nodeData.height || 128); // Default 128px (h-32)
 
+	// Update dimensions when nodeData changes
+	$effect(() => {
+		width = nodeData.width || 128;
+		height = nodeData.height || 128;
+	});
+
+	// Get text size with default (Small)
+	let textSizeClass = $derived.by(() => {
+		const textSize = nodeData.textSize || 'Small';
+		switch (textSize) {
+			case 'Small':
+				return 'text-sm';
+			case 'Medium':
+				return 'text-lg';
+			case 'Large':
+				return 'text-xl';
+			case 'Extra Large':
+				return 'text-3xl';
+			default:
+				return 'text-sm';
+		}
+	});
+
 	// Resize state
 	let isResizing = $state(false);
 	let resizeStartX = $state(0);
@@ -182,13 +205,13 @@
 				oninput={handleNoteInput}
 				onblur={handleNoteBlur}
 				onkeydown={handleNoteKeydown}
-				class="h-full w-full resize-none border-none bg-transparent p-1 text-sm leading-relaxed break-words text-gray-800 outline-none placeholder:text-gray-500"
+				class="h-full w-full resize-none border-none bg-transparent p-1 {textSizeClass} leading-relaxed break-words text-gray-800 outline-none placeholder:text-gray-500"
 				placeholder="Type your note..."
 				style="font-family: inherit;"
 			></textarea>
 		{:else}
 			<div
-				class="flex h-full w-full items-start overflow-hidden p-1 text-sm leading-relaxed text-balance break-words whitespace-pre-wrap text-gray-800"
+				class="flex h-full w-full items-start overflow-hidden p-1 {textSizeClass} leading-relaxed text-balance break-words whitespace-pre-wrap text-gray-800"
 			>
 				{nodeData.content || 'Click to edit...'}
 			</div>

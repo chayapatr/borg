@@ -219,6 +219,13 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				type: 'color-picker',
 				placeholder: 'Choose background color'
 			},
+			{
+				id: 'textSize',
+				label: 'Text Size',
+				type: 'select',
+				options: ['Small', 'Medium', 'Large', 'Extra Large'],
+				placeholder: 'Choose text size'
+			}
 		]
 	},
 
@@ -233,6 +240,12 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				type: 'text',
 				placeholder: 'Enter title...',
 				required: true
+			},
+			{
+				id: 'status',
+				label: 'Status',
+				type: 'status',
+				options: ['To Do', 'Doing', 'Done']
 			}
 		]
 	}
