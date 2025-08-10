@@ -22,11 +22,11 @@
 	let stickerUrl = $derived(nodeData.stickerUrl || '');
 	let category = $derived(nodeData.category || '');
 	let filename = $derived(nodeData.filename || '');
-	
+
 	// Image loading state
 	let imageLoaded = $state(false);
 	let imageError = $state(false);
-	
+
 	// Reset loading state when stickerUrl changes
 	$effect(() => {
 		if (stickerUrl) {
@@ -36,9 +36,9 @@
 	});
 
 	// Debug logging
-	$effect(() => {
-		console.log('🎨 StickerNode data:', { stickerUrl, category, filename, nodeData });
-	});
+	// $effect(() => {
+	// 	console.log('🎨 StickerNode data:', { stickerUrl, category, filename, nodeData });
+	// });
 
 	// Resize state
 	let isResizing = $state(false);
@@ -48,10 +48,10 @@
 	function startResize(event: MouseEvent, handle: string) {
 		event.preventDefault();
 		event.stopPropagation();
-		
+
 		isResizing = true;
 		resizeHandle = handle;
-		
+
 		const startX = event.clientX;
 		const startY = event.clientY;
 		const startWidth = width;
@@ -116,15 +116,13 @@
 		document.dispatchEvent(event);
 	}
 
-
-
 	// Handle delete
 	function handleDelete(event: MouseEvent) {
 		event.stopPropagation();
 
 		if (confirm('Are you sure you want to delete this sticker?')) {
-			const deleteEvent = new CustomEvent('nodeDelete', { 
-				detail: { nodeId: id } 
+			const deleteEvent = new CustomEvent('nodeDelete', {
+				detail: { nodeId: id }
 			});
 			document.dispatchEvent(deleteEvent);
 		}
@@ -134,12 +132,12 @@
 	function handleContextMenu(event: MouseEvent) {
 		event.preventDefault();
 	}
-	
+
 	// Handle image load
 	function handleImageLoad() {
 		imageLoaded = true;
 	}
-	
+
 	// Handle image error
 	function handleImageError() {
 		imageError = true;
@@ -149,7 +147,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div>
-	<div 
+	<div
 		class="sticker-node group relative cursor-grab active:cursor-grabbing"
 		style="width: {width}px; height: {height}px;"
 		oncontextmenu={handleContextMenu}
@@ -158,23 +156,29 @@
 		{#if stickerUrl}
 			<!-- Loading state -->
 			{#if !imageLoaded && !imageError}
-				<div class="w-full h-full flex items-center justify-center">
-					<div class="w-8 h-8 border-2 border-gray-300 border-t-black rounded-full animate-spin"></div>
+				<div class="flex h-full w-full items-center justify-center">
+					<div
+						class="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-black"
+					></div>
 				</div>
 			{/if}
-			
+
 			<!-- Error state -->
 			{#if imageError}
-				<div class="w-full h-full bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
+				<div
+					class="flex h-full w-full items-center justify-center rounded-lg border border-red-200 bg-red-50"
+				>
 					<span class="text-red-500">✗</span>
 				</div>
 			{/if}
-			
+
 			<!-- Sticker image -->
-			<img 
+			<img
 				src={stickerUrl}
 				alt="{category} sticker"
-				class="w-full h-full object-contain transition-all duration-200 {imageLoaded ? 'opacity-100' : 'opacity-0'}"
+				class="h-full w-full object-contain transition-all duration-200 {imageLoaded
+					? 'opacity-100'
+					: 'opacity-0'}"
 				onload={handleImageLoad}
 				onerror={handleImageError}
 				draggable="false"
@@ -199,17 +203,17 @@
 
 		<!-- Delete button (top-right corner) -->
 		<button
-			class="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50"
+			class="absolute top-1 right-1 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
 			title="Delete sticker"
 			aria-label="Delete sticker"
 			onclick={handleDelete}
 		>
-			<Trash2 class="w-2 h-2 text-gray-700 hover:text-red-600" />
+			<Trash2 class="h-3 w-3 text-gray-700 hover:text-borg-orange" />
 		</button>
 
 		<!-- Connection handles (hidden by default for stickers) -->
-		<Handle type="target" position={Position.Left} class="!opacity-0 !pointer-events-none" />
-		<Handle type="source" position={Position.Right} class="!opacity-0 !pointer-events-none" />
+		<Handle type="target" position={Position.Left} class="!pointer-events-none !opacity-0" />
+		<Handle type="source" position={Position.Right} class="!pointer-events-none !opacity-0" />
 	</div>
 </div>
 

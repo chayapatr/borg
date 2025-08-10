@@ -34,21 +34,7 @@ export class FirebaseStickerService implements IStickerService {
             
         } catch (firebaseError) {
             console.error('❌ Failed to load Firebase catalog:', firebaseError);
-            console.warn('⚠️ Trying local fallback...');
-        }
-
-        // Fallback to local catalog (limited development data)
-        try {
-            console.log('📋 Loading sticker catalog from local source...');
-            const { stickerCatalog } = await import('../../data/sticker-catalog');
-            console.log('📋 Raw catalog:', stickerCatalog);
-            this.catalogCache = stickerCatalog;
-            this.catalogCacheTime = Date.now();
-            console.log(`✅ Loaded local sticker catalog with ${this.catalogCache.categories.length} categories`);
-            return this.catalogCache;
-        } catch (localError) {
-            console.error('❌ Failed to load sticker catalog from both sources:', localError);
-            throw new Error('Failed to load sticker catalog from both Firebase and local sources');
+            throw new Error('Failed to load sticker catalog from Firebase');
         }
     }
 

@@ -57,10 +57,6 @@
 
 	// Resize state
 	let isResizing = $state(false);
-	let resizeStartX = $state(0);
-	let resizeStartY = $state(0);
-	let startWidth = $state(0);
-	let startHeight = $state(0);
 
 	// Post-it inline editing state
 	let isEditingNote = $state(false);
@@ -79,7 +75,6 @@
 		setTimeout(() => {
 			if (textarea) {
 				textarea.focus();
-				textarea.select();
 			}
 		}, 0);
 	}
@@ -181,39 +176,43 @@
 	}
 
 	function startResize(event: MouseEvent) {
-		event.stopPropagation();
 		event.preventDefault();
-
+		event.stopPropagation();
+		
 		isResizing = true;
-		resizeStartX = event.clientX;
-		resizeStartY = event.clientY;
-		startWidth = width;
-		startHeight = height;
+		
+		const startX = event.clientX;
+		const startY = event.clientY;
+		const startWidth = width;
+		const startHeight = height;
 
-		document.addEventListener('mousemove', handleResize);
-		document.addEventListener('mouseup', stopResize);
-		document.body.style.cursor = 'se-resize';
+		function handleMouseMove(e: MouseEvent) {
+			if (!isResizing) return;
+			
+			const deltaX = e.clientX - startX;
+			const deltaY = e.clientY - startY;
+
+			const newWidth = Math.max(80, startWidth + deltaX);
+			const newHeight = Math.max(60, startHeight + deltaY);
+			
+			width = newWidth;
+			height = newHeight;
+		}
+
+		function handleMouseUp() {
+			isResizing = false;
+			updateNodeData();
+			document.removeEventListener('mousemove', handleMouseMove);
+			document.removeEventListener('mouseup', handleMouseUp);
+		}
+
+		document.addEventListener('mousemove', handleMouseMove);
+		document.addEventListener('mouseup', handleMouseUp);
 	}
-
-	function handleResize(event: MouseEvent) {
-		if (!isResizing) return;
-
-		const deltaX = event.clientX - resizeStartX;
-		const deltaY = event.clientY - resizeStartY;
-
-		width = Math.max(80, startWidth + deltaX); // Min width 80px
-		height = Math.max(60, startHeight + deltaY); // Min height 60px
-	}
-
-	function stopResize() {
-		if (!isResizing) return;
-
-		isResizing = false;
-		document.removeEventListener('mousemove', handleResize);
-		document.removeEventListener('mouseup', stopResize);
-		document.body.style.cursor = '';
-
-		// Save the new dimensions
+	
+	// Update node data helper function
+	function updateNodeData() {
+		// Update the data prop immediately
 		data.nodeData = {
 			...nodeData,
 			width,
@@ -241,7 +240,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div>
 	<div
-		class="group relative cursor-pointer rounded-lg border border-black p-1 transition-all duration-200"
+		class="group relative cursor-pointer rounded-lg border p-1 {isResizing ? '' : 'transition-all duration-200'} {isEditingNote ? 'border-black border-2 shadow-lg' : 'border-black'}"
 		style="{backgroundStyle}; width: {width}px; height: {height}px;"
 		onclick={handleNodeClick}
 	>
@@ -253,7 +252,9 @@
 				oninput={handleNoteInput}
 				onblur={handleNoteBlur}
 				onkeydown={handleNoteKeydown}
-				class="h-full w-full resize-none border-none bg-transparent p-1 {textSizeClass} {fontWeightClass} leading-relaxed break-words text-gray-800 outline-none placeholder:text-gray-500"
+				onmousedown={(e) => e.stopPropagation()}
+				ondragstart={(e) => e.preventDefault()}
+				class="nodrag h-full w-full resize-none border-none bg-transparent p-1 {textSizeClass} {fontWeightClass} leading-relaxed break-words text-gray-800 outline-none placeholder:text-gray-500"
 				placeholder="Type your note..."
 				style="font-family: inherit;"
 			></textarea>
