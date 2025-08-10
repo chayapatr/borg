@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { TemplateField } from '../../templates';
+	import AddTimelineEventModal from '../browser/AddTimelineEventModal.svelte';
+	import { Plus } from '@lucide/svelte';
 
 	let {
 		field,
@@ -22,6 +24,7 @@
 	// State for timeline data
 	let allEvents = $state<any[]>([]);
 	let eventsMap = $state<Map<string, any>>(new Map());
+	let showAddModal = $state(false);
 
 	// Countdown calculation function
 	function calculateCountdown(targetDate: string): {
@@ -65,24 +68,47 @@
 
 	// Load timeline data reactively
 	$effect(() => {
-		(async () => {
-			if (timelineService.getEventsSortedByDate) {
-				const result = timelineService.getEventsSortedByDate();
-				const events = result instanceof Promise ? await result : result;
-				allEvents = events;
-
-				// Create a map for quick lookup
-				const map = new Map();
-				events.forEach((event) => map.set(event.id, event));
-				eventsMap = map;
-			}
-		})();
+		loadEvents();
 	});
+
+	async function loadEvents() {
+		if (timelineService.getEventsSortedByDate) {
+			const result = timelineService.getEventsSortedByDate();
+			const events = result instanceof Promise ? await result : result;
+			allEvents = events;
+
+			// Create a map for quick lookup
+			const map = new Map();
+			events.forEach((event) => map.set(event.id, event));
+			eventsMap = map;
+		}
+	}
+
+	async function handleAddEvent(templateType: string, eventData: Record<string, any>) {
+		const result = timelineService.addEvent(templateType, eventData);
+		if (result instanceof Promise) await result;
+		await loadEvents(); // Reload events to get the new one
+		showAddModal = false;
+
+		// If this was successful, find the newly created event and select it
+		const updatedResult = timelineService.getEventsSortedByDate();
+		const updatedEvents = updatedResult instanceof Promise ? await updatedResult : updatedResult;
+		const newEvent = updatedEvents.find(
+			(e) => e.title === eventData.title && e.date === eventData.date
+		);
+		if (newEvent) {
+			value = newEvent.id;
+		}
+	}
+
+	function handleCloseModal() {
+		showAddModal = false;
+	}
 </script>
 
 <div class="field-container">
 	{#if !(countdownOnly && mode === 'display')}
-		<label class="mb-1 block text-sm font-medium text-zinc-600">
+		<label for="timeline-select-{field.id}" class="mb-1 block text-sm font-medium text-zinc-600">
 			{field.label}
 		</label>
 	{/if}
@@ -150,17 +176,33 @@
 			<div class="py-1 text-zinc-600">No event selected</div>
 		{/if}
 	{:else}
-		<select
-			bind:value
-			class="w-full rounded border border-zinc-700 bg-white px-3 py-2 text-black focus:border-borg-blue focus:outline-none"
-		>
-			<option value="">Select timeline event...</option>
-			{#each allEvents as event}
-				<option value={event.id}>
-					{event.title} ({new Date(event.date).toLocaleDateString()}) - {event.templateType ||
-						'Event'}
-				</option>
-			{/each}
-		</select>
+		<div class="flex gap-2">
+			<select
+				id="timeline-select-{field.id}"
+				bind:value
+				class="min-w-0 flex-1 rounded border border-zinc-700 bg-white px-3 py-2 text-black focus:border-borg-blue focus:outline-none"
+			>
+				<option value="">Select timeline event...</option>
+				{#each allEvents as event}
+					<option value={event.id}>
+						{event.title} ({new Date(event.date).toLocaleDateString()}) - {event.templateType ||
+							'Event'}
+					</option>
+				{/each}
+			</select>
+			<button
+				type="button"
+				onclick={() => (showAddModal = true)}
+				class="flex flex-shrink-0 items-center gap-1 rounded border border-borg-blue bg-borg-blue px-2 py-2 text-white transition-colors hover:bg-blue-600"
+				title="Add New Event"
+			>
+				<Plus class="h-4 w-4" />
+				<span class="hidden text-sm lg:inline">New</span>
+			</button>
+		</div>
 	{/if}
 </div>
+
+{#if showAddModal}
+	<AddTimelineEventModal onAdd={handleAddEvent} onClose={handleCloseModal} />
+{/if}

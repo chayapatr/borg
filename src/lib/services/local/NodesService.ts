@@ -41,6 +41,11 @@ export class NodesService {
 			}
 		});
 
+		// Set countdown mode to true by default for time nodes
+		if (templateType === 'time') {
+			nodeData.countdownMode = true;
+		}
+
 		const newNode: Node = {
 			id,
 			type: 'universal',

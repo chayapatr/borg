@@ -64,6 +64,11 @@ export class FirebaseNodesService implements INodesService {
 			}
 		});
 
+		// Set countdown mode to true by default for time nodes
+		if (templateType === 'time') {
+			nodeDataFields.countdownMode = true;
+		}
+
 		// Save to Firestore first to get the real document ID
 		const nodeDoc = {
 			type: 'universal',
