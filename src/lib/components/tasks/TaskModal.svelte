@@ -3,6 +3,7 @@
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { IPeopleService, ITaskService } from '../../services/interfaces';
 	import type { Task } from '../../types/task';
+	import { authStore } from '../../stores/authStore';
 
 	interface Props {
 		nodeId: string;
@@ -34,42 +35,51 @@
 
 	// Initialize form values
 	let title = $state(task?.title || '');
-	let assignee = $state(task?.assignee || '');
+	let assignee = $state(task?.assignee || (!task ? $authStore.user?.uid || '' : ''));
 	let dueDate = $state(task?.dueDate || '');
 	let notes = $state(task?.notes || '');
+	let isLoading = $state(false);
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 
 		if (!title.trim()) return;
 
-		if (isEditMode && task) {
-			// Edit mode - update existing task
-			const updates: Partial<Task> = {
-				title: title.trim(),
-				assignee: assignee || '',
-				dueDate: dueDate && dueDate.trim() ? dueDate.trim() : '',
-				notes: notes && notes.trim() ? notes.trim() : ''
-			};
+		isLoading = true;
 
-			const result = taskService.updateTask(nodeId, task.id, updates, projectSlug);
-			if (result instanceof Promise) await result;
-			onTaskUpdated?.();
-		} else {
-			// Add mode - create new task
-			const taskData: Omit<Task, 'id' | 'createdAt'> = {
-				title: title.trim(),
-				assignee: assignee || '',
-				dueDate: dueDate && dueDate.trim() ? dueDate.trim() : '',
-				notes: notes && notes.trim() ? notes.trim() : ''
-			};
+		try {
+			if (isEditMode && task) {
+				// Edit mode - update existing task
+				const updates: Partial<Task> = {
+					title: title.trim(),
+					assignee: assignee || '',
+					dueDate: dueDate && dueDate.trim() ? dueDate.trim() : '',
+					notes: notes && notes.trim() ? notes.trim() : ''
+				};
 
-			const result = taskService.addTask(nodeId, taskData, projectSlug);
-			if (result instanceof Promise) await result;
-			onTaskAdded?.();
+				const result = taskService.updateTask(nodeId, task.id, updates, projectSlug);
+				if (result instanceof Promise) await result;
+				onTaskUpdated?.();
+			} else {
+				// Add mode - create new task
+				const taskData: Omit<Task, 'id' | 'createdAt'> = {
+					title: title.trim(),
+					assignee: assignee || '',
+					dueDate: dueDate && dueDate.trim() ? dueDate.trim() : '',
+					notes: notes && notes.trim() ? notes.trim() : ''
+				};
+
+				const result = taskService.addTask(nodeId, taskData, projectSlug);
+				if (result instanceof Promise) await result;
+				onTaskAdded?.();
+			}
+
+			onClose();
+		} catch (error) {
+			console.error('Error saving task:', error);
+		} finally {
+			isLoading = false;
 		}
-
-		onClose();
 	}
 </script>
 
@@ -96,6 +106,7 @@
 					bind:value={title}
 					placeholder="Enter task description..."
 					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
+					disabled={isLoading}
 					required
 				/>
 			</div>
@@ -108,6 +119,7 @@
 					id="assignee"
 					bind:value={assignee}
 					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none"
+					disabled={isLoading}
 				>
 					<option value="">Unassigned</option>
 					{#each people as person}
@@ -123,6 +135,7 @@
 					type="date"
 					bind:value={dueDate}
 					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none"
+					disabled={isLoading}
 				/>
 			</div>
 
@@ -134,6 +147,7 @@
 					rows="3"
 					placeholder="Additional notes..."
 					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
+					disabled={isLoading}
 				></textarea>
 			</div>
 
@@ -141,16 +155,22 @@
 				<button
 					type="button"
 					onclick={onClose}
-					class="flex-1 rounded-lg bg-white px-4 py-2 text-black"
+					disabled={isLoading}
+					class="flex-1 rounded-lg bg-white px-4 py-2 text-black disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					Cancel
 				</button>
 				<button
 					type="submit"
-					disabled={!title.trim()}
-					class="flex-1 rounded-lg bg-borg-orange px-4 py-2 text-white hover:bg-borg-orange disabled:cursor-not-allowed disabled:opacity-60"
+					disabled={!title.trim() || isLoading}
+					class="flex-1 rounded-lg bg-borg-orange px-4 py-2 text-white hover:bg-borg-orange disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
 				>
-					{submitButtonText}
+					{#if isLoading}
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+						Saving...
+					{:else}
+						{submitButtonText}
+					{/if}
 				</button>
 			</div>
 		</form>

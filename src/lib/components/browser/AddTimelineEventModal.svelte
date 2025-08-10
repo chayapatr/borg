@@ -17,6 +17,7 @@
 
 	let timelineService = new TimelineService();
 	let selectedTemplateType = $state(editingEvent?.templateType || 'event');
+	let isLoading = $state(false);
 
 	// Initialize eventData with both top-level fields and eventData fields
 	let eventData = $state<Record<string, any>>(
@@ -35,15 +36,26 @@
 	// Get current template and its fields
 	const currentTemplate = $derived(timelineService.getTemplate(selectedTemplateType));
 
-	function handleSubmit(event: Event) {
+	async function handleSubmit(event: Event) {
 		event.preventDefault();
 
 		if (!eventData.title?.trim()) return;
 
-		if (editingEvent && onUpdate) {
-			onUpdate(editingEvent.id, selectedTemplateType, eventData);
-		} else {
-			onAdd(selectedTemplateType, eventData);
+		isLoading = true;
+
+		try {
+			if (editingEvent && onUpdate) {
+				const result = onUpdate(editingEvent.id, selectedTemplateType, eventData);
+				if (result instanceof Promise) await result;
+			} else {
+				const result = onAdd(selectedTemplateType, eventData);
+				if (result instanceof Promise) await result;
+			}
+			onClose();
+		} catch (error) {
+			console.error('Error saving timeline event:', error);
+		} finally {
+			isLoading = false;
 		}
 	}
 
@@ -76,10 +88,10 @@
 	onclick={handleBackdropClick}
 >
 	<div
-		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border border-zinc-300 bg-white shadow-xl"
+		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border border-black bg-borg-beige shadow-xl"
 	>
 		<!-- Header -->
-		<div class="border-b border-zinc-200 p-6">
+		<div class="border-b border-black p-6">
 			<h2 class="text-lg font-semibold text-zinc-900">
 				{editingEvent ? 'Edit Timeline Event' : 'Add Timeline Event'}
 			</h2>
@@ -95,11 +107,12 @@
 						{#each templates as template}
 							<button
 								type="button"
+								disabled={isLoading}
 								onclick={() => (selectedTemplateType = template.id)}
-								class="flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all {selectedTemplateType ===
+								class="flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 {selectedTemplateType ===
 								template.id
 									? 'border-blue-500 bg-blue-500/10 text-blue-600'
-									: 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:border-zinc-400 hover:bg-zinc-100'}"
+									: 'border-black bg-white text-zinc-700 hover:border-black hover:bg-borg-beige'}"
 							>
 								<div
 									class="h-3 w-3 flex-shrink-0 rounded-full"
@@ -127,27 +140,40 @@
 				<!-- Dynamic fields based on selected template -->
 				{#each currentTemplate.fields as field}
 					<div>
-						<FieldRenderer {field} bind:value={eventData[field.id]} readonly={false} mode="edit" />
+						<FieldRenderer
+							{field}
+							bind:value={eventData[field.id]}
+							readonly={isLoading}
+							mode="edit"
+						/>
 					</div>
 				{/each}
 			</form>
 		</div>
 
 		<!-- Footer -->
-		<div class="flex gap-3 border-t border-zinc-200 p-6">
+		<div class="flex gap-3 border-t border-black p-6">
 			<button
 				type="button"
 				onclick={onClose}
-				class="flex-1 rounded bg-zinc-200 px-4 py-2 text-zinc-700 transition-colors hover:bg-zinc-300"
+				disabled={isLoading}
+				class="flex-1 rounded bg-white px-4 py-2 text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				Cancel
 			</button>
 			<button
 				onclick={handleSubmit}
-				disabled={!eventData.title?.trim()}
-				class="flex-1 rounded bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+				disabled={!eventData.title?.trim() || isLoading}
+				class="flex flex-1 items-center justify-center gap-2 rounded bg-borg-violet px-4 py-2 text-white transition-colors hover:bg-borg-blue disabled:cursor-not-allowed disabled:opacity-50"
 			>
-				{editingEvent ? 'Update Event' : 'Add Event'}
+				{#if isLoading}
+					<div
+						class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+					></div>
+					Saving...
+				{:else}
+					{editingEvent ? 'Update Event' : 'Add Event'}
+				{/if}
 			</button>
 		</div>
 	</div>
