@@ -148,6 +148,7 @@
 								src={profileImageUrl}
 								alt="Profile"
 								class="h-full w-full object-cover"
+								referrerpolicy="no-referrer"
 								onerror={handleImageError}
 							/>
 						</div>

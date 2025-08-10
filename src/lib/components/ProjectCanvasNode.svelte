@@ -169,6 +169,7 @@
 								src={collaborator.photoUrl}
 								alt={collaborator.name || collaborator.email || 'User'}
 								class="h-full w-full object-cover"
+								referrerpolicy="no-referrer"
 							/>
 						{:else}
 							<div
@@ -205,11 +206,11 @@
 				<div class="text-xs text-zinc-600">
 					Task: {totalTaskCount} |
 					<span class="inline-flex items-center gap-1">
-						<span class="h-2 w-2 rounded-full border border-black bg-sky-500"></span>
+						<span class="h-2 w-2 rounded-full border border-black bg-purple-500"></span>
 						{projectStatusCounts.todo}
 					</span>
 					<span class="inline-flex items-center gap-1">
-						<span class="h-2 w-2 rounded-full border border-black bg-purple-500"></span>
+						<span class="h-2 w-2 rounded-full border border-black bg-sky-500"></span>
 						{projectStatusCounts.doing}
 					</span>
 					<span class="inline-flex items-center gap-1">

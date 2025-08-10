@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import { Trash2, Pencil } from '@lucide/svelte';
+	import { Trash2, Pencil, Bold } from '@lucide/svelte';
 
 	let { data, id } = $props<{ data: any; id: string }>();
 
@@ -14,6 +14,14 @@
 	$effect(() => {
 		width = nodeData.width || 128;
 		height = nodeData.height || 128;
+	});
+
+	// Get font weight with default (normal)
+	let fontWeight = $state(nodeData.fontWeight || 'normal');
+
+	// Update font weight when nodeData changes
+	$effect(() => {
+		fontWeight = nodeData.fontWeight || 'normal';
 	});
 
 	// Get text size with default (Small)
@@ -32,6 +40,9 @@
 				return 'text-sm';
 		}
 	});
+
+	// Get font weight class
+	let fontWeightClass = $derived(fontWeight === 'bold' ? 'font-semibold' : 'font-normal');
 
 	// Resize state
 	let isResizing = $state(false);
@@ -131,6 +142,33 @@
 		}
 	}
 
+	function toggleFontWeight(event: MouseEvent) {
+		event.stopPropagation();
+		
+		const newFontWeight = fontWeight === 'bold' ? 'normal' : 'bold';
+		fontWeight = newFontWeight;
+
+		// Update the data prop immediately
+		data.nodeData = {
+			...nodeData,
+			fontWeight: newFontWeight
+		};
+
+		// Dispatch update event to save the font weight
+		const updateEvent = new CustomEvent('nodeUpdate', {
+			detail: {
+				nodeId: id,
+				data: {
+					nodeData: {
+						...nodeData,
+						fontWeight: newFontWeight
+					}
+				}
+			}
+		});
+		document.dispatchEvent(updateEvent);
+	}
+
 	function startResize(event: MouseEvent) {
 		event.stopPropagation();
 		event.preventDefault();
@@ -205,13 +243,13 @@
 				oninput={handleNoteInput}
 				onblur={handleNoteBlur}
 				onkeydown={handleNoteKeydown}
-				class="h-full w-full resize-none border-none bg-transparent p-1 {textSizeClass} leading-relaxed break-words text-gray-800 outline-none placeholder:text-gray-500"
+				class="h-full w-full resize-none border-none bg-transparent p-1 {textSizeClass} {fontWeightClass} leading-relaxed break-words text-gray-800 outline-none placeholder:text-gray-500"
 				placeholder="Type your note..."
 				style="font-family: inherit;"
 			></textarea>
 		{:else}
 			<div
-				class="flex h-full w-full items-start overflow-hidden p-1 {textSizeClass} leading-relaxed text-balance break-words whitespace-pre-wrap text-gray-800"
+				class="flex h-full w-full items-start overflow-hidden p-1 {textSizeClass} {fontWeightClass} leading-relaxed text-balance break-words whitespace-pre-wrap text-gray-800"
 			>
 				{nodeData.content || 'Click to edit...'}
 			</div>
@@ -237,6 +275,13 @@
 		<div
 			class="absolute top-1 right-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
 		>
+			<button
+				onclick={toggleFontWeight}
+				aria-label="Toggle font weight"
+				class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-gray-800 {fontWeight === 'bold' ? 'bg-white/50 text-gray-800' : ''}"
+			>
+				<Bold class="h-3 w-3" />
+			</button>
 			<button
 				onclick={handleSettingsClick}
 				aria-label="Edit settings"

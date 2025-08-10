@@ -104,6 +104,18 @@
 			icon: template.icon
 		};
 	}
+
+	function getDaysLeft(dateString: string): number | null {
+		const now = new Date();
+		const target = new Date(dateString);
+		const diffMs = target.getTime() - now.getTime();
+
+		if (diffMs <= 0) {
+			return null; // Past event
+		}
+
+		return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+	}
 </script>
 
 <div class="flex flex-1 flex-col">
@@ -112,7 +124,7 @@
 		<div class="flex items-center justify-between">
 			<div>
 				<h2 class="text-2xl font-semibold text-zinc-100">Timeline</h2>
-				<p class="text-zinc-400 mt-1">Track conferences and important dates</p>
+				<p class="border-zinc-600 mt-1">Track conferences and important dates</p>
 			</div>
 			<button
 				onclick={() => (showAddModal = true)}
@@ -132,7 +144,7 @@
 					<Calendar class="h-8 w-8" />
 					<h2 class="rounded-md text-3xl font-semibold">Timeline</h2>
 				</div>
-				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
+				<!-- <p class="border-zinc-600 mt-1">Manage your research projects</p> -->
 			</div>
 			<button
 				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-blue px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
@@ -164,6 +176,7 @@
 			<div class="space-y-4">
 				{#each events as event}
 					{@const template = getTemplateInfo(event.templateType)}
+					{@const daysLeft = getDaysLeft(event.date)}
 					<div
 						class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-4 transition-colors hover:bg-zinc-50"
 						role="button"
@@ -179,7 +192,7 @@
 						<div class="flex items-start justify-between">
 							<div class="flex flex-1 items-start gap-3">
 								<div
-									class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg"
+									class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg"
 									style="background-color: {template.color}20; border: 1px solid {template.color}40;"
 								>
 									<svg
@@ -203,11 +216,13 @@
 								<div class="flex-1">
 									<div class="mb-1 flex items-center gap-2">
 										<h3 class="font-medium text-black">{event.title}</h3>
-										<span class="rounded-full bg-zinc-800 px-2 py-1 text-xs text-zinc-300">
+										<span
+											class="rounded-full bg-borg-beige px-2 py-[0.15rem] text-[11px] text-zinc-600"
+										>
 											{template.name}
 										</span>
 									</div>
-									<div class="mb-2 flex items-center gap-4 text-sm text-zinc-400">
+									<div class="mb-2 flex items-center gap-4 text-sm text-zinc-600">
 										<span class="flex items-center gap-1">
 											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path
@@ -219,14 +234,18 @@
 											</svg>
 											{formatDate(event.date)}
 										</span>
-										{#if isUpcoming(event.date)}
-											<span class="text-xs text-borg-green">Upcoming</span>
+										{#if daysLeft !== null}
+											<span class="font-mono text-sm font-bold text-borg-blue">
+												{daysLeft} day{daysLeft !== 1 ? 's' : ''} left
+											</span>
 										{:else}
 											<span class="text-xs text-zinc-500">Past</span>
 										{/if}
 									</div>
 									{#if event.eventData.description}
-										<p class="line-clamp-2 text-sm text-zinc-400">{event.eventData.description}</p>
+										<p class="line-clamp-2 border-zinc-600 text-sm">
+											{event.eventData.description}
+										</p>
 									{/if}
 								</div>
 							</div>

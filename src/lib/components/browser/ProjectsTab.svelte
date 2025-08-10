@@ -209,11 +209,11 @@
 									{@const counts = projectCounts[project.slug] || { todo: 0, doing: 0, done: 0 }}
 									Task: {taskCount} |
 									<span class="inline-flex items-center gap-1">
-										<span class="h-2 w-2 rounded-full border border-black bg-sky-500"></span>
+										<span class="h-2 w-2 rounded-full border border-black bg-purple-500"></span>
 										{counts.todo}
 									</span>
 									<span class="inline-flex items-center gap-1">
-										<span class="h-2 w-2 rounded-full border border-black bg-purple-500"></span>
+										<span class="h-2 w-2 rounded-full border border-black bg-sky-500"></span>
 										{counts.doing}
 									</span>
 									<span class="inline-flex items-center gap-1">
