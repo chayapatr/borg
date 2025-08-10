@@ -268,8 +268,8 @@
 				// Find the dragged node in workingNodes and save just that one
 				const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
 				if (draggedNode) {
-					// Save only the dragged node - this will give it a unique updatedAt timestamp
-					await nodesService.saveBatch([draggedNode], canvasEdges);
+					// Save only the dragged node without edges - this will give it a unique updatedAt timestamp
+					await nodesService.saveBatch([draggedNode], []);
 					console.log('🔴 Save completed for:', draggedNodeId);
 				}
 			}
