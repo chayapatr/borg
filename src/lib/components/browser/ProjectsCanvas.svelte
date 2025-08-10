@@ -45,6 +45,7 @@
 	// Current working nodes (mutable for SvelteFlow)
 	let workingNodes = $state<Node[]>([]);
 	let lastProjectsLength = 0;
+	let skipNextUpdate = $state(false);
 
 	// Edit panel state
 	let showEditPanel = $state(false);
@@ -56,13 +57,19 @@
 	let showStickerPanel = $state(false);
 
 	function updateWorkingNodes() {
+		console.log('🔄 updateWorkingNodes called');
+		console.log('🔄 mounted:', mounted, 'projects.length:', projects.length);
+		console.log('🔄 Current workingNodes order:', workingNodes.map(n => n.id));
+		
 		if (!mounted) {
 			workingNodes = canvasNodes.slice();
+			console.log('🔄 Not mounted, using canvasNodes');
 			return;
 		}
 
 		if (!projects.length) {
 			workingNodes = canvasNodes.slice();
+			console.log('🔄 No projects, using canvasNodes');
 			return;
 		}
 
@@ -85,17 +92,40 @@
 			draggable: true
 		}));
 
-		// Filter out any project nodes from canvas nodes to avoid duplicates
+		// Get non-project canvas nodes (these maintain their own ordering)
 		const nonProjectCanvasNodes = canvasNodes.filter((node) => !node.id.startsWith('project-'));
 
-		// Merge existing working node positions with fresh project data
+		// Preserve existing order of workingNodes when updating
 		const existingWorkingNodes = new Map(workingNodes.map((n) => [n.id, n]));
-		const updatedProjectNodes = projectNodes.map((pNode) => {
-			const existingNode = existingWorkingNodes.get(pNode.id);
-			return existingNode ? { ...pNode, position: existingNode.position } : pNode;
-		});
+		const existingProjectNodeOrder = workingNodes.filter((node) => node.id.startsWith('project-'));
+		
+		// Update existing project nodes with fresh data while preserving order
+		const orderedUpdatedProjectNodes: Node[] = [];
+		const processedIds = new Set<string>();
 
-		workingNodes = [...updatedProjectNodes, ...nonProjectCanvasNodes];
+		// First, add existing project nodes in their current order (if they still exist in projects)
+		for (const existingNode of existingProjectNodeOrder) {
+			const matchingProjectNode = projectNodes.find((pNode) => pNode.id === existingNode.id);
+			if (matchingProjectNode) {
+				// Update with fresh data but keep position from existing
+				orderedUpdatedProjectNodes.push({
+					...matchingProjectNode,
+					position: existingNode.position
+				});
+				processedIds.add(existingNode.id);
+			}
+		}
+
+		// Then, add any new project nodes that weren't in the existing order
+		for (const pNode of projectNodes) {
+			if (!processedIds.has(pNode.id)) {
+				orderedUpdatedProjectNodes.push(pNode);
+			}
+		}
+
+		workingNodes = [...orderedUpdatedProjectNodes, ...nonProjectCanvasNodes];
+		
+		console.log('🔄 Final workingNodes order:', workingNodes.map(n => n.id));
 	}
 
 	function getProjectNodePosition(projectId: string, defaultIndex: number) {
@@ -141,7 +171,12 @@
 			if (nodesService.subscribeToNodes && nodesService.subscribeToEdges) {
 				nodesService.subscribeToNodes((nodes) => {
 					canvasNodes = nodes;
-					updateWorkingNodes();
+					if (skipNextUpdate) {
+						console.log('🚫 Skipping updateWorkingNodes due to skipNextUpdate flag');
+						skipNextUpdate = false;
+					} else {
+						updateWorkingNodes();
+					}
 				});
 
 				nodesService.subscribeToEdges((edges) => {
@@ -198,29 +233,39 @@
 		});
 	}
 
+
 	function handleNodeDragStart(event: any) {
-		console.log('ProjectsCanvas: Node drag started, bringing to front...', event);
+		console.log('🟡 ProjectsCanvas: Node drag started', event);
 		if (event && event.node) {
 			const draggedNodeId = event.node.id;
-			// Remove the dragged node from its current position
+			console.log('🟡 Dragged node ID:', draggedNodeId);
+			
+			// Simple approach: just reorder in workingNodes like Canvas.svelte does
 			const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
 			const otherNodes = workingNodes.filter(node => node.id !== draggedNodeId);
 			
 			if (draggedNode) {
+				console.log('🟡 Moving node to front in workingNodes');
 				// Move dragged node to the end of the array (renders on top)
 				workingNodes = [...otherNodes, draggedNode];
 			}
 		}
 	}
 
-	async function handleNodeDragStop() {
+	async function handleNodeDragStop(event: any) {
+		console.log('🔴 ProjectsCanvas: Node drag stopped', event);
 		if (!mounted) return;
 
 		try {
-			// Save all current node positions to canvas
+			console.log('🔴 Saving workingNodes:', workingNodes.length);
+			// Set flag to skip the next updateWorkingNodes call from subscription
+			skipNextUpdate = true;
+			// Save all current node positions to canvas - this matches Canvas.svelte behavior
 			await nodesService.saveBatch(workingNodes, canvasEdges);
+			console.log('🔴 Save completed successfully');
 		} catch (error) {
-			console.error('Failed to save node positions:', error);
+			console.error('🔴 Failed to save node positions:', error);
+			skipNextUpdate = false; // Reset flag on error
 		}
 	}
 
