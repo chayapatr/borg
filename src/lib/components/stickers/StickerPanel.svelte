@@ -16,7 +16,7 @@
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 
-	// Load categories when panel opens
+	// Load categories when panel opens (with aggressive caching)
 	$effect(() => {
 		if (isOpen && categories.length === 0) {
 			(async () => {
@@ -24,6 +24,8 @@
 					console.log('🎨 Loading sticker categories...');
 					loading = true;
 					error = null;
+					
+					// The service now has multi-layer caching, so this should be very fast on subsequent calls
 					categories = await stickerService.getCategories();
 					console.log('🎨 Loaded categories:', categories.length);
 
