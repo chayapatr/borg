@@ -244,11 +244,12 @@
 		if (!mounted) return;
 
 		try {
-			if (event?.targetNode && !event.targetNode.id.startsWith('project-')) {
+			if (event?.targetNode) {
 				const draggedNodeId = event.targetNode.id;
 				const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
 				
 				if (draggedNode) {
+					console.log('ProjectsCanvas: Saving position for node:', draggedNodeId, draggedNode.position);
 					// Save only the dragged node - Firebase will set updatedAt for ordering
 					await nodesService.saveBatch([draggedNode], []);
 				}

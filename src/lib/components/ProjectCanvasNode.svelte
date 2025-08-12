@@ -22,26 +22,40 @@
 	// Collaborator data
 	let collaboratorsData = $state<Person[]>([]);
 
-	// Listen for global task updates
-	$effect(() => {
-		const handleTasksUpdated = () => {
-			refreshTrigger += 1;
-		};
+	// Debounced refresh to prevent excessive requests
+	let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+	
+	// Removed global task update listener - Firebase subscriptions handle updates automatically
+	// Project counts will update when Firebase data changes via the Canvas subscriptions
 
-		document.addEventListener('tasksUpdated', handleTasksUpdated);
-		return () => {
-			document.removeEventListener('tasksUpdated', handleTasksUpdated);
-		};
-	});
-
-	// Load project counts (matching project card logic)
+	// Load project counts with caching (only once initially, then on explicit refresh)
 	$effect(() => {
 		refreshTrigger; // Include in dependencies
+		
+		const projectSlug = nodeData.projectSlug;
+		if (!projectSlug) return;
 
+		// Cache key for this project
+		const cacheKey = `project-counts-${projectSlug}`;
+		const cacheTimeout = 30000; // 30 seconds cache
+		
+		// Check cache first
+		const cached = sessionStorage.getItem(cacheKey);
+		if (cached) {
+			try {
+				const { data: cachedData, timestamp } = JSON.parse(cached);
+				if (Date.now() - timestamp < cacheTimeout) {
+					projectStatusCounts = cachedData.statusCounts;
+					totalTaskCount = cachedData.totalTaskCount;
+					return; // Use cached data
+				}
+			} catch (e) {
+				// Invalid cache, proceed to fetch
+			}
+		}
+
+		// Fetch fresh data only if cache is expired or missing
 		(async () => {
-			const projectSlug = nodeData.projectSlug;
-			if (!projectSlug) return;
-
 			try {
 				// Get node status counts (todo/doing/done) - same as project cards
 				const statusCounts = await projectsService.getProjectStatusCounts(projectSlug);
@@ -50,6 +64,12 @@
 				// Get task counts - same as project cards
 				const taskCounts = await taskService.getTaskCounts(projectSlug);
 				totalTaskCount = taskCounts.total;
+				
+				// Cache the results
+				sessionStorage.setItem(cacheKey, JSON.stringify({
+					data: { statusCounts, totalTaskCount: taskCounts.total },
+					timestamp: Date.now()
+				}));
 			} catch (error) {
 				console.error('Failed to load project counts:', error);
 				projectStatusCounts = { todo: 0, doing: 0, done: 0 };
@@ -58,7 +78,7 @@
 		})();
 	});
 
-	// Fetch collaborator data when collaborators change
+	// Fetch collaborator data when collaborators change (with caching)
 	$effect(() => {
 		const collaboratorIds = nodeData.collaborators;
 		const projectSlug = nodeData.projectSlug;
@@ -71,27 +91,63 @@
 		(async () => {
 			try {
 				const fetchedCollaborators: Person[] = [];
+				const cacheTimeout = 300000; // 5 minutes cache for people data
 
 				for (const collaboratorId of collaboratorIds) {
 					if (typeof collaboratorId === 'string') {
-						// Try to get person by ID, first from project scope then global
-						let person = await peopleService.getPerson(collaboratorId, projectSlug);
+						// Check cache first
+						const cacheKey = `person-${collaboratorId}-${projectSlug || 'global'}`;
+						const cached = sessionStorage.getItem(cacheKey);
+						
+						let person: Person | null = null;
+						
+						if (cached) {
+							try {
+								const { data: cachedPerson, timestamp } = JSON.parse(cached);
+								if (Date.now() - timestamp < cacheTimeout) {
+									person = cachedPerson;
+								}
+							} catch (e) {
+								// Invalid cache, proceed to fetch
+							}
+						}
+						
+						// Fetch if not in cache
 						if (!person) {
-							person = await peopleService.getPerson(collaboratorId);
+							// Try to get person by ID, first from project scope then global
+							person = await peopleService.getPerson(collaboratorId, projectSlug);
+							if (!person) {
+								person = await peopleService.getPerson(collaboratorId);
+							}
+							
+							// Cache the result
+							if (person) {
+								sessionStorage.setItem(cacheKey, JSON.stringify({
+									data: person,
+									timestamp: Date.now()
+								}));
+							}
 						}
 
 						if (person) {
 							fetchedCollaborators.push(person);
 						} else {
 							// Fallback: create a placeholder person with the ID as name
-							fetchedCollaborators.push({
+							const placeholder = {
 								id: collaboratorId,
 								name: collaboratorId,
 								email: undefined,
 								photoUrl: undefined,
 								createdAt: new Date().toISOString(),
 								updatedAt: new Date().toISOString()
-							});
+							};
+							fetchedCollaborators.push(placeholder);
+							
+							// Cache the placeholder too to avoid repeated failures
+							sessionStorage.setItem(cacheKey, JSON.stringify({
+								data: placeholder,
+								timestamp: Date.now()
+							}));
 						}
 					}
 				}

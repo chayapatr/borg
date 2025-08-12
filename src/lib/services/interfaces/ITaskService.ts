@@ -16,6 +16,7 @@ export interface ITaskService {
 	getOverdueTasks(projectSlug?: string): Promise<TaskWithContext[]> | TaskWithContext[];
 	updateOverdueStatus(): Promise<void> | void;
 	refreshNodeTitles?(): Promise<void> | void;
+	refreshNodeTitlesForNode?(nodeId: string, projectId: string, nodeTitle?: string, nodeType?: string): Promise<void> | void;
 
 	// Real-time subscriptions (Firebase only)
 	subscribeToNodeTasks?(nodeId: string, callback: (tasks: Task[]) => void, projectSlug?: string): () => void;

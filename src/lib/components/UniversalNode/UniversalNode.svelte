@@ -48,19 +48,8 @@
 	// Reactive flag to trigger task refresh
 	let refreshTrigger = $state(0);
 
-	// Listen for global task updates
-	$effect(() => {
-		const handleTasksUpdated = () => {
-			console.log('UniversalNode: Received tasksUpdated event for node:', id);
-			refreshTrigger += 1;
-		};
-
-		document.addEventListener('tasksUpdated', handleTasksUpdated);
-
-		return () => {
-			document.removeEventListener('tasksUpdated', handleTasksUpdated);
-		};
-	});
+	// Removed global task update listener - Firebase subscriptions handle updates automatically
+	// Task counts will update when Firebase data changes via the Canvas subscriptions
 
 	// Load tasks when component mounts or data changes
 	$effect(() => {

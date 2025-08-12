@@ -96,16 +96,49 @@
 		return screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
 	}
 
-	// Auto-save positions when nodes change (e.g., after dragging)
+	// Auto-save positions when nodes change (e.g., after dragging) 
+	// but SKIP if nodes were just added/removed (handled by Firestore subscriptions)
 	$effect(() => {
-		if (nodesService) {
+		if (nodesService && nodes.length > 0 && previousNodes.length > 0) {
+			// Only trigger auto-save if this is likely a position/content change, not add/remove
+			const nodeCountChanged = nodes.length !== previousNodes.length;
+			if (nodeCountChanged) {
+				// Node was added/removed - don't auto-save as Firestore already has the data
+				// Just update our tracking arrays
+				previousNodes = [...nodes];
+				previousEdges = [...edges];
+				return;
+			}
+			
+			// Check if this is a position change (from dragging) - save immediately
+			let hasPositionChanges = false;
+			if (previousNodes.length === nodes.length) {
+				for (let i = 0; i < nodes.length; i++) {
+					const current = nodes[i];
+					const previous = previousNodes.find(p => p.id === current.id);
+					if (previous && (
+						current.position.x !== previous.position.x || 
+						current.position.y !== previous.position.y
+					)) {
+						hasPositionChanges = true;
+						break;
+					}
+				}
+			}
+			
 			clearTimeout(saveTimeout);
+			
+			// Use shorter timeout for position changes to prevent Firebase conflicts
+			const timeout = hasPositionChanges ? 100 : 500;
+			
 			saveTimeout = setTimeout(async () => {
 				// Skip auto-save if we just did an explicit save
 				if (skipNextAutoSave) {
 					skipNextAutoSave = false;
 					return;
 				}
+				
+				console.log(`Canvas: Auto-saving (hasPositionChanges: ${hasPositionChanges}, timeout: ${timeout}ms)`);
 				
 				// Use optimized batch save if available, otherwise fall back to regular batch save
 				if (
@@ -128,11 +161,11 @@
 				previousNodes = [...nodes];
 				previousEdges = [...edges];
 
-				// Update project node count if we have a project
+				// Update project node count if we have a project (debounced)
 				if (projectSlug && projectsService) {
 					await projectsService.updateNodeCount(projectSlug, nodes.length);
 				}
-			}, 500);
+			}, timeout);
 		}
 	});
 
@@ -570,9 +603,14 @@
 	// Handle node drag stop to save position immediately
 	function handleNodeDragStop(event: any) {
 		console.log('Node drag stopped, saving positions...', event);
+		console.log('Event details:', {
+			node: event?.node,
+			targetNode: event?.targetNode,
+			eventType: typeof event
+		});
 		console.log(
 			'Current nodes state:',
-			nodes.map((n) => ({ id: n.id, position: n.position }))
+			nodes.map((n) => ({ id: n.id, position: n.position, templateType: n.data?.templateType }))
 		);
 
 		if (nodesService) {
@@ -632,32 +670,11 @@
 		// The batch save above handles all position updates atomically
 	}
 
-	// Function to refresh task sidebar data and node display
+	// Function to refresh task sidebar data only (no global event spam)
 	async function handleTasksUpdated() {
-		console.log('Canvas: handleTasksUpdated called');
+		console.log('Canvas: handleTasksUpdated called - refreshing sidebar only');
 
-		// Dispatch global event to force all UniversalNode components to refresh
-		const refreshEvent = new CustomEvent('tasksUpdated', {
-			detail: { timestamp: Date.now() }
-		});
-		document.dispatchEvent(refreshEvent);
-		console.log('Canvas: tasksUpdated event dispatched');
-
-		// Always refresh node display to update task counts
-		if (nodesService.loadFromStorage) {
-			nodesService.loadFromStorage();
-		} else {
-			// For Firebase services, reload nodes to get updated data
-			try {
-				const nodeResults = nodesService.getNodes();
-				const loadedNodes = nodeResults instanceof Promise ? await nodeResults : nodeResults;
-				nodes = loadedNodes;
-			} catch (error) {
-				console.error('Failed to reload nodes:', error);
-			}
-		}
-
-		// If sidebar is open, refresh its tasks too
+		// Only refresh the sidebar if it's open - no global event spam
 		if (showNodeTaskSidebar && taskSidebarNodeId && taskService) {
 			console.log('Canvas: Refreshing sidebar tasks for node:', taskSidebarNodeId);
 			const tasksResult = taskService.getNodeTasks(taskSidebarNodeId, projectSlug);
@@ -665,6 +682,12 @@
 			console.log('Canvas: Updated sidebar tasks:', updatedTasks.length);
 			taskSidebarTasks = [...updatedTasks];
 		}
+
+		// For localStorage services only - refresh storage data  
+		if (nodesService.loadFromStorage) {
+			nodesService.loadFromStorage();
+		}
+		// Firebase services handle updates via subscriptions automatically
 	}
 
 	// Handle task modal completion

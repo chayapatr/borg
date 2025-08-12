@@ -310,11 +310,30 @@ export class FirebaseTaskService implements ITaskService {
 		return snapshot.docs.map(doc => this.toTaskWithContext(doc.data() as StoredTask));
 	}
 
+	// Cache for task counts to avoid repeated expensive queries
+	private taskCountsCache = new Map<string, { counts: TaskCounts, timestamp: number }>();
+	private readonly TASK_CACHE_DURATION = 30000; // 30 seconds
+
 	async getTaskCounts(projectSlug?: string): Promise<TaskCounts> {
+		const cacheKey = projectSlug || 'global';
+		
+		// Check cache first
+		const cached = this.taskCountsCache.get(cacheKey);
+		if (cached && (Date.now() - cached.timestamp) < this.TASK_CACHE_DURATION) {
+			console.log(`FirebaseTaskService: Using cached task counts for ${cacheKey}`);
+			return cached.counts;
+		}
+
 		const tasks = projectSlug ? await this.getProjectTasks(projectSlug) : await this.getAllTasks();
-		return {
+		const counts = {
 			total: tasks.length
 		};
+		
+		// Cache the result
+		this.taskCountsCache.set(cacheKey, { counts, timestamp: Date.now() });
+		console.log(`FirebaseTaskService: Cached task counts for ${cacheKey}:`, counts);
+		
+		return counts;
 	}
 
 	async getOverdueTasks(projectSlug?: string): Promise<TaskWithContext[]> {
@@ -520,6 +539,76 @@ export class FirebaseTaskService implements ITaskService {
 			console.log('FirebaseTaskService.refreshNodeTitles: Updated and saved tasks');
 		} else {
 			console.log('FirebaseTaskService.refreshNodeTitles: No changes needed');
+		}
+	}
+
+	// Optimized method to refresh task titles for a specific node only
+	async refreshNodeTitlesForNode(nodeId: string, projectId: string, nodeTitle?: string, nodeType?: string): Promise<void> {
+		console.log(`FirebaseTaskService.refreshNodeTitlesForNode: Starting refresh for node ${nodeId}...`);
+		
+		// Get tasks only for this specific node
+		const tasksQuery = query(
+			collection(db, 'tasks'),
+			where('nodeId', '==', nodeId),
+			where('projectId', '==', projectId)
+		);
+		const tasksSnapshot = await getDocs(tasksQuery);
+		
+		if (tasksSnapshot.empty) {
+			console.log(`FirebaseTaskService.refreshNodeTitlesForNode: No tasks found for node ${nodeId}`);
+			return;
+		}
+		
+		// If nodeTitle and nodeType are provided (from the update), use them
+		// Otherwise fetch the node data
+		let newNodeTitle = nodeTitle;
+		let newNodeType = nodeType;
+		
+		if (!newNodeTitle || !newNodeType) {
+			const nodeDocRef = doc(db, 'projects', projectId, 'nodes', nodeId);
+			const nodeSnapshot = await getDoc(nodeDocRef);
+			
+			if (nodeSnapshot.exists()) {
+				const nodeData = nodeSnapshot.data();
+				newNodeTitle = this.extractNodeTitle(nodeData?.nodeData, nodeData?.templateType);
+				newNodeType = nodeData?.templateType || 'unknown';
+			} else {
+				console.warn(`FirebaseTaskService.refreshNodeTitlesForNode: Node ${nodeId} not found`);
+				return;
+			}
+		}
+		
+		const batch = writeBatch(db);
+		let batchCount = 0;
+		let hasChanges = false;
+		
+		for (const taskDoc of tasksSnapshot.docs) {
+			const task = taskDoc.data() as StoredTask;
+			
+			if (task.nodeTitle !== newNodeTitle || task.nodeType !== newNodeType) {
+				console.log(`FirebaseTaskService.refreshNodeTitlesForNode: Updating task ${task.id}:`, {
+					oldTitle: task.nodeTitle,
+					newTitle: newNodeTitle,
+					oldType: task.nodeType,
+					newType: newNodeType
+				});
+				
+				batch.update(taskDoc.ref, {
+					nodeTitle: newNodeTitle,
+					nodeType: newNodeType,
+					updatedAt: new Date().toISOString()
+				});
+				
+				batchCount++;
+				hasChanges = true;
+			}
+		}
+		
+		if (hasChanges && batchCount > 0) {
+			await batch.commit();
+			console.log(`FirebaseTaskService.refreshNodeTitlesForNode: Updated ${batchCount} tasks for node ${nodeId}`);
+		} else {
+			console.log(`FirebaseTaskService.refreshNodeTitlesForNode: No changes needed for node ${nodeId}`);
 		}
 	}
 

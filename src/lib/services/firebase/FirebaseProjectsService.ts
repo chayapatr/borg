@@ -108,35 +108,61 @@ export class FirebaseProjectsService implements IProjectsService {
 		await this.updateProject(slug, { nodeCount: count });
 	}
 
-	invalidateStatusCache(): void {
-		// Firebase doesn't need cache invalidation since it's real-time
+	invalidateStatusCache(slug: string): void {
+		this.statusCountsCache.delete(slug);
+		console.log(`FirebaseProjectsService: Invalidated status cache for ${slug}`);
 	}
 
 	invalidateAllStatusCaches(): void {
-		// Firebase doesn't need cache invalidation since it's real-time
+		this.statusCountsCache.clear();
+		console.log('FirebaseProjectsService: Cleared all status caches');
 	}
 
 	async getGlobalStatusCounts(): Promise<{ todo: number; doing: number; done: number }> {
 		const projects = await this.getAllProjects();
 		const counts = { todo: 0, doing: 0, done: 0 };
 		
-		for (const project of projects) {
-			const projectCounts = await this.getProjectStatusCounts(project.slug);
+		// Process projects in parallel to avoid blocking
+		const projectCountPromises = projects.map(project => this.getProjectStatusCounts(project.slug));
+		const allProjectCounts = await Promise.all(projectCountPromises);
+		
+		allProjectCounts.forEach(projectCounts => {
 			counts.todo += projectCounts.todo;
 			counts.doing += projectCounts.doing;
 			counts.done += projectCounts.done;
-		}
+		});
 		
 		return counts;
 	}
 
+	// Cache for status counts to avoid repeated expensive queries
+	private statusCountsCache = new Map<string, { counts: { todo: number; doing: number; done: number }, timestamp: number }>();
+	private projectIdCache = new Map<string, { id: string, timestamp: number }>();
+	private readonly CACHE_DURATION = 30000; // 30 seconds
+
 	async getProjectStatusCounts(slug: string): Promise<{ todo: number; doing: number; done: number }> {
 		try {
-			const project = await this.getProject(slug);
-			if (!project) return { todo: 0, doing: 0, done: 0 };
+			// Check cache first
+			const cached = this.statusCountsCache.get(slug);
+			if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+				console.log(`FirebaseProjectsService: Using cached status counts for ${slug}`);
+				return cached.counts;
+			}
+
+			// Get project ID (with caching to avoid repeated lookups)
+			let projectId: string;
+			const cachedId = this.projectIdCache.get(slug);
+			if (cachedId && (Date.now() - cachedId.timestamp) < this.CACHE_DURATION) {
+				projectId = cachedId.id;
+			} else {
+				const project = await this.getProject(slug);
+				if (!project) return { todo: 0, doing: 0, done: 0 };
+				projectId = project.id;
+				this.projectIdCache.set(slug, { id: projectId, timestamp: Date.now() });
+			}
 
 			// Query nodes with status denormalized field
-			const nodesQuery = query(collection(db, 'projects', project.id, 'nodes'));
+			const nodesQuery = query(collection(db, 'projects', projectId, 'nodes'));
 			const snapshot = await getDocs(nodesQuery);
 			
 			const counts = { todo: 0, doing: 0, done: 0 };
@@ -151,6 +177,10 @@ export class FirebaseProjectsService implements IProjectsService {
 					counts.done++;
 				}
 			});
+			
+			// Cache the result
+			this.statusCountsCache.set(slug, { counts, timestamp: Date.now() });
+			console.log(`FirebaseProjectsService: Cached status counts for ${slug}:`, counts);
 			
 			return counts;
 		} catch (error) {
