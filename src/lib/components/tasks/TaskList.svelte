@@ -117,10 +117,6 @@
 				<div class="flex items-start justify-between gap-2">
 					<p class="text-sm text-black {isResolved ? 'line-through' : ''}">
 						{task.title}
-						<span class="text-xs whitespace-nowrap text-zinc-600">
-							[{person?.name ||
-								(task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}]
-						</span>
 					</p>
 					<div class="flex items-center gap-1">
 						<div
@@ -160,7 +156,7 @@
 
 				{#if task.notes}
 					<div class="mt-1 flex items-start gap-1 text-xs text-zinc-500">
-						<StickyNote class="mt-0.5 h-3 w-3 flex-shrink-0" />
+						<!-- <StickyNote class="mt-0.5 h-3 w-3 flex-shrink-0" /> -->
 						<span class="break-words">{task.notes}</span>
 					</div>
 				{/if}
@@ -171,6 +167,13 @@
 						<span>Resolved</span>
 					</div>
 				{/if}
+
+				<div class="mt-2 mb-1 flex items-center gap-2 text-xs whitespace-nowrap text-black">
+					{#if person?.name}
+						<img src={person.photoUrl} alt="" class="h-4 w-4 rounded-full" />
+					{/if}
+					{person?.name || (task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}
+				</div>
 			</div>
 		</div>
 	{/each}

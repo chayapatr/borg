@@ -81,24 +81,28 @@
 								</span>
 							</div>
 
-							<div class="space-y-2">
+							<div class="space-y-4">
 								{#each nodeTasks as task}
 									{@const person = allPeople.find((p) => p.id === task.assignee)}
-									<div class="rounded border border-black bg-white p-3">
-										<p class="mb-1 text-sm text-black">
+									<div class=" rounded border border-black bg-white p-3">
+										<p class="text-sm font-medium text-black">
 											{task.title}
 										</p>
-										<p class="text-xs text-zinc-500">
+										<div class="mt-2 flex items-center gap-2 text-xs text-zinc-700">
+											<!-- {JSON.stringify(person)} -->
+											{#if person?.name}
+												<img src={person.photoUrl} alt="" class="h-4 w-4 rounded-full" />
+											{/if}
 											{person?.name ||
 												(task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}
-										</p>
+										</div>
 										{#if task.dueDate}
-											<p class="text-xs text-zinc-500">
+											<p class="mt-2 text-xs text-zinc-500">
 												Due: {new Date(task.dueDate).toLocaleDateString()}
 											</p>
 										{/if}
 										{#if task.notes}
-											<p class="mt-1 text-xs text-zinc-500">{task.notes}</p>
+											<p class="mt-2 text-xs text-zinc-500">{task.notes}</p>
 										{/if}
 									</div>
 								{/each}
