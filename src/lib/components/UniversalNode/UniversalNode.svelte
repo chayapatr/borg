@@ -241,7 +241,7 @@
 					: 'white'};"
 		>
 			<!-- Non-Project Node Header (inside the node box) -->
-			{#if template.id !== 'note' && template.id !== 'project'}
+			{#if template.id !== 'note' && template.id !== 'project' && template.id !== 'blank'}
 				<NodeHeader
 					{template}
 					templateType={data.templateType}
