@@ -18,7 +18,6 @@
 	// Get note size setting with default (current = Small)
 	let size = $derived(nodeData.size || 'Small');
 
-
 	// Node size classes for post-it notes
 	let nodeSizeClass = $derived.by(() => {
 		if (template.id !== 'note') return '';
@@ -36,7 +35,6 @@
 
 	// Task-related state
 	const taskService: ITaskService = ServiceFactory.createTaskService();
-
 
 	// Title inline editing state
 	let isEditingTitle = $state(false);
@@ -75,14 +73,25 @@
 		const currentProjectSlug = projectSlug || '';
 
 		// Only setup subscription if node ID or project actually changed
-		if (isSubscriptionSetup && subscribedNodeId === currentNodeId && subscribedProjectSlug === currentProjectSlug) {
-			console.log(`UniversalNode: Subscription already exists for node ${currentNodeId}, skipping setup`);
+		if (
+			isSubscriptionSetup &&
+			subscribedNodeId === currentNodeId &&
+			subscribedProjectSlug === currentProjectSlug
+		) {
+			console.log(
+				`UniversalNode: Subscription already exists for node ${currentNodeId}, skipping setup`
+			);
 			return; // Already subscribed to this exact node/project combination
 		}
 
 		// Cleanup existing subscription if parameters changed
-		if (currentSubscription && (subscribedNodeId !== currentNodeId || subscribedProjectSlug !== currentProjectSlug)) {
-			console.log(`UniversalNode: Cleaning up subscription for node ${subscribedNodeId} (switching to ${currentNodeId})`);
+		if (
+			currentSubscription &&
+			(subscribedNodeId !== currentNodeId || subscribedProjectSlug !== currentProjectSlug)
+		) {
+			console.log(
+				`UniversalNode: Cleaning up subscription for node ${subscribedNodeId} (switching to ${currentNodeId})`
+			);
 			currentSubscription();
 			currentSubscription = null;
 			isSubscriptionSetup = false;
@@ -90,12 +99,16 @@
 
 		// Use subscription if available, otherwise fallback to one-time fetch
 		if ((taskService as any).subscribeToNodeTasks) {
-			console.log(`UniversalNode: Setting up real-time task subscription for node ${currentNodeId}`);
-			
+			console.log(
+				`UniversalNode: Setting up real-time task subscription for node ${currentNodeId}`
+			);
+
 			const unsubscribe = (taskService as any).subscribeToNodeTasks(
 				currentNodeId,
 				(updatedTasks: Task[]) => {
-					console.log(`UniversalNode: Node ${currentNodeId} received ${updatedTasks.length} tasks via subscription`);
+					console.log(
+						`UniversalNode: Node ${currentNodeId} received ${updatedTasks.length} tasks via subscription`
+					);
 					tasks = updatedTasks;
 				},
 				projectSlug
@@ -127,7 +140,9 @@
 				const nodeTasks =
 					nodeTasksResult instanceof Promise ? await nodeTasksResult : nodeTasksResult;
 
-				console.log(`UniversalNode: Node ${currentNodeId} loaded ${nodeTasks.length} tasks (one-time fetch)`);
+				console.log(
+					`UniversalNode: Node ${currentNodeId} loaded ${nodeTasks.length} tasks (one-time fetch)`
+				);
 				tasks = nodeTasks;
 			})();
 		}
@@ -142,8 +157,6 @@
 		return '#3f3f46'; // zinc-700 - default
 	});
 
-
-
 	function handleNodeClick() {
 		// Dispatch the edit event
 		const event = new CustomEvent('nodeEdit', {
@@ -155,8 +168,6 @@
 		});
 		document.dispatchEvent(event);
 	}
-
-
 
 	function handleTitleSave(title: string) {
 		// Update the data prop immediately to reflect changes
@@ -197,7 +208,6 @@
 		});
 		document.dispatchEvent(customEvent);
 	}
-
 </script>
 
 {#if template.id === 'note'}
@@ -210,21 +220,17 @@
 	<div>
 		<!-- Project Node Header (outside the main node box) -->
 		{#if template.id === 'project'}
-			<NodeHeader
-				{template}
-				templateType={data.templateType}
-				{nodeData}
-				onDelete={handleDelete}
-			/>
+			<NodeHeader {template} templateType={data.templateType} {nodeData} onDelete={handleDelete} />
 		{/if}
 
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
 			onclick={handleNodeClick}
-			class="group relative cursor-pointer border transition-all duration-200 {template.id === 'note'
+			class="group relative cursor-pointer border transition-all duration-200 {template.id ===
+			'note'
 				? `aspect-square ${nodeSizeClass} rounded-lg p-1`
-				: 'max-w-64 min-w-48'} {hasTasks && template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
+				: 'max-w-64 min-w-48'} {template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
 			style="box-shadow: {template.id === 'note'
 				? '0;'
 				: '0;'}; border-color: {borderColor}; background-color: {template.id === 'note' &&
@@ -256,8 +262,8 @@
 				/>
 
 				<!-- Connection Handles -->
-				<Handle type="target" position={Position.Left} class="!bg-zinc-600" />
-				<Handle type="source" position={Position.Right} class="!bg-zinc-600" />
+				<Handle type="target" position={Position.Left} class="!h-2 !w-2 !bg-zinc-600" />
+				<Handle type="source" position={Position.Right} class="!h-2 !w-2 !bg-zinc-600" />
 			</div>
 		</div>
 

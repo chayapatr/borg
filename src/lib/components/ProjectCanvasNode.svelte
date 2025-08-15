@@ -24,7 +24,7 @@
 
 	// Debounced refresh to prevent excessive requests
 	let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
-	
+
 	// Removed global task update listener - Firebase subscriptions handle updates automatically
 	// Project counts will update when Firebase data changes via the Canvas subscriptions
 
@@ -35,12 +35,16 @@
 
 		// Use task subscription for real-time task count updates
 		if ((taskService as any).subscribeToProjectTasks) {
-			console.log(`ProjectCanvasNode: Setting up real-time task subscription for project ${projectSlug}`);
-			
+			console.log(
+				`ProjectCanvasNode: Setting up real-time task subscription for project ${projectSlug}`
+			);
+
 			const unsubscribeTaskSub = (taskService as any).subscribeToProjectTasks(
 				projectSlug,
 				(updatedTasks: any[]) => {
-					console.log(`ProjectCanvasNode: Project ${projectSlug} received ${updatedTasks.length} tasks via subscription`);
+					console.log(
+						`ProjectCanvasNode: Project ${projectSlug} received ${updatedTasks.length} tasks via subscription`
+					);
 					totalTaskCount = updatedTasks.length;
 				}
 			);
@@ -64,7 +68,7 @@
 			// Fallback to one-time fetch with caching for non-Firebase services
 			const cacheKey = `project-counts-${projectSlug}`;
 			const cacheTimeout = 30000;
-			
+
 			const cached = sessionStorage.getItem(cacheKey);
 			if (cached) {
 				try {
@@ -86,11 +90,14 @@
 
 					const taskCounts = await taskService.getTaskCounts(projectSlug);
 					totalTaskCount = taskCounts.total;
-					
-					sessionStorage.setItem(cacheKey, JSON.stringify({
-						data: { statusCounts, totalTaskCount: taskCounts.total },
-						timestamp: Date.now()
-					}));
+
+					sessionStorage.setItem(
+						cacheKey,
+						JSON.stringify({
+							data: { statusCounts, totalTaskCount: taskCounts.total },
+							timestamp: Date.now()
+						})
+					);
 				} catch (error) {
 					console.error('Failed to load project counts:', error);
 					projectStatusCounts = { todo: 0, doing: 0, done: 0 };
@@ -120,9 +127,9 @@
 						// Check cache first
 						const cacheKey = `person-${collaboratorId}-${projectSlug || 'global'}`;
 						const cached = sessionStorage.getItem(cacheKey);
-						
+
 						let person: Person | null = null;
-						
+
 						if (cached) {
 							try {
 								const { data: cachedPerson, timestamp } = JSON.parse(cached);
@@ -133,7 +140,7 @@
 								// Invalid cache, proceed to fetch
 							}
 						}
-						
+
 						// Fetch if not in cache
 						if (!person) {
 							// Try to get person by ID, first from project scope then global
@@ -141,13 +148,16 @@
 							if (!person) {
 								person = await peopleService.getPerson(collaboratorId);
 							}
-							
+
 							// Cache the result
 							if (person) {
-								sessionStorage.setItem(cacheKey, JSON.stringify({
-									data: person,
-									timestamp: Date.now()
-								}));
+								sessionStorage.setItem(
+									cacheKey,
+									JSON.stringify({
+										data: person,
+										timestamp: Date.now()
+									})
+								);
 							}
 						}
 
@@ -164,12 +174,15 @@
 								updatedAt: new Date().toISOString()
 							};
 							fetchedCollaborators.push(placeholder);
-							
+
 							// Cache the placeholder too to avoid repeated failures
-							sessionStorage.setItem(cacheKey, JSON.stringify({
-								data: placeholder,
-								timestamp: Date.now()
-							}));
+							sessionStorage.setItem(
+								cacheKey,
+								JSON.stringify({
+									data: placeholder,
+									timestamp: Date.now()
+								})
+							);
 						}
 					}
 				}
@@ -231,47 +244,49 @@
 		style="border-color: {borderColor};"
 		onclick={handleNodeClick}
 	>
-		<div class="flex flex-1 items-center gap-2 p-3">
+		<div class="flex flex-col gap-2 p-3">
 			<!-- Project Title -->
 			<h3 class="mr-1 text-2xl font-semibold text-black">{nodeData.title || 'Untitled Project'}</h3>
 
-			<!-- Collaborators -->
-			{#if nodeData.collaborators && nodeData.collaborators.length > 0}
-				{#each collaboratorsData.slice(0, 5) as collaborator}
-					<div
-						class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-black"
-						title={collaborator.name || collaborator.email || 'User'}
-					>
-						{#if collaborator.photoUrl}
-							<img
-								src={collaborator.photoUrl}
-								alt={collaborator.name || collaborator.email || 'User'}
-								class="h-full w-full object-cover"
-								referrerpolicy="no-referrer"
-							/>
-						{:else}
-							<div
-								class="flex h-full w-full items-center justify-center bg-borg-green text-xs font-medium text-white"
-							>
-								{getInitials(collaborator.name || collaborator.email || 'U')}
-							</div>
-						{/if}
-					</div>
-				{/each}
-				{#if nodeData.collaborators.length > 5}
-					<div
-						class="flex h-8 w-8 items-center justify-center rounded-full border border-black bg-gray-300 text-xs font-medium text-gray-700"
-						title="{nodeData.collaborators.length - 5} more collaborators"
-					>
-						+{nodeData.collaborators.length - 5}
-					</div>
-				{/if}
-			{:else}
-				<!-- <div class="flex items-center gap-2 text-sm text-gray-500">
+			<div class="flex gap-1.5">
+				<!-- Collaborators -->
+				{#if nodeData.collaborators && nodeData.collaborators.length > 0}
+					{#each collaboratorsData.slice(0, 5) as collaborator}
+						<div
+							class="flex h-4 w-4 items-center justify-center overflow-hidden rounded-full border border-black"
+							title={collaborator.name || collaborator.email || 'User'}
+						>
+							{#if collaborator.photoUrl}
+								<img
+									src={collaborator.photoUrl}
+									alt={collaborator.name || collaborator.email || 'User'}
+									class="h-full w-full object-cover"
+									referrerpolicy="no-referrer"
+								/>
+							{:else}
+								<div
+									class="flex h-full w-full items-center justify-center bg-borg-green text-xs font-medium text-white"
+								>
+									{getInitials(collaborator.name || collaborator.email || 'U')}
+								</div>
+							{/if}
+						</div>
+					{/each}
+					{#if nodeData.collaborators.length > 5}
+						<div
+							class="flex h-4 w-4 items-center justify-center rounded-full border border-black bg-gray-300 text-[9px] font-medium text-gray-700"
+							title="{nodeData.collaborators.length - 5} more collaborators"
+						>
+							+{nodeData.collaborators.length - 5}
+						</div>
+					{/if}
+				{:else}
+					<!-- <div class="flex items-center gap-2 text-sm text-gray-500">
 					<Shield class="h-4 w-4" />
 					<span>No collaborators</span>
 				</div> -->
-			{/if}
+				{/if}
+			</div>
 		</div>
 
 		<!-- Task Counts Section (Bottom Box like UniversalNode) -->
@@ -282,7 +297,8 @@
 				onclick={handleNodeClick}
 			>
 				<div class="text-xs text-zinc-600">
-					Task: {totalTaskCount} |
+					<span class="font-semibold">{totalTaskCount} Task{totalTaskCount > 1 ? 's' : ''}</span>
+					|
 					<span class="inline-flex items-center gap-1">
 						<span class="h-2 w-2 rounded-full border border-black bg-purple-500"></span>
 						{projectStatusCounts.todo}
@@ -300,7 +316,7 @@
 		{/if}
 
 		<!-- Connection Handles -->
-		<Handle type="target" position={Position.Left} class="!bg-zinc-600" />
-		<Handle type="source" position={Position.Right} class="!bg-zinc-600" />
+		<Handle type="target" position={Position.Left} class="!h-2 !w-2 !bg-zinc-600" />
+		<Handle type="source" position={Position.Right} class="!h-2 !w-2 !bg-zinc-600" />
 	</div>
 </div>
