@@ -12,6 +12,8 @@
 
 	let { data, id } = $props<{ data: any; id: string }>();
 
+	let isBeingEdited = $derived(data.isBeingEdited || false);
+
 	let template: NodeTemplate = $derived(getTemplate(data.templateType || 'blank'));
 	let nodeData = $derived(data.nodeData || {});
 
@@ -212,10 +214,10 @@
 
 {#if template.id === 'note'}
 	<!-- Delegate entirely to NoteNode for note types -->
-	<NoteNode {data} {id} />
+	<NoteNode {data} {id} {isBeingEdited} />
 {:else if template.id === 'sticker'}
 	<!-- Delegate entirely to StickerNode for sticker types -->
-	<StickerNode {data} {id} />
+	<StickerNode {data} {id} {isBeingEdited} />
 {:else}
 	<div>
 		<!-- Project Node Header (outside the main node box) -->
@@ -259,6 +261,7 @@
 					bind:isEditingTitle
 					onTitleSave={handleTitleSave}
 					onNodeClick={handleNodeClick}
+					{isBeingEdited}
 				/>
 
 				<!-- Connection Handles -->

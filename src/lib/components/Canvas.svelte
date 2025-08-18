@@ -35,6 +35,17 @@
 		universal: UniversalNode
 	};
 
+	// Add editing state to nodes without recreating objects to preserve positions
+	$effect(() => {
+		if (nodes.length > 0) {
+			nodes.forEach(node => {
+				if (node.data) {
+					node.data.isBeingEdited = showEditPanel && editNodeId === node.id;
+				}
+			});
+		}
+	});
+
 	// Use $state.raw for better performance with arrays as shown in reference
 	let nodes = $state.raw<Node[]>([]);
 	let edges = $state.raw<Edge[]>([]);

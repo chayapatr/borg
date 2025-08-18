@@ -2,7 +2,11 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { Trash2 } from '@lucide/svelte';
 
-	let { data, id } = $props<{ data: any; id: string }>();
+	let { data, id, isBeingEdited = false } = $props<{ 
+		data: any; 
+		id: string; 
+		isBeingEdited?: boolean;
+	}>();
 
 	let nodeData = $derived(data.nodeData || {});
 

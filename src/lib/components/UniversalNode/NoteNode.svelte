@@ -2,7 +2,11 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import { Trash2, Pencil, Bold } from '@lucide/svelte';
 
-	let { data, id } = $props<{ data: any; id: string }>();
+	let { data, id, isBeingEdited = false } = $props<{ 
+		data: any; 
+		id: string; 
+		isBeingEdited?: boolean;
+	}>();
 
 	let nodeData = $derived(data.nodeData || {});
 
@@ -64,10 +68,16 @@
 	let textarea = $state<HTMLTextAreaElement>();
 
 	function handleNodeClick() {
-		startInlineEdit();
+		// Don't allow inline editing if the edit panel is open for this node
+		if (!isBeingEdited) {
+			startInlineEdit();
+		}
 	}
 
 	function startInlineEdit() {
+		// Extra safety check
+		if (isBeingEdited) return;
+		
 		isEditingNote = true;
 		noteContent = nodeData.content || '';
 

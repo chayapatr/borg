@@ -3,12 +3,14 @@
 		nodeData,
 		isEditingTitle = $bindable(),
 		onSave,
-		isProjectNode = false
+		isProjectNode = false,
+		isBeingEdited = false
 	} = $props<{
 		nodeData: any;
 		isEditingTitle: boolean;
 		onSave: (title: string) => void;
 		isProjectNode?: boolean;
+		isBeingEdited?: boolean;
 	}>();
 
 	let titleContent = $state('');
@@ -16,6 +18,7 @@
 
 	function startTitleEdit() {
 		if (isProjectNode) return; // Don't allow editing project titles
+		if (isBeingEdited) return; // Don't allow editing if edit panel is open
 		
 		isEditingTitle = true;
 		titleContent = nodeData.title || '';
@@ -51,6 +54,7 @@
 
 	function handleTitleClick(event: MouseEvent) {
 		if (isProjectNode) return; // Project titles can't be edited
+		if (isBeingEdited) return; // Don't allow editing if edit panel is open
 		
 		event.stopPropagation(); // Prevent node click when clicking title
 		startTitleEdit();

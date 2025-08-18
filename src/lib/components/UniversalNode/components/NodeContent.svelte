@@ -9,7 +9,8 @@
 		templateType,
 		isEditingTitle = $bindable(),
 		onTitleSave,
-		onNodeClick
+		onNodeClick,
+		isBeingEdited = false
 	} = $props<{
 		template: NodeTemplate;
 		nodeData: any;
@@ -17,6 +18,7 @@
 		isEditingTitle: boolean;
 		onTitleSave: (title: string) => void;
 		onNodeClick?: () => void;
+		isBeingEdited?: boolean;
 	}>();
 
 	function handleNodeClick() {
@@ -57,6 +59,7 @@
 							bind:isEditingTitle
 							onSave={onTitleSave}
 							isProjectNode={templateType === 'project'}
+							{isBeingEdited}
 						/>
 					{:else}
 						<FieldRenderer
@@ -81,6 +84,7 @@
 								bind:isEditingTitle
 								onSave={onTitleSave}
 								isProjectNode={templateType === 'project'}
+								{isBeingEdited}
 							/>
 						{:else}
 							<FieldRenderer
