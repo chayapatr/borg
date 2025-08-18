@@ -3,6 +3,7 @@ import type { Project } from '../local/ProjectsService';
 export interface IProjectsService {
 	getAllProjects(): Promise<Project[]> | Project[];
 	getProject(slug: string): Promise<Project | null> | Project | null;
+	getProjectById?(id: string): Promise<Project | null> | Project | null;
 	createProject(data: { 
 		title: string; 
 		description?: string; 

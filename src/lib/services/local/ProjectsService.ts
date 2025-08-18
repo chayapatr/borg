@@ -17,7 +17,10 @@ export interface Project {
 
 export class ProjectsService {
 	private storageKey = 'things-projects';
-	private statusCountsCache = new Map<string, { counts: { todo: number; doing: number; done: number }, lastUpdated: number }>();
+	private statusCountsCache = new Map<
+		string,
+		{ counts: { todo: number; doing: number; done: number }; lastUpdated: number }
+	>();
 	private readonly CACHE_DURATION = 10000; // 10 seconds
 
 	getAllProjects(): Project[] {
@@ -32,13 +35,13 @@ export class ProjectsService {
 
 	getProject(slug: string): Project | null {
 		const projects = this.getAllProjects();
-		return projects.find(p => p.slug === slug) || null;
+		return projects.find((p) => p.slug === slug) || null;
 	}
 
 	createProject(data: { title: string; description?: string; status?: string }): Project {
 		const projects = this.getAllProjects();
 		const slug = this.generateSlug(data.title);
-		
+
 		const project: Project = {
 			id: `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			slug,
@@ -58,8 +61,9 @@ export class ProjectsService {
 
 	updateProject(slug: string, updates: Partial<Project>): Project | null {
 		const projects = this.getAllProjects();
-		const index = projects.findIndex(p => p.slug === slug);
-		
+
+		const index = projects.findIndex((p) => p.slug === slug);
+
 		if (index === -1) return null;
 
 		projects[index] = {
@@ -74,12 +78,12 @@ export class ProjectsService {
 
 	deleteProject(slug: string): boolean {
 		const projects = this.getAllProjects();
-		const filtered = projects.filter(p => p.slug !== slug);
-		
+		const filtered = projects.filter((p) => p.slug !== slug);
+
 		if (filtered.length === projects.length) return false;
 
 		this.saveProjects(filtered);
-		
+
 		// Also delete project-specific data
 		try {
 			localStorage.removeItem(`things-canvas-data-${slug}`);
@@ -107,14 +111,14 @@ export class ProjectsService {
 	getGlobalStatusCounts(): { todo: number; doing: number; done: number } {
 		const projects = this.getAllProjects();
 		const counts = { todo: 0, doing: 0, done: 0 };
-		
-		projects.forEach(project => {
+
+		projects.forEach((project) => {
 			const projectCounts = this.getProjectStatusCounts(project.slug);
 			counts.todo += projectCounts.todo;
 			counts.doing += projectCounts.doing;
 			counts.done += projectCounts.done;
 		});
-		
+
 		return counts;
 	}
 
@@ -123,8 +127,8 @@ export class ProjectsService {
 			// Check cache first
 			const cached = this.statusCountsCache.get(slug);
 			const now = Date.now();
-			
-			if (cached && (now - cached.lastUpdated) < this.CACHE_DURATION) {
+
+			if (cached && now - cached.lastUpdated < this.CACHE_DURATION) {
 				return cached.counts;
 			}
 
@@ -136,11 +140,11 @@ export class ProjectsService {
 				this.statusCountsCache.set(slug, { counts: emptyCounts, lastUpdated: now });
 				return emptyCounts;
 			}
-			
+
 			const data = JSON.parse(stored);
 			const nodes = data.nodes || [];
 			const counts = { todo: 0, doing: 0, done: 0 };
-			
+
 			nodes.forEach((node: { data?: { nodeData?: { status?: string } } }) => {
 				const status = node.data?.nodeData?.status;
 				if (status === 'To Do') {
@@ -151,10 +155,10 @@ export class ProjectsService {
 					counts.done++;
 				}
 			});
-			
+
 			// Cache the result
 			this.statusCountsCache.set(slug, { counts, lastUpdated: now });
-			
+
 			return counts;
 		} catch (error) {
 			console.error('Failed to get project status counts:', error);
@@ -175,7 +179,7 @@ export class ProjectsService {
 		let slug = baseSlug;
 		let counter = 1;
 
-		while (projects.some(p => p.slug === slug)) {
+		while (projects.some((p) => p.slug === slug)) {
 			slug = `${baseSlug}-${counter}`;
 			counter++;
 		}

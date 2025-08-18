@@ -22,6 +22,7 @@
 	import type { INodesService } from '../../services/interfaces';
 	import type { Project } from '../../services/local/ProjectsService';
 	import { getTemplate } from '../../templates';
+	import { authStore } from '../../stores/authStore';
 	import '@xyflow/svelte/dist/style.css';
 	import '../svelteflow.css';
 
@@ -456,6 +457,13 @@
 		if (!getViewport) return; // Not initialized yet
 
 		const projectsService = ServiceFactory.createProjectsService();
+		
+		// Get current user ID
+		const currentUser = $authStore.user;
+		if (!currentUser) {
+			console.log('ProjectsCanvas: No user logged in, cannot save viewport');
+			return;
+		}
 
 		try {
 			const viewport = getViewport();
@@ -465,29 +473,27 @@
 				zoom: viewport.zoom
 			};
 
-			console.log('ProjectsCanvas: Attempting to save viewport position:', viewportData);
+			console.log('ProjectsCanvas: Attempting to save viewport position for user:', currentUser.uid, viewportData);
 			
-			// First check if project-canvas exists, if not create it
-			let project = await projectsService.getProject('project-canvas');
+			// Get existing project-canvas project by slug
+			const project = await projectsService.getProject('project-canvas');
 			console.log('ProjectsCanvas: Existing project data:', project);
 			
-			if (!project) {
-				console.log('ProjectsCanvas: Creating project-canvas project...');
-				project = await projectsService.createProject({
-					title: 'Projects Canvas',
-					description: 'Virtual project for projects canvas viewport',
-					status: 'active'
-				});
-				// Set the slug to match our identifier
-				await projectsService.updateProject(project.id, { slug: 'project-canvas' });
-			}
+			// Get existing viewport positions object, or create new one
+			const existingViewportPositions = (project as any)?.viewportPositions || {};
 			
-			// Save viewport position
+			// Update viewport position for current user
+			const updatedViewportPositions = {
+				...existingViewportPositions,
+				[currentUser.uid]: viewportData
+			};
+			
+			// Save viewport positions
 			const result = await projectsService.updateProject('project-canvas', {
-				viewportPosition: viewportData
+				viewportPositions: updatedViewportPositions
 			} as any);
 			console.log('ProjectsCanvas: Update result:', result);
-			console.log('ProjectsCanvas: Saved viewport position:', viewportData);
+			console.log('ProjectsCanvas: Saved viewport position for user:', currentUser.uid, viewportData);
 		} catch (error) {
 			console.error('ProjectsCanvas: Failed to save viewport position:', error);
 		}
@@ -497,22 +503,32 @@
 		if (!setViewport) return; // Not initialized yet
 
 		const projectsService = ServiceFactory.createProjectsService();
+		
+		// Get current user ID
+		const currentUser = $authStore.user;
+		if (!currentUser) {
+			console.log('ProjectsCanvas: No user logged in, cannot load viewport');
+			return;
+		}
 
 		try {
-			const projectResult = projectsService.getProject('project-canvas');
-			const project = projectResult instanceof Promise ? await projectResult : projectResult;
+			// Get project-canvas by slug
+			const project = await projectsService.getProject('project-canvas');
 
 			console.log('ProjectsCanvas: Loaded project data:', project);
 			
-			if ((project as any)?.viewportPosition) {
-				const { x, y, zoom } = (project as any).viewportPosition;
+			// Check for user-specific viewport position
+			const userViewportPosition = (project as any)?.viewportPositions?.[currentUser.uid];
+			
+			if (userViewportPosition) {
+				const { x, y, zoom } = userViewportPosition;
 				// Use setTimeout to ensure SvelteFlow is fully mounted
 				setTimeout(() => {
 					setViewport({ x, y, zoom }, { duration: 200 });
-					console.log('ProjectsCanvas: Restored viewport position:', (project as any).viewportPosition);
+					console.log('ProjectsCanvas: Restored viewport position for user:', currentUser.uid, userViewportPosition);
 				}, 100);
 			} else {
-				console.log('ProjectsCanvas: No saved viewport position found');
+				console.log('ProjectsCanvas: No saved viewport position found for user:', currentUser.uid);
 			}
 		} catch (error) {
 			console.error('ProjectsCanvas: Failed to load viewport position:', error);

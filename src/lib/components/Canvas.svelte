@@ -22,6 +22,7 @@
 	import Toolbar from './Toolbar.svelte';
 	import StickerPanel from './stickers/StickerPanel.svelte';
 	import type { Task } from '../types/task';
+	import { authStore } from '../stores/authStore';
 	import '@xyflow/svelte/dist/style.css';
 	import './svelteflow.css';
 
@@ -194,6 +195,13 @@
 	async function saveViewportPosition() {
 		if (!projectSlug || !projectsService) return;
 
+		// Get current user ID
+		const currentUser = $authStore.user;
+		if (!currentUser) {
+			console.log('Canvas: No user logged in, cannot save viewport');
+			return;
+		}
+
 		try {
 			const viewport = getViewport();
 			const viewportData = {
@@ -202,11 +210,24 @@
 				zoom: viewport.zoom
 			};
 
+			// Get existing project data to preserve existing viewport positions
+			const projectResult = projectsService.getProject(projectSlug);
+			const project = projectResult instanceof Promise ? await projectResult : projectResult;
+			
+			// Get existing viewport positions object, or create new one
+			const existingViewportPositions = (project as any)?.viewportPositions || {};
+			
+			// Update viewport position for current user
+			const updatedViewportPositions = {
+				...existingViewportPositions,
+				[currentUser.uid]: viewportData
+			};
+
 			// Save to Firebase using projects service
 			await projectsService.updateProject(projectSlug, {
-				viewportPosition: viewportData
+				viewportPositions: updatedViewportPositions
 			} as any);
-			console.log('Canvas: Saved viewport position:', viewportData);
+			console.log('Canvas: Saved viewport position for user:', currentUser.uid, viewportData);
 		} catch (error) {
 			console.error('Canvas: Failed to save viewport position:', error);
 		}
@@ -222,17 +243,29 @@
 	async function loadViewportPosition() {
 		if (!projectSlug || !projectsService) return;
 
+		// Get current user ID
+		const currentUser = $authStore.user;
+		if (!currentUser) {
+			console.log('Canvas: No user logged in, cannot load viewport');
+			return;
+		}
+
 		try {
 			const projectResult = projectsService.getProject(projectSlug);
 			const project = projectResult instanceof Promise ? await projectResult : projectResult;
 
-			if (project?.viewportPosition) {
-				const { x, y, zoom } = project.viewportPosition;
+			// Check for user-specific viewport position
+			const userViewportPosition = (project as any)?.viewportPositions?.[currentUser.uid];
+
+			if (userViewportPosition) {
+				const { x, y, zoom } = userViewportPosition;
 				// Use setTimeout to ensure SvelteFlow is fully mounted
 				setTimeout(() => {
 					setViewport({ x, y, zoom }, { duration: 200 });
-					console.log('Canvas: Restored viewport position:', project.viewportPosition);
+					console.log('Canvas: Restored viewport position for user:', currentUser.uid, userViewportPosition);
 				}, 100);
+			} else {
+				console.log('Canvas: No saved viewport position found for user:', currentUser.uid);
 			}
 		} catch (error) {
 			console.error('Canvas: Failed to load viewport position:', error);
