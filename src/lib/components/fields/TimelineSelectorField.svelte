@@ -26,15 +26,55 @@
 	let eventsMap = $state<Map<string, any>>(new Map());
 	let showAddModal = $state(false);
 
+	// Helper function to create a proper Date object with time and timezone
+	function createEventDateTime(event: any): Date {
+		if (!event.date) return new Date();
+		
+		// If we have time and timezone, create a proper datetime
+		if (event.time && event.timezone) {
+			// Create a datetime string and use the Date constructor
+			// The Date constructor will interpret this in local time, which is what we want for countdown calculations
+			const isoString = `${event.date}T${event.time}:00`;
+			return new Date(isoString);
+		}
+		
+		// If we have time but no timezone, assume local time
+		if (event.time) {
+			return new Date(`${event.date}T${event.time}:00`);
+		}
+		
+		// If we only have date, use end of day (23:59:59) for better UX
+		const dateOnly = new Date(event.date);
+		dateOnly.setHours(23, 59, 59, 999);
+		return dateOnly;
+	}
+
+	// Helper function to format event datetime for display with timezone info
+	function formatEventDateTime(event: any): string {
+		if (!event.date) return 'No date';
+		
+		const eventDateTime = createEventDateTime(event);
+		const dateStr = eventDateTime.toLocaleDateString();
+		
+		if (event.time && event.timezone) {
+			const timezoneDisplay = event.timezone.split('/')[1]?.replace('_', ' ') || event.timezone;
+			return `${dateStr} at ${event.time} (${timezoneDisplay})`;
+		} else if (event.time) {
+			return `${dateStr} at ${event.time}`;
+		}
+		
+		return dateStr;
+	}
+
 	// Countdown calculation function
-	function calculateCountdown(targetDate: string): {
+	function calculateCountdown(event: any): {
 		days: number;
 		hours: number;
 		minutes: number;
 		isOverdue: boolean;
 	} {
 		const now = new Date();
-		const target = new Date(targetDate);
+		const target = createEventDateTime(event);
 		const diffMs = target.getTime() - now.getTime();
 
 		if (diffMs <= 0) {
@@ -121,7 +161,7 @@
 					<!-- Countdown-only mode: large, centered display -->
 					{@const countdown = (() => {
 						countdownRefreshKey;
-						return calculateCountdown(event.date);
+						return calculateCountdown(event);
 					})()}
 					<div class="py-2 text-center">
 						<div class="font-sanss mb-3 text-lg font-semibold text-black">{event.title}</div>
@@ -165,7 +205,7 @@
 					<div class="py-1 text-black">
 						<div class="font-medium">{event.title}</div>
 						<div class="text-sm text-zinc-600">
-							{new Date(event.date).toLocaleDateString()} • {event.templateType || 'Event'}
+							{formatEventDateTime(event)} • {event.templateType || 'Event'}
 						</div>
 					</div>
 				{/if}
@@ -185,8 +225,7 @@
 				<option value="">Select timeline event...</option>
 				{#each allEvents as event}
 					<option value={event.id}>
-						{event.title} ({new Date(event.date).toLocaleDateString()}) - {event.templateType ||
-							'Event'}
+						{event.title} ({formatEventDateTime(event)}) - {event.templateType || 'Event'}
 					</option>
 				{/each}
 			</select>

@@ -20,6 +20,7 @@ export interface TemplateField {
 		| 'status'
 		| 'link'
 		| 'date'
+		| 'time'
 		| 'button'
 		| 'people-selector'
 		| 'timeline-selector'
@@ -31,6 +32,7 @@ export interface TemplateField {
 	buttonText?: string;
 	buttonUrl?: string;
 	showInDisplay?: boolean; // Controls visibility in display mode, defaults to true
+	defaultValue?: string; // Default value for the field
 }
 
 export const nodeTemplates: Record<string, NodeTemplate> = {

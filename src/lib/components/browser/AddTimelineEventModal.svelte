@@ -25,6 +25,8 @@
 			? {
 					title: editingEvent.title,
 					date: editingEvent.date,
+					time: editingEvent.time,
+					timezone: editingEvent.timezone,
 					...editingEvent.eventData
 				}
 			: {}
