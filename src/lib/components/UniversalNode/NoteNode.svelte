@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import { Trash2, Pencil, Bold } from '@lucide/svelte';
+	import { Trash2, Pencil, Bold, Lock } from '@lucide/svelte';
 
-	let { data, id, isBeingEdited = false } = $props<{ 
-		data: any; 
-		id: string; 
+	let {
+		data,
+		id,
+		isBeingEdited = false
+	} = $props<{
+		data: any;
+		id: string;
 		isBeingEdited?: boolean;
 	}>();
 
@@ -51,7 +55,7 @@
 	// Get background style based on selection
 	let backgroundStyle = $derived.by(() => {
 		const bgValue = nodeData.backgroundColor || '#fef08a';
-		
+
 		if (bgValue.startsWith('linear-gradient')) {
 			return `background: ${bgValue}`;
 		} else {
@@ -77,7 +81,7 @@
 	function startInlineEdit() {
 		// Extra safety check
 		if (isBeingEdited) return;
-		
+
 		isEditingNote = true;
 		noteContent = nodeData.content || '';
 
@@ -160,7 +164,7 @@
 
 	function toggleFontWeight(event: MouseEvent) {
 		event.stopPropagation();
-		
+
 		const newFontWeight = fontWeight === 'bold' ? 'normal' : 'bold';
 		fontWeight = newFontWeight;
 
@@ -188,9 +192,9 @@
 	function startResize(event: MouseEvent) {
 		event.preventDefault();
 		event.stopPropagation();
-		
+
 		isResizing = true;
-		
+
 		const startX = event.clientX;
 		const startY = event.clientY;
 		const startWidth = width;
@@ -198,13 +202,13 @@
 
 		function handleMouseMove(e: MouseEvent) {
 			if (!isResizing) return;
-			
+
 			const deltaX = e.clientX - startX;
 			const deltaY = e.clientY - startY;
 
 			const newWidth = Math.max(80, startWidth + deltaX);
 			const newHeight = Math.max(60, startHeight + deltaY);
-			
+
 			width = newWidth;
 			height = newHeight;
 		}
@@ -219,7 +223,7 @@
 		document.addEventListener('mousemove', handleMouseMove);
 		document.addEventListener('mouseup', handleMouseUp);
 	}
-	
+
 	// Update node data helper function
 	function updateNodeData() {
 		// Update the data prop immediately
@@ -250,7 +254,10 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div>
 	<div
-		class="group relative cursor-pointer rounded-lg border border-black p-1 {isResizing || isEditingNote ? '' : 'transition-all duration-200'} {isEditingNote ? 'border-2 shadow-lg' : ''}"
+		class="group relative cursor-pointer rounded-lg border border-black p-1 {isResizing ||
+		isEditingNote
+			? ''
+			: 'transition-all duration-200'} {isEditingNote ? 'border-2 shadow-lg' : ''}"
 		style="{backgroundStyle}; width: {width}px; height: {height}px;"
 		onclick={handleNodeClick}
 	>
@@ -294,33 +301,41 @@
 		</div>
 
 		<!-- Settings and Delete buttons for note nodes -->
-		<div
-			class="absolute top-1 right-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
-		>
-			<button
-				onclick={toggleFontWeight}
-				aria-label="Toggle font weight"
-				class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-gray-800 {fontWeight === 'bold' ? 'bg-white/50 text-gray-800' : ''}"
-			>
-				<Bold class="h-3 w-3" />
-			</button>
-			<button
-				onclick={handleSettingsClick}
-				aria-label="Edit settings"
-				class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-blue-600"
-			>
-				<Pencil class="h-3 w-3" />
-			</button>
-			<button
-				onclick={(event) => {
-					event.stopPropagation();
-					handleDelete(event);
-				}}
-				aria-label="Delete note"
-				class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-red-600"
-			>
-				<Trash2 class="h-3 w-3" />
-			</button>
+		<div class="absolute top-1 right-1 flex gap-1">
+			<div class="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+				<button
+					onclick={toggleFontWeight}
+					aria-label="Toggle font weight"
+					class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-gray-800 {fontWeight ===
+					'bold'
+						? 'bg-white/50 text-gray-800'
+						: ''}"
+				>
+					<Bold class="h-3 w-3" />
+				</button>
+				<button
+					onclick={handleSettingsClick}
+					aria-label="Edit settings"
+					class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-blue-600"
+				>
+					<Pencil class="h-3 w-3" />
+				</button>
+				<button
+					onclick={(event) => {
+						event.stopPropagation();
+						handleDelete(event);
+					}}
+					aria-label="Delete note"
+					class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-red-600"
+				>
+					<Trash2 class="h-3 w-3" />
+				</button>
+			</div>
+			{#if nodeData.locked}
+				<div class="p-1 text-gray-600" title="Node is locked">
+					<Lock class="h-3 w-3" />
+				</div>
+			{/if}
 		</div>
 
 		<!-- Connection Handles -->

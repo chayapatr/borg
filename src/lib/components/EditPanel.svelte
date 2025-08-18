@@ -8,7 +8,7 @@
 	import FieldRenderer from './fields/FieldRenderer.svelte';
 	import CustomFieldManager from './fields/CustomFieldManager.svelte';
 	import FieldVisibilityManager from './fields/FieldVisibilityManager.svelte';
-	import { X } from '@lucide/svelte';
+	import { X, Lock, Unlock } from '@lucide/svelte';
 
 	let {
 		nodeId,
@@ -155,13 +155,30 @@
 						<span class="animate-pulse text-xs font-medium text-zinc-700">💾 Saving...</span>
 					{/if}
 				</div>
-				<button
-					onclick={handleClose}
-					aria-label="Close panel"
-					class="rounded-lg p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300"
-				>
-					<X class="h-5 w-5" />
-				</button>
+				<div class="flex items-center gap-2">
+					<button
+						onclick={() => {
+							editableData.locked = !editableData.locked;
+						}}
+						aria-label={editableData.locked ? 'Unlock node' : 'Lock node'}
+						class="rounded-lg p-1 {editableData.locked
+							? 'text-red-600 hover:bg-red-50'
+							: 'text-zinc-400 hover:bg-zinc-100'} transition-colors"
+					>
+						{#if editableData.locked}
+							<Lock class="h-5 w-5" />
+						{:else}
+							<Unlock class="h-5 w-5" />
+						{/if}
+					</button>
+					<button
+						onclick={handleClose}
+						aria-label="Close panel"
+						class="rounded-lg p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300"
+					>
+						<X class="h-5 w-5" />
+					</button>
+				</div>
 			</div>
 		</div>
 
@@ -182,6 +199,32 @@
 						{/if}
 					</div>
 				{/each}
+
+				<!-- Lock toggle for all nodes -->
+				<div class="border-y border-zinc-200 py-4">
+					<div class="flex items-center justify-between">
+						<div>
+							<label class="text-sm font-medium text-zinc-700">Lock Node Position</label>
+							<!-- <p class="text-xs text-zinc-500">Prevent node from being moved when locked</p> -->
+						</div>
+						<button
+							type="button"
+							class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none {editableData.locked
+								? 'bg-red-600'
+								: 'bg-gray-200'}"
+							onclick={() => {
+								editableData.locked = !editableData.locked;
+							}}
+						>
+							<span class="sr-only">Toggle node lock</span>
+							<span
+								class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {editableData.locked
+									? 'translate-x-5'
+									: 'translate-x-0'}"
+							></span>
+						</button>
+					</div>
+				</div>
 
 				<!-- Countdown toggle for timeline event nodes -->
 				{#if templateType === 'time'}

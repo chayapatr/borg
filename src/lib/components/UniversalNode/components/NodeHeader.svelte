@@ -10,16 +10,12 @@
 		Square,
 		CircleDashed,
 		PencilRuler,
-		CheckCircle
+		CheckCircle,
+		Lock
 	} from '@lucide/svelte';
 	import type { NodeTemplate } from '../../../templates';
 
-	let {
-		template,
-		templateType,
-		nodeData,
-		onDelete
-	} = $props<{
+	let { template, templateType, nodeData, onDelete } = $props<{
 		template: NodeTemplate;
 		templateType: string;
 		nodeData: any;
@@ -76,9 +72,12 @@
 
 		// Get color based on status
 		let color;
-		if (status === 'To Do') color = '#9333ea'; // purple-600
-		else if (status === 'Doing') color = '#0284c7'; // sky-600
-		else if (status === 'Done') color = '#16a34a'; // green-600
+		if (status === 'To Do')
+			color = '#9333ea'; // purple-600
+		else if (status === 'Doing')
+			color = '#0284c7'; // sky-600
+		else if (status === 'Done')
+			color = '#16a34a'; // green-600
 		else color = '#374151'; // gray-700 - default
 
 		return { component, color };
@@ -161,14 +160,19 @@
 			<span class="bg-white text-sm font-medium">{template.name}</span>
 		</div>
 
-		<div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+		<div class="-mt-2 -mr-1 flex items-center gap-1">
 			<button
 				onclick={handleDelete}
 				aria-label="Delete node"
-				class="rounded p-1 text-zinc-500 hover:bg-borg-orange hover:text-white"
+				class="rounded p-0.5 text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-borg-orange hover:text-white"
 			>
-				<Trash2 class="h-4 w-4" />
+				<Trash2 class="h-3 w-3" />
 			</button>
+			{#if nodeData.locked}
+				<div class="rounded p-0.5 text-zinc-500" title="Node is locked">
+					<Lock class="h-3 w-3" />
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}

@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import { Trash2 } from '@lucide/svelte';
+	import { Trash2, Lock } from '@lucide/svelte';
 
-	let { data, id, isBeingEdited = false } = $props<{ 
-		data: any; 
-		id: string; 
+	let {
+		data,
+		id,
+		isBeingEdited = false
+	} = $props<{
+		data: any;
+		id: string;
 		isBeingEdited?: boolean;
 	}>();
 
@@ -205,15 +209,22 @@
 			</div>
 		</div>
 
-		<!-- Delete button (top-right corner) -->
-		<button
-			class="absolute top-1 right-1 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
-			title="Delete sticker"
-			aria-label="Delete sticker"
-			onclick={handleDelete}
-		>
-			<Trash2 class="h-3 w-3 text-gray-700 hover:text-borg-orange" />
-		</button>
+		<!-- Action buttons (top-right corner) -->
+		<div class="absolute top-1 right-1 flex gap-1">
+			<button
+				class="flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
+				title="Delete sticker"
+				aria-label="Delete sticker"
+				onclick={handleDelete}
+			>
+				<Trash2 class="h-3 w-3 text-gray-700 hover:text-borg-orange" />
+			</button>
+			{#if nodeData.locked}
+				<div class="flex p-0.5 text-white" title="Node is locked">
+					<Lock class="h-3 w-3" />
+				</div>
+			{/if}
+		</div>
 
 		<!-- Connection handles (hidden by default for stickers) -->
 		<Handle type="target" position={Position.Left} class="!pointer-events-none !opacity-0" />

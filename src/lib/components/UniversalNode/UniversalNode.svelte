@@ -9,6 +9,7 @@
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import type { Task } from '../../types/task';
+	import { Lock } from '@lucide/svelte';
 
 	let { data, id } = $props<{ data: any; id: string }>();
 

@@ -35,12 +35,14 @@
 		universal: UniversalNode
 	};
 
-	// Add editing state to nodes without recreating objects to preserve positions
+	// Add editing state to nodes and handle lock state without recreating objects to preserve positions
 	$effect(() => {
 		if (nodes.length > 0) {
 			nodes.forEach(node => {
 				if (node.data) {
 					node.data.isBeingEdited = showEditPanel && editNodeId === node.id;
+					// Set draggable property based on lock state - locked nodes can't be dragged
+					node.draggable = !(node.data.nodeData && node.data.nodeData.locked);
 				}
 			});
 		}
