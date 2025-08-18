@@ -49,17 +49,29 @@
 	function formatEventDateTime(event: any): string {
 		if (!event.timestamp && !event.date) return 'No date';
 		
-		const eventDateTime = createEventDateTime(event);
-		const dateStr = eventDateTime.toLocaleDateString();
-		const timeStr = eventDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-		
 		// Extract timezone from timestamp if available
 		if (event.timestamp && event.timestamp.includes('T')) {
 			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
 			const offset = timezoneMatch?.[1];
 			const timezone = offset === '-5' ? 'ET' : offset === '-12' ? 'AOE' : `UTC${offset}`;
+			
+			// Parse the timestamp and format it directly to preserve the original timezone time
+			const datePart = event.timestamp.split('T')[0];
+			const timePart = event.timestamp.split('T')[1];
+			const timeOnly = timePart.split(/[+-]/)[0];
+			const timeComponents = timeOnly.split(':');
+			const timeStr = `${timeComponents[0]}:${timeComponents[1]}`;
+			
+			const date = new Date(datePart);
+			const dateStr = date.toLocaleDateString();
+			
 			return `${dateStr} at ${timeStr} ${timezone}`;
 		}
+		
+		// Fallback for legacy events
+		const eventDateTime = createEventDateTime(event);
+		const dateStr = eventDateTime.toLocaleDateString();
+		const timeStr = eventDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 		
 		return `${dateStr} at ${timeStr}`;
 	}

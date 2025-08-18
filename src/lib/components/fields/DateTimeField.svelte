@@ -20,15 +20,12 @@
 
 	// Initialize from existing value or set defaults
 	$effect(() => {
-		console.log('DateTimeField effect - value:', value);
 		if (value && value.includes('T')) {
 			// Parse existing timestamp
-			console.log('Parsing timestamp:', value);
 			
 			// Extract date part (YYYY-MM-DD)
 			const datePart = value.split('T')[0];
 			dateValue = datePart;
-			console.log('Extracted date:', dateValue);
 			
 			// Extract time part (HH:MM) - handle both with and without seconds
 			const timePart = value.split('T')[1];
@@ -37,7 +34,6 @@
 				const timeOnly = timePart.split(/[+-]/)[0]; // Split on + or -
 				const timeComponents = timeOnly.split(':');
 				timeValue = `${timeComponents[0]}:${timeComponents[1]}`; // Only take HH:MM
-				console.log('Extracted time:', timeValue);
 				
 				// Extract timezone from the ISO string (e.g., "-05:00" -> "-5")
 				const timezoneMatch = value.match(/([+-]\d{1,2}):\d{2}$/);
@@ -46,14 +42,12 @@
 				} else {
 					timezoneValue = '-5'; // Default to ET
 				}
-				console.log('Extracted timezone:', timezoneValue);
 			} else {
 				timeValue = '00:00';
 				timezoneValue = '-5';
 			}
 		} else if (!dateValue) {
 			// Only set defaults if not already set
-			console.log('Setting defaults');
 			const today = new Date();
 			dateValue = today.toISOString().split('T')[0];
 			timeValue = '00:00';

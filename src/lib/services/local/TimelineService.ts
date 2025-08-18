@@ -88,12 +88,7 @@ export class TimelineService {
 	getAllEvents(): TimelineEvent[] {
 		try {
 			const stored = localStorage.getItem(this.storageKey);
-			if (!stored) return [];
-			
-			const rawEvents = JSON.parse(stored);
-			
-			// Migrate legacy events on load (read-only migration)
-			return rawEvents.map((event: any) => this.migrateEvent(event));
+			return stored ? JSON.parse(stored) : [];
 		} catch (error) {
 			console.error('Failed to load timeline events:', error);
 			return [];
@@ -135,30 +130,19 @@ export class TimelineService {
 	}
 
 	updateEvent(id: string, updates: Partial<TimelineEvent>): TimelineEvent | null {
-		const rawStored = localStorage.getItem(this.storageKey);
-		if (!rawStored) return null;
-		
-		const rawEvents = JSON.parse(rawStored);
-		const index = rawEvents.findIndex((e: any) => e.id === id);
+		const events = this.getAllEvents();
+		const index = events.findIndex(e => e.id === id);
 		
 		if (index === -1) return null;
 
-		// Migrate the event to new format when updating
-		const migratedEvent = this.migrateEvent(rawEvents[index]);
-		
-		// Apply updates
-		const updatedEvent = {
-			...migratedEvent,
+		events[index] = {
+			...events[index],
 			...updates,
 			updatedAt: new Date().toISOString()
 		};
 
-		// Clean up old fields when saving
-		const cleanEvent = this.cleanupLegacyFields(updatedEvent);
-		rawEvents[index] = cleanEvent;
-
-		this.saveEvents(rawEvents);
-		return updatedEvent;
+		this.saveEvents(events);
+		return events[index];
 	}
 
 	deleteEvent(id: string): boolean {
@@ -188,89 +172,6 @@ export class TimelineService {
 		return this.getAllEvents();
 	}
 
-	// Migration helper: Convert legacy event to new timestamp format
-	public migrateEvent(event: any): TimelineEvent {
-		if (event.timestamp) {
-			// Already in new format, return as is
-			return event as TimelineEvent;
-		}
-
-		// Legacy event with separate date/time/timezone fields
-		let timestamp: string;
-		
-		if (event.date && event.time && event.timezone) {
-			// Has all three fields - create proper timestamp
-			const timezoneOffset = this.parseTimezoneOffset(event.timezone);
-			const offsetString = timezoneOffset >= 0 ? 
-				`+${Math.abs(timezoneOffset).toString().padStart(2, '0')}:00` : 
-				`-${Math.abs(timezoneOffset).toString().padStart(2, '0')}:00`;
-			timestamp = `${event.date}T${event.time}${offsetString}`;
-		} else if (event.date && event.time) {
-			// Has date and time but no timezone - assume ET
-			timestamp = `${event.date}T${event.time}-05:00`;
-		} else if (event.date) {
-			// Only has date - use end of day with ET timezone
-			timestamp = `${event.date}T23:59-05:00`;
-		} else {
-			// No date info - use current time without seconds
-			const now = new Date();
-			const dateStr = now.toISOString().split('T')[0];
-			const timeStr = now.toTimeString().slice(0, 5);
-			timestamp = `${dateStr}T${timeStr}-05:00`;
-		}
-
-		// Create migrated event
-		const migratedEvent: TimelineEvent = {
-			id: event.id,
-			templateType: event.templateType,
-			title: event.title,
-			timestamp,
-			eventData: event.eventData || {},
-			createdAt: event.createdAt,
-			updatedAt: new Date().toISOString(), // Update timestamp for migration
-			createdBy: event.createdBy,
-			projectId: event.projectId
-		};
-
-		return migratedEvent;
-	}
-
-	// Helper to parse timezone offset from various formats
-	private parseTimezoneOffset(timezone: string): number {
-		if (typeof timezone === 'string') {
-			// Handle formats like "-5 (ET)", "-5", "America/New_York"
-			const offsetMatch = timezone.match(/^([+-]?\d+)/);
-			if (offsetMatch) {
-				return parseInt(offsetMatch[1]);
-			}
-			
-			// Handle timezone names
-			const timezoneMap: Record<string, number> = {
-				'America/New_York': -5,
-				'America/Chicago': -6,
-				'America/Denver': -7,
-				'America/Los_Angeles': -8,
-				'America/Phoenix': -7,
-				'Pacific/Honolulu': -10
-			};
-			
-			return timezoneMap[timezone] || -5; // Default to ET
-		}
-		
-		return -5; // Default to ET
-	}
-
-	// Clean up legacy fields when saving migrated events
-	private cleanupLegacyFields(event: TimelineEvent): TimelineEvent {
-		const cleaned = { ...event };
-		
-		// Remove old date/time/timezone fields if they exist
-		delete (cleaned as any).date;
-		delete (cleaned as any).time;
-		delete (cleaned as any).timezone;
-		
-		return cleaned;
-	}
 
 	private saveEvents(events: TimelineEvent[]): void {
 		try {

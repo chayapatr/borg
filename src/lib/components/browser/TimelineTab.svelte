@@ -84,6 +84,30 @@
 	}
 
 	function formatDateTime(event: TimelineEvent) {
+		// Extract timezone from timestamp if available
+		if (event.timestamp && event.timestamp.includes('T')) {
+			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
+			const offset = timezoneMatch?.[1];
+			const timezone = offset === '-5' ? 'ET' : offset === '-12' ? 'AOE' : `UTC${offset}`;
+			
+			// Parse the timestamp and format it directly to preserve the original timezone time
+			const datePart = event.timestamp.split('T')[0];
+			const timePart = event.timestamp.split('T')[1];
+			const timeOnly = timePart.split(/[+-]/)[0];
+			const timeComponents = timeOnly.split(':');
+			const timeStr = `${timeComponents[0]}:${timeComponents[1]}`;
+			
+			const date = new Date(datePart);
+			const dateStr = date.toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				year: 'numeric'
+			});
+			
+			return `${dateStr} at ${timeStr} ${timezone}`;
+		}
+		
+		// Fallback for legacy events
 		const date = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date();
 		const dateStr = date.toLocaleDateString('en-US', {
 			month: 'short',
@@ -91,14 +115,6 @@
 			year: 'numeric'
 		});
 		const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-		
-		// Extract timezone from timestamp if available
-		if (event.timestamp && event.timestamp.includes('T')) {
-			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
-			const offset = timezoneMatch?.[1];
-			const timezone = offset === '-5' ? 'ET' : offset === '-12' ? 'AOE' : `UTC${offset}`;
-			return `${dateStr} at ${timeStr} ${timezone}`;
-		}
 		
 		return `${dateStr} at ${timeStr}`;
 	}
@@ -117,16 +133,35 @@
 		};
 	}
 
-	function getDaysLeft(event: TimelineEvent): number | null {
+	function getTimeLeft(event: TimelineEvent): { 
+		days: number; 
+		hours: number; 
+		minutes: number; 
+		isOverdue: boolean;
+		displayText: string;
+	} {
 		const now = new Date();
 		const target = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date();
 		const diffMs = target.getTime() - now.getTime();
 
 		if (diffMs <= 0) {
-			return null; // Past event
+			return { days: 0, hours: 0, minutes: 0, isOverdue: true, displayText: 'Past' };
 		}
 
-		return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+		const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+		const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+		const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+		let displayText: string;
+		if (days >= 1) {
+			displayText = `${days} day${days !== 1 ? 's' : ''} left`;
+		} else if (hours > 0) {
+			displayText = `${hours}h ${minutes}m left`;
+		} else {
+			displayText = `${minutes}m left`;
+		}
+
+		return { days, hours, minutes, isOverdue: false, displayText };
 	}
 </script>
 
@@ -188,7 +223,7 @@
 			<div class="space-y-4">
 				{#each events as event}
 					{@const template = getTemplateInfo(event.templateType)}
-					{@const daysLeft = getDaysLeft(event)}
+					{@const timeLeft = getTimeLeft(event)}
 					<div
 						class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-4 transition-colors hover:bg-zinc-50"
 						role="button"
@@ -246,9 +281,9 @@
 											</svg>
 											{formatDateTime(event)}
 										</span>
-										{#if daysLeft !== null}
+										{#if !timeLeft.isOverdue}
 											<span class="font-mono text-sm font-bold text-borg-blue">
-												{daysLeft} day{daysLeft !== 1 ? 's' : ''} left
+												{timeLeft.displayText}
 											</span>
 										{:else}
 											<span class="text-xs text-zinc-500">Past</span>

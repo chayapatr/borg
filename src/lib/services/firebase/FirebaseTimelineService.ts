@@ -8,23 +8,20 @@ import {
 	query, 
 	orderBy, 
 	onSnapshot,
-	deleteField,
 	type Unsubscribe 
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import type { TimelineEvent, TimelineTemplate } from '../local/TimelineService';
-import { getTimelineTemplate, timelineTemplates, TimelineService } from '../local/TimelineService';
+import { getTimelineTemplate, timelineTemplates } from '../local/TimelineService';
 import type { ITimelineService } from '../interfaces';
 import { get } from 'svelte/store';
 import { authStore } from '../../stores/authStore';
 
 export class FirebaseTimelineService implements ITimelineService {
 	private projectId?: string;
-	private localService: TimelineService;
 
 	constructor(projectId?: string) {
 		this.projectId = projectId;
-		this.localService = new TimelineService();
 	}
 
 	async getAllEvents(): Promise<TimelineEvent[]> {
@@ -37,22 +34,12 @@ export class FirebaseTimelineService implements ITimelineService {
 			? `projects/${this.projectId}/timeline`
 			: 'timeline';
 			
-		// Get all events without ordering
 		const snapshot = await getDocs(collection(db, collectionPath));
 		
-		console.log('FirebaseTimelineService: Found', snapshot.docs.length, 'events');
-		
-		// Migrate legacy events when loading
-		const migratedEvents = snapshot.docs.map(doc => {
-			const rawData = { ...doc.data(), id: doc.id };
-			console.log('Raw event data:', rawData);
-			const migrated = this.localService.migrateEvent(rawData);
-			console.log('Migrated event:', migrated);
-			return migrated;
-		});
-		
-		console.log('Returning', migratedEvents.length, 'migrated events');
-		return migratedEvents;
+		return snapshot.docs.map(doc => ({
+			...doc.data(),
+			id: doc.id
+		} as TimelineEvent));
 	}
 
 	async getEvent(id: string): Promise<TimelineEvent | null> {
@@ -113,21 +100,13 @@ export class FirebaseTimelineService implements ITimelineService {
 			
 		const eventRef = doc(db, collectionPath, id);
 		
-		// Clean up legacy fields when updating
-		const cleanUpdates = {
+		const updateData = {
 			...updates,
 			updatedAt: new Date().toISOString()
 		};
 		
-		// Remove old fields from Firestore when updating
-		const updateData: any = { ...cleanUpdates };
-		updateData.date = deleteField(); // This will delete the field in Firestore
-		updateData.time = deleteField();
-		updateData.timezone = deleteField();
-		
 		await updateDoc(eventRef, updateData);
 		
-		// Return updated event
 		const events = await this.getAllEvents();
 		return events.find(e => e.id === id) || null;
 	}
@@ -178,7 +157,7 @@ export class FirebaseTimelineService implements ITimelineService {
 			? `projects/${this.projectId}/timeline`
 			: 'timeline';
 			
-		const q = query(collection(db, collectionPath), orderBy('date', 'asc'));
+		const q = collection(db, collectionPath);
 		
 		return onSnapshot(q, (snapshot) => {
 			const events = snapshot.docs.map(doc => ({
@@ -190,10 +169,7 @@ export class FirebaseTimelineService implements ITimelineService {
 	}
 
 	subscribeToProjectEvents(projectId: string, callback: (events: TimelineEvent[]) => void): Unsubscribe {
-		const q = query(
-			collection(db, `projects/${projectId}/timeline`), 
-			orderBy('date', 'asc')
-		);
+		const q = collection(db, `projects/${projectId}/timeline`);
 		
 		return onSnapshot(q, (snapshot) => {
 			const events = snapshot.docs.map(doc => ({
