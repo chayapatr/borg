@@ -30,9 +30,8 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 		icon: 'calendar',
 		fields: [
 			{ id: 'title', label: 'Title', type: 'text', placeholder: 'Conference name' },
-			{ id: 'timestamp', label: 'Date & Time', type: 'datetime', defaultValue: '-5' },
+			{ id: 'timestamp', label: 'Date & Time', type: 'datetime', defaultValue: '-4' },
 			{ id: 'venue', label: 'Venue', type: 'text', placeholder: 'Location or virtual' },
-			{ id: 'submissionDeadline', label: 'Submission Deadline', type: 'date' },
 			{ id: 'website', label: 'Website', type: 'link', placeholder: 'https://conference.org' },
 			{ id: 'organization', label: 'Organization', type: 'text', placeholder: 'ACM, IEEE, etc.' }
 		]
@@ -70,7 +69,7 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 		icon: 'calendar-days',
 		fields: [
 			{ id: 'title', label: 'Event Name', type: 'text', placeholder: 'Workshop, meeting, etc.' },
-			{ id: 'timestamp', label: 'Date & Time', type: 'datetime', defaultValue: '-5' },
+			{ id: 'timestamp', label: 'Date & Time', type: 'datetime', defaultValue: '-4' },
 			{ id: 'location', label: 'Location', type: 'text', placeholder: 'Room, building, or virtual' },
 			{ id: 'description', label: 'Description', type: 'textarea' },
 			{ id: 'attendees', label: 'Attendees', type: 'tags', placeholder: 'Add person' }

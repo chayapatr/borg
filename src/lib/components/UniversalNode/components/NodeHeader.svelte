@@ -193,16 +193,14 @@
 			<button
 				onclick={handleDelete}
 				aria-label="Delete node"
-				class="rounded p-0.5 text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-borg-orange hover:text-white"
+				class="rounded p-0.5 text-zinc-700 opacity-0 transition-opacity group-hover:opacity-100 hover:text-borg-orange"
 			>
 				<Trash2 class="h-3 w-3" />
 			</button>
 			<button
 				onclick={toggleLock}
 				aria-label={nodeData.locked ? 'Unlock node' : 'Lock node'}
-				class="rounded p-0.5 {nodeData.locked
-					? 'text-zinc-600 hover:bg-gray-100 hover:text-blue-600'
-					: 'text-gray-500 hover:bg-gray-100 hover:text-amber-700'}"
+				class="p-0.5 text-zinc-700 hover:text-borg-orange"
 				title={nodeData.locked ? 'Click to unlock node' : 'Click to lock node'}
 			>
 				{#if nodeData.locked}

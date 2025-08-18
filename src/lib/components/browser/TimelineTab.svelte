@@ -10,9 +10,12 @@
 	}>();
 
 	let events = $state<TimelineEvent[]>([]);
+	let upcomingEvents = $state<TimelineEvent[]>([]);
+	let pastEvents = $state<TimelineEvent[]>([]);
 	let showAddModal = $state(false);
 	let editingEvent = $state<TimelineEvent | undefined>(undefined);
 	let dataLoaded = $state(false);
+	let selectedTab = $state<'upcoming' | 'past'>('upcoming');
 
 	// Lazy load data when tab becomes active
 	$effect(() => {
@@ -25,7 +28,38 @@
 		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
 
 		const result = timelineService.getEventsSortedByDate();
-		events = result instanceof Promise ? await result : result;
+		const allEvents = result instanceof Promise ? await result : result;
+		
+		const now = new Date();
+		
+		// Split events into upcoming and past
+		const upcoming: TimelineEvent[] = [];
+		const past: TimelineEvent[] = [];
+		
+		allEvents.forEach(event => {
+			const eventDate = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date(0);
+			if (eventDate >= now) {
+				upcoming.push(event);
+			} else {
+				past.push(event);
+			}
+		});
+		
+		// Sort upcoming events by deadline (soonest first)
+		upcomingEvents = upcoming.sort((a, b) => {
+			const dateA = a.timestamp ? new Date(a.timestamp) : (a as any).date ? new Date((a as any).date) : new Date(0);
+			const dateB = b.timestamp ? new Date(b.timestamp) : (b as any).date ? new Date((b as any).date) : new Date(0);
+			return dateA.getTime() - dateB.getTime();
+		});
+		
+		// Sort past events by deadline (most recent first)
+		pastEvents = past.sort((a, b) => {
+			const dateA = a.timestamp ? new Date(a.timestamp) : (a as any).date ? new Date((a as any).date) : new Date(0);
+			const dateB = b.timestamp ? new Date(b.timestamp) : (b as any).date ? new Date((b as any).date) : new Date(0);
+			return dateB.getTime() - dateA.getTime();
+		});
+		
+		events = allEvents; // Keep all events for compatibility
 		dataLoaded = true;
 	}
 
@@ -88,7 +122,7 @@
 		if (event.timestamp && event.timestamp.includes('T')) {
 			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
 			const offset = timezoneMatch?.[1];
-			const timezone = offset === '-5' ? 'ET' : offset === '-12' ? 'AOE' : `UTC${offset}`;
+			const timezone = offset === '-5' ? 'EST' : offset === '-4' ? 'EDT' : offset === '-12' ? 'AOE' : (offset === '+0' ? 'UTC' : `UTC${offset}`);
 			
 			// Parse the timestamp and format it directly to preserve the original timezone time
 			const datePart = event.timestamp.split('T')[0];
@@ -142,15 +176,17 @@
 	} {
 		const now = new Date();
 		const target = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date();
+		
 		const diffMs = target.getTime() - now.getTime();
 
 		if (diffMs <= 0) {
 			return { days: 0, hours: 0, minutes: 0, isOverdue: true, displayText: 'Past' };
 		}
 
-		const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-		const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-		const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+		const totalMinutes = Math.floor(diffMs / (1000 * 60));
+		const days = Math.floor(totalMinutes / (24 * 60));
+		const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+		const minutes = totalMinutes % 60;
 
 		let displayText: string;
 		if (days >= 1) {
@@ -167,23 +203,6 @@
 
 <div class="flex flex-1 flex-col">
 	<!-- Header -->
-	<!-- <div class="p-6 border-b border-zinc-800">
-		<div class="flex items-center justify-between">
-			<div>
-				<h2 class="text-2xl font-semibold text-zinc-100">Timeline</h2>
-				<p class="border-zinc-600 mt-1">Track conferences and important dates</p>
-			</div>
-			<button
-				onclick={() => (showAddModal = true)}
-				class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors"
-			>
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-				</svg>
-				Add Event
-			</button>
-		</div>
-	</div> -->
 	<div class=" flex h-16 flex-col justify-center border-b bg-white px-6">
 		<div class="flex items-center justify-between">
 			<div>
@@ -191,7 +210,6 @@
 					<Calendar class="h-8 w-8" />
 					<h2 class="rounded-md text-3xl font-semibold">Timeline</h2>
 				</div>
-				<!-- <p class="border-zinc-600 mt-1">Manage your research projects</p> -->
 			</div>
 			<button
 				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-violet px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
@@ -204,119 +222,240 @@
 		</div>
 	</div>
 
+	<!-- Sub-tabs for Upcoming/Past -->
+	<div class="border-b bg-white px-6">
+		<div class="flex space-x-8">
+			<button
+				class="border-b-2 py-3 text-sm font-medium transition-colors {selectedTab === 'upcoming' 
+					? 'border-borg-blue text-borg-blue' 
+					: 'border-transparent text-zinc-500 hover:text-zinc-700'}"
+				onclick={() => selectedTab = 'upcoming'}
+			>
+				Upcoming ({upcomingEvents.length})
+			</button>
+			<button
+				class="border-b-2 py-3 text-sm font-medium transition-colors {selectedTab === 'past' 
+					? 'border-borg-blue text-borg-blue' 
+					: 'border-transparent text-zinc-500 hover:text-zinc-700'}"
+				onclick={() => selectedTab = 'past'}
+			>
+				Past ({pastEvents.length})
+			</button>
+		</div>
+	</div>
+
 	<!-- Timeline Events -->
 	<div class="flex-1 overflow-y-auto p-6">
-		{#if events.length === 0}
-			<div class="flex h-64 flex-col items-center justify-center text-center">
-				<Fish class="mb-4 h-8 w-8" />
+		{#if selectedTab === 'upcoming'}
+			{@const currentEvents = upcomingEvents}
+			{#if currentEvents.length === 0}
+				<div class="flex h-64 flex-col items-center justify-center text-center">
+					<Fish class="mb-4 h-8 w-8" />
 
-				<h3 class="mb-2 text-xl font-medium text-black">No events yet</h3>
-				<p class="mb-4 text-zinc-500">Add your first conference, deadline, or event</p>
-				<!-- <button
-					onclick={() => (showAddModal = true)}
-					class="rounded-lg bg-borg-blue px-4 py-2 text-white transition-colors hover:bg-blue-500"
-				>
-					Add Event
-				</button> -->
-			</div>
-		{:else}
-			<div class="space-y-4">
-				{#each events as event}
-					{@const template = getTemplateInfo(event.templateType)}
-					{@const timeLeft = getTimeLeft(event)}
-					<div
-						class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-4 transition-colors hover:bg-zinc-50"
-						role="button"
-						tabindex="0"
-						onclick={() => handleEditEvent(event)}
-						onkeydown={(e) => {
-							if (e.key === 'Enter' || e.key === ' ') {
-								e.preventDefault();
-								handleEditEvent(event);
-							}
-						}}
-					>
-						<div class="flex items-start justify-between">
-							<div class="flex flex-1 items-start gap-3">
-								<div
-									class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg"
-									style="background-color: {template.color}20; border: 1px solid {template.color}40;"
-								>
-									<svg
-										class="h-5 w-5"
-										style="color: {template.color}"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
+					<h3 class="mb-2 text-xl font-medium text-black">No upcoming events</h3>
+					<p class="mb-4 text-zinc-500">Add your first conference, deadline, or event</p>
+				</div>
+			{:else}
+				<div class="space-y-4">
+					{#each currentEvents as event}
+						{@const template = getTemplateInfo(event.templateType)}
+						{@const timeLeft = getTimeLeft(event)}
+						<div
+							class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-4 transition-colors hover:bg-zinc-50"
+							role="button"
+							tabindex="0"
+							onclick={() => handleEditEvent(event)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									handleEditEvent(event);
+								}
+							}}
+						>
+							<div class="flex items-start justify-between">
+								<div class="flex flex-1 items-start gap-3">
+									<div
+										class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg"
+										style="background-color: {template.color}20; border: 1px solid {template.color}40;"
 									>
-										{#if template.icon === 'calendar'}
-											<Calendar />
-										{:else if template.icon === 'clock'}
-											<Clock />
-										{:else if template.icon === 'dollar-sign'}
-											<DollarSign />
-										{:else}
-											<Calendar />
-										{/if}
-									</svg>
-								</div>
-								<div class="flex-1">
-									<div class="mb-1 flex items-center gap-2">
-										<h3 class="font-medium text-black">{event.title}</h3>
-										<span
-											class="rounded-full bg-borg-beige px-2 py-[0.15rem] text-[11px] text-zinc-600"
+										<svg
+											class="h-5 w-5"
+											style="color: {template.color}"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
 										>
-											{template.name}
-										</span>
+											{#if template.icon === 'calendar'}
+												<Calendar />
+											{:else if template.icon === 'clock'}
+												<Clock />
+											{:else if template.icon === 'dollar-sign'}
+												<DollarSign />
+											{:else}
+												<Calendar />
+											{/if}
+										</svg>
 									</div>
-									<div class="mb-2 flex items-center gap-4 text-sm text-zinc-600">
-										<span class="flex items-center gap-1">
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-												/>
-											</svg>
-											{formatDateTime(event)}
-										</span>
-										{#if !timeLeft.isOverdue}
-											<span class="font-mono text-sm font-bold text-borg-blue">
-												{timeLeft.displayText}
+									<div class="flex-1">
+										<div class="mb-1 flex items-center gap-2">
+											<h3 class="font-medium text-black">{event.title}</h3>
+											<span
+												class="rounded-full bg-borg-beige px-2 py-[0.15rem] text-[11px] text-zinc-600"
+											>
+												{template.name}
 											</span>
-										{:else}
-											<span class="text-xs text-zinc-500">Past</span>
+										</div>
+										<div class="mb-2 flex items-center gap-4 text-sm text-zinc-600">
+											<span class="flex items-center gap-1">
+												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+													/>
+												</svg>
+												{formatDateTime(event)}
+											</span>
+											{#if !timeLeft.isOverdue}
+												<span class="font-mono text-sm font-bold text-borg-blue">
+													{timeLeft.displayText}
+												</span>
+											{:else}
+												<span class="text-xs text-zinc-500">Past</span>
+											{/if}
+										</div>
+										{#if event.eventData.description}
+											<p class="line-clamp-2 border-zinc-600 text-sm">
+												{event.eventData.description}
+											</p>
 										{/if}
 									</div>
-									{#if event.eventData.description}
-										<p class="line-clamp-2 border-zinc-600 text-sm">
-											{event.eventData.description}
-										</p>
-									{/if}
 								</div>
+								<button
+									onclick={(e) => {
+										e.stopPropagation();
+										handleDeleteEvent(event.id);
+									}}
+									class="ml-2 text-zinc-500 transition-colors hover:text-red-400"
+									aria-label="Delete event"
+								>
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+										/>
+									</svg>
+								</button>
 							</div>
-							<button
-								onclick={(e) => {
-									e.stopPropagation();
-									handleDeleteEvent(event.id);
-								}}
-								class="ml-2 text-zinc-500 transition-colors hover:text-red-400"
-								aria-label="Delete event"
-							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-									/>
-								</svg>
-							</button>
 						</div>
-					</div>
-				{/each}
-			</div>
+					{/each}
+				</div>
+			{/if}
+		{:else}
+			{@const currentEvents = pastEvents}
+			{#if currentEvents.length === 0}
+				<div class="flex h-64 flex-col items-center justify-center text-center">
+					<Fish class="mb-4 h-8 w-8" />
+
+					<h3 class="mb-2 text-xl font-medium text-black">No past events</h3>
+					<p class="mb-4 text-zinc-500">Past events will appear here</p>
+				</div>
+			{:else}
+				<div class="space-y-4">
+					{#each currentEvents as event}
+						{@const template = getTemplateInfo(event.templateType)}
+						{@const timeLeft = getTimeLeft(event)}
+						<div
+							class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-4 transition-colors hover:bg-zinc-50"
+							role="button"
+							tabindex="0"
+							onclick={() => handleEditEvent(event)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									handleEditEvent(event);
+								}
+							}}
+						>
+							<div class="flex items-start justify-between">
+								<div class="flex flex-1 items-start gap-3">
+									<div
+										class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg"
+										style="background-color: {template.color}20; border: 1px solid {template.color}40;"
+									>
+										<svg
+											class="h-5 w-5"
+											style="color: {template.color}"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											{#if template.icon === 'calendar'}
+												<Calendar />
+											{:else if template.icon === 'clock'}
+												<Clock />
+											{:else if template.icon === 'dollar-sign'}
+												<DollarSign />
+											{:else}
+												<Calendar />
+											{/if}
+										</svg>
+									</div>
+									<div class="flex-1">
+										<div class="mb-1 flex items-center gap-2">
+											<h3 class="font-medium text-black">{event.title}</h3>
+											<span
+												class="rounded-full bg-borg-beige px-2 py-[0.15rem] text-[11px] text-zinc-600"
+											>
+												{template.name}
+											</span>
+										</div>
+										<div class="mb-2 flex items-center gap-4 text-sm text-zinc-600">
+											<span class="flex items-center gap-1">
+												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+													/>
+												</svg>
+												{formatDateTime(event)}
+											</span>
+											<span class="text-xs text-zinc-500">Past</span>
+										</div>
+										{#if event.eventData.description}
+											<p class="line-clamp-2 border-zinc-600 text-sm">
+												{event.eventData.description}
+											</p>
+										{/if}
+									</div>
+								</div>
+								<button
+									onclick={(e) => {
+										e.stopPropagation();
+										handleDeleteEvent(event.id);
+									}}
+									class="ml-2 text-zinc-500 transition-colors hover:text-red-400"
+									aria-label="Delete event"
+								>
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+										/>
+									</svg>
+								</button>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>

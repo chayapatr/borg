@@ -53,7 +53,7 @@
 		if (event.timestamp && event.timestamp.includes('T')) {
 			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
 			const offset = timezoneMatch?.[1];
-			const timezone = offset === '-5' ? 'ET' : offset === '-12' ? 'AOE' : `UTC${offset}`;
+			const timezone = offset === '-5' ? 'EST' : offset === '-4' ? 'EDT' : offset === '-12' ? 'AOE' : (offset === '+0' ? 'UTC' : `UTC${offset}`);
 			
 			// Parse the timestamp and format it directly to preserve the original timezone time
 			const datePart = event.timestamp.split('T')[0];
