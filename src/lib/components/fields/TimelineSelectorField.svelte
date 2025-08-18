@@ -26,56 +26,42 @@
 	let eventsMap = $state<Map<string, any>>(new Map());
 	let showAddModal = $state(false);
 
-	// Helper function to create a proper Date object with time and timezone
+	// Helper function to create a proper Date object from timestamp
 	function createEventDateTime(event: any): Date {
-		if (!event.date) return new Date();
-		
-		// If we have time and timezone, create a proper datetime
-		if (event.time && event.timezone) {
-			// Extract timezone offset from "-5 (Boston)" format
-			const offsetMatch = event.timezone.match(/^([+-]?\d+)/);
-			const offset = offsetMatch ? parseInt(offsetMatch[1]) : 0;
-			
-			// Create the base datetime
-			const isoString = `${event.date}T${event.time}:00`;
-			const eventDate = new Date(isoString);
-			
-			// Adjust for timezone offset (convert from event timezone to local time for comparison)
-			// The offset is in hours, multiply by 60 * 60 * 1000 for milliseconds
-			const localOffset = new Date().getTimezoneOffset() / 60; // Local offset in hours
-			const timezoneAdjustment = (offset - localOffset) * 60 * 60 * 1000;
-			
-			return new Date(eventDate.getTime() - timezoneAdjustment);
+		if (event.timestamp) {
+			return new Date(event.timestamp);
 		}
-		
-		// If we have time but no timezone, assume local time
-		if (event.time) {
-			return new Date(`${event.date}T${event.time}:00`);
+		// Fallback for old events that might still have separate date/time fields
+		if (event.date) {
+			const dateOnly = new Date(event.date);
+			if (event.time) {
+				const [hours, minutes] = event.time.split(':').map(Number);
+				dateOnly.setHours(hours, minutes, 0, 0);
+			} else {
+				dateOnly.setHours(23, 59, 59, 999);
+			}
+			return dateOnly;
 		}
-		
-		// If we only have date, use end of day (23:59:59) for better UX
-		const dateOnly = new Date(event.date);
-		dateOnly.setHours(23, 59, 59, 999);
-		return dateOnly;
+		return new Date();
 	}
 
-	// Helper function to format event datetime for display with timezone info
+	// Helper function to format event datetime for display
 	function formatEventDateTime(event: any): string {
-		if (!event.date) return 'No date';
+		if (!event.timestamp && !event.date) return 'No date';
 		
 		const eventDateTime = createEventDateTime(event);
 		const dateStr = eventDateTime.toLocaleDateString();
+		const timeStr = eventDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 		
-		if (event.time && event.timezone) {
-			// Extract timezone abbreviation from "-5 (ET)" format
-			const timezoneMatch = event.timezone.match(/\(([^)]+)\)/);
-			const timezoneDisplay = timezoneMatch ? timezoneMatch[1] : 'UTC';
-			return `${dateStr} at ${event.time} ${timezoneDisplay}`;
-		} else if (event.time) {
-			return `${dateStr} at ${event.time}`;
+		// Extract timezone from timestamp if available
+		if (event.timestamp && event.timestamp.includes('T')) {
+			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
+			const offset = timezoneMatch?.[1];
+			const timezone = offset === '-5' ? 'ET' : offset === '-12' ? 'AOE' : `UTC${offset}`;
+			return `${dateStr} at ${timeStr} ${timezone}`;
 		}
 		
-		return dateStr;
+		return `${dateStr} at ${timeStr}`;
 	}
 
 	// Countdown calculation function
@@ -146,7 +132,7 @@
 		const updatedResult = timelineService.getEventsSortedByDate();
 		const updatedEvents = updatedResult instanceof Promise ? await updatedResult : updatedResult;
 		const newEvent = updatedEvents.find(
-			(e) => e.title === eventData.title && e.date === eventData.date
+			(e) => e.title === eventData.title && (e.timestamp === eventData.timestamp || (e as any).date === eventData.date)
 		);
 		if (newEvent) {
 			value = newEvent.id;
@@ -179,7 +165,28 @@
 						<div class="font-sanss mb-3 text-lg font-semibold text-black">{event.title}</div>
 						{#if countdown.isOverdue}
 							<div class="font-mono text-2xl font-bold text-red-600">⚠️ OVERDUE</div>
+						{:else if countdown.days < 1}
+							<!-- Less than 1 day: show hours and minutes only -->
+							<div class="flex justify-center gap-4">
+								<div class="flex flex-col items-center">
+									<div class="font-mono text-3xl font-bold text-orange-500">
+										{countdown.hours.toString().padStart(2, '0')}
+									</div>
+									<div class="text-sm font-medium text-zinc-600">
+										Hr{countdown.hours !== 1 ? 's' : ''}
+									</div>
+								</div>
+								<div class="flex flex-col items-center">
+									<div class="font-mono text-3xl font-bold text-orange-500">
+										{countdown.minutes.toString().padStart(2, '0')}
+									</div>
+									<div class="text-sm font-medium text-zinc-600">
+										Min{countdown.minutes !== 1 ? 's' : ''}
+									</div>
+								</div>
+							</div>
 						{:else}
+							<!-- More than 1 day: show days, hours, minutes -->
 							<div class="flex justify-center gap-4">
 								{#if countdown.days > 0}
 									<div class="flex flex-col items-center">

@@ -42,12 +42,12 @@
 		eventData: Record<string, any>
 	) {
 		// Filter out undefined values and separate top-level fields from eventData
-		const { title, date, ...dynamicEventData } = eventData;
+		const { title, timestamp, ...dynamicEventData } = eventData;
 
 		const updates = {
 			templateType,
 			title: title || 'Untitled Event',
-			date: date || new Date().toISOString().split('T')[0],
+			timestamp: timestamp || new Date().toISOString(),
 			eventData: dynamicEventData
 		};
 
@@ -83,17 +83,29 @@
 		}
 	}
 
-	function formatDate(dateString: string) {
-		const date = new Date(dateString);
-		return date.toLocaleDateString('en-US', {
+	function formatDateTime(event: TimelineEvent) {
+		const date = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date();
+		const dateStr = date.toLocaleDateString('en-US', {
 			month: 'short',
 			day: 'numeric',
 			year: 'numeric'
 		});
+		const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		
+		// Extract timezone from timestamp if available
+		if (event.timestamp && event.timestamp.includes('T')) {
+			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
+			const offset = timezoneMatch?.[1];
+			const timezone = offset === '-5' ? 'ET' : offset === '-12' ? 'AOE' : `UTC${offset}`;
+			return `${dateStr} at ${timeStr} ${timezone}`;
+		}
+		
+		return `${dateStr} at ${timeStr}`;
 	}
 
-	function isUpcoming(dateString: string) {
-		return new Date(dateString) >= new Date();
+	function isUpcoming(event: TimelineEvent) {
+		const eventDate = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date();
+		return eventDate >= new Date();
 	}
 
 	function getTemplateInfo(templateType: string) {
@@ -105,9 +117,9 @@
 		};
 	}
 
-	function getDaysLeft(dateString: string): number | null {
+	function getDaysLeft(event: TimelineEvent): number | null {
 		const now = new Date();
-		const target = new Date(dateString);
+		const target = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date();
 		const diffMs = target.getTime() - now.getTime();
 
 		if (diffMs <= 0) {
@@ -176,7 +188,7 @@
 			<div class="space-y-4">
 				{#each events as event}
 					{@const template = getTemplateInfo(event.templateType)}
-					{@const daysLeft = getDaysLeft(event.date)}
+					{@const daysLeft = getDaysLeft(event)}
 					<div
 						class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-4 transition-colors hover:bg-zinc-50"
 						role="button"
@@ -232,7 +244,7 @@
 													d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 												/>
 											</svg>
-											{formatDate(event.date)}
+											{formatDateTime(event)}
 										</span>
 										{#if daysLeft !== null}
 											<span class="font-mono text-sm font-bold text-borg-blue">

@@ -21,6 +21,7 @@ export interface TemplateField {
 		| 'link'
 		| 'date'
 		| 'time'
+		| 'datetime'
 		| 'button'
 		| 'people-selector'
 		| 'timeline-selector'

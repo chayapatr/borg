@@ -8,6 +8,7 @@
 	import LinkField from './LinkField.svelte';
 	import DateField from './DateField.svelte';
 	import TimeField from './TimeField.svelte';
+	import DateTimeField from './DateTimeField.svelte';
 	import ButtonField from './ButtonField.svelte';
 	import PeopleSelectorField from './PeopleSelectorField.svelte';
 	import TimelineSelectorField from './TimelineSelectorField.svelte';
@@ -48,6 +49,8 @@
 	<DateField {field} bind:value {readonly} {mode} />
 {:else if field.type === 'time'}
 	<TimeField {field} bind:value {readonly} {mode} />
+{:else if field.type === 'datetime'}
+	<DateTimeField {field} bind:value {readonly} {mode} />
 {:else if field.type === 'button'}
 	<ButtonField {field} bind:value {readonly} {mode} />
 {:else if field.type === 'people-selector'}

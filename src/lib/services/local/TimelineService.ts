@@ -13,9 +13,7 @@ export interface TimelineEvent {
 	id: string;
 	templateType: string;
 	title: string;
-	date: string;
-	time?: string; // Time in HH:MM format
-	timezone?: string; // Timezone identifier (e.g., 'America/New_York')
+	timestamp: string; // ISO timestamp with timezone (e.g., '2024-12-25T14:00:00-05:00')
 	eventData: Record<string, any>; // Dynamic data based on template
 	createdAt: string;
 	updatedAt: string;
@@ -32,9 +30,7 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 		icon: 'calendar',
 		fields: [
 			{ id: 'title', label: 'Title', type: 'text', placeholder: 'Conference name' },
-			{ id: 'date', label: 'Date', type: 'date' },
-			{ id: 'time', label: 'Time', type: 'time', placeholder: 'HH:MM' },
-			{ id: 'timezone', label: 'TZ', type: 'select', options: ['-5 (ET)', '-4 (AOE)'], defaultValue: '-5 (ET)' },
+			{ id: 'timestamp', label: 'Date & Time', type: 'datetime', defaultValue: '-5' },
 			{ id: 'venue', label: 'Venue', type: 'text', placeholder: 'Location or virtual' },
 			{ id: 'submissionDeadline', label: 'Submission Deadline', type: 'date' },
 			{ id: 'website', label: 'Website', type: 'link', placeholder: 'https://conference.org' },
@@ -48,9 +44,7 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 		icon: 'dollar-sign',
 		fields: [
 			{ id: 'title', label: 'Grant Name', type: 'text', placeholder: 'NSF CAREER Award' },
-			{ id: 'date', label: 'Deadline', type: 'date' },
-			{ id: 'time', label: 'Time', type: 'time', placeholder: 'HH:MM' },
-			{ id: 'timezone', label: 'TZ', type: 'select', options: ['-5 (ET)', '-4 (AOE)'], defaultValue: '-5 (ET)' },
+			{ id: 'timestamp', label: 'Deadline', type: 'datetime', defaultValue: '-5' },
 			{ id: 'amount', label: 'Amount', type: 'text', placeholder: '$500,000' },
 			{ id: 'agency', label: 'Agency', type: 'text', placeholder: 'NSF, NIH, etc.' },
 			{ id: 'website', label: 'Website', type: 'link' },
@@ -64,9 +58,7 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 		icon: 'clock',
 		fields: [
 			{ id: 'title', label: 'Title', type: 'text', placeholder: 'Paper submission' },
-			{ id: 'date', label: 'Deadline', type: 'date' },
-			{ id: 'time', label: 'Time', type: 'time', placeholder: 'HH:MM' },
-			{ id: 'timezone', label: 'TZ', type: 'select', options: ['-5 (ET)', '-4 (AOE)'], defaultValue: '-5 (ET)' },
+			{ id: 'timestamp', label: 'Deadline', type: 'datetime', defaultValue: '-5' },
 			{ id: 'description', label: 'Description', type: 'textarea', placeholder: 'What needs to be done' },
 			{ id: 'priority', label: 'Priority', type: 'status', options: ['Low', 'Medium', 'High', 'Critical'] }
 		]
@@ -78,9 +70,7 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 		icon: 'calendar-days',
 		fields: [
 			{ id: 'title', label: 'Event Name', type: 'text', placeholder: 'Workshop, meeting, etc.' },
-			{ id: 'date', label: 'Date', type: 'date' },
-			{ id: 'time', label: 'Time', type: 'time', placeholder: 'HH:MM' },
-			{ id: 'timezone', label: 'TZ', type: 'select', options: ['-5 (ET)', '-4 (AOE)'], defaultValue: '-5 (ET)' },
+			{ id: 'timestamp', label: 'Date & Time', type: 'datetime', defaultValue: '-5' },
 			{ id: 'location', label: 'Location', type: 'text', placeholder: 'Room, building, or virtual' },
 			{ id: 'description', label: 'Description', type: 'textarea' },
 			{ id: 'attendees', label: 'Attendees', type: 'tags', placeholder: 'Add person' }
@@ -98,7 +88,12 @@ export class TimelineService {
 	getAllEvents(): TimelineEvent[] {
 		try {
 			const stored = localStorage.getItem(this.storageKey);
-			return stored ? JSON.parse(stored) : [];
+			if (!stored) return [];
+			
+			const rawEvents = JSON.parse(stored);
+			
+			// Migrate legacy events on load (read-only migration)
+			return rawEvents.map((event: any) => this.migrateEvent(event));
 		} catch (error) {
 			console.error('Failed to load timeline events:', error);
 			return [];
@@ -128,9 +123,7 @@ export class TimelineService {
 			id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			templateType,
 			title: initializedData.title || 'Untitled Event',
-			date: initializedData.date || new Date().toISOString().split('T')[0],
-			time: initializedData.time || undefined,
-			timezone: initializedData.timezone || 'America/New_York', // Default to ET
+			timestamp: initializedData.timestamp || new Date().toISOString(), // Default to now
 			eventData: initializedData,
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString()
@@ -142,19 +135,30 @@ export class TimelineService {
 	}
 
 	updateEvent(id: string, updates: Partial<TimelineEvent>): TimelineEvent | null {
-		const events = this.getAllEvents();
-		const index = events.findIndex(e => e.id === id);
+		const rawStored = localStorage.getItem(this.storageKey);
+		if (!rawStored) return null;
+		
+		const rawEvents = JSON.parse(rawStored);
+		const index = rawEvents.findIndex((e: any) => e.id === id);
 		
 		if (index === -1) return null;
 
-		events[index] = {
-			...events[index],
+		// Migrate the event to new format when updating
+		const migratedEvent = this.migrateEvent(rawEvents[index]);
+		
+		// Apply updates
+		const updatedEvent = {
+			...migratedEvent,
 			...updates,
 			updatedAt: new Date().toISOString()
 		};
 
-		this.saveEvents(events);
-		return events[index];
+		// Clean up old fields when saving
+		const cleanEvent = this.cleanupLegacyFields(updatedEvent);
+		rawEvents[index] = cleanEvent;
+
+		this.saveEvents(rawEvents);
+		return updatedEvent;
 	}
 
 	deleteEvent(id: string): boolean {
@@ -181,8 +185,91 @@ export class TimelineService {
 	}
 
 	getEventsSortedByDate(): TimelineEvent[] {
-		const events = this.getAllEvents();
-		return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+		return this.getAllEvents();
+	}
+
+	// Migration helper: Convert legacy event to new timestamp format
+	public migrateEvent(event: any): TimelineEvent {
+		if (event.timestamp) {
+			// Already in new format, return as is
+			return event as TimelineEvent;
+		}
+
+		// Legacy event with separate date/time/timezone fields
+		let timestamp: string;
+		
+		if (event.date && event.time && event.timezone) {
+			// Has all three fields - create proper timestamp
+			const timezoneOffset = this.parseTimezoneOffset(event.timezone);
+			const offsetString = timezoneOffset >= 0 ? 
+				`+${Math.abs(timezoneOffset).toString().padStart(2, '0')}:00` : 
+				`-${Math.abs(timezoneOffset).toString().padStart(2, '0')}:00`;
+			timestamp = `${event.date}T${event.time}${offsetString}`;
+		} else if (event.date && event.time) {
+			// Has date and time but no timezone - assume ET
+			timestamp = `${event.date}T${event.time}-05:00`;
+		} else if (event.date) {
+			// Only has date - use end of day with ET timezone
+			timestamp = `${event.date}T23:59-05:00`;
+		} else {
+			// No date info - use current time without seconds
+			const now = new Date();
+			const dateStr = now.toISOString().split('T')[0];
+			const timeStr = now.toTimeString().slice(0, 5);
+			timestamp = `${dateStr}T${timeStr}-05:00`;
+		}
+
+		// Create migrated event
+		const migratedEvent: TimelineEvent = {
+			id: event.id,
+			templateType: event.templateType,
+			title: event.title,
+			timestamp,
+			eventData: event.eventData || {},
+			createdAt: event.createdAt,
+			updatedAt: new Date().toISOString(), // Update timestamp for migration
+			createdBy: event.createdBy,
+			projectId: event.projectId
+		};
+
+		return migratedEvent;
+	}
+
+	// Helper to parse timezone offset from various formats
+	private parseTimezoneOffset(timezone: string): number {
+		if (typeof timezone === 'string') {
+			// Handle formats like "-5 (ET)", "-5", "America/New_York"
+			const offsetMatch = timezone.match(/^([+-]?\d+)/);
+			if (offsetMatch) {
+				return parseInt(offsetMatch[1]);
+			}
+			
+			// Handle timezone names
+			const timezoneMap: Record<string, number> = {
+				'America/New_York': -5,
+				'America/Chicago': -6,
+				'America/Denver': -7,
+				'America/Los_Angeles': -8,
+				'America/Phoenix': -7,
+				'Pacific/Honolulu': -10
+			};
+			
+			return timezoneMap[timezone] || -5; // Default to ET
+		}
+		
+		return -5; // Default to ET
+	}
+
+	// Clean up legacy fields when saving migrated events
+	private cleanupLegacyFields(event: TimelineEvent): TimelineEvent {
+		const cleaned = { ...event };
+		
+		// Remove old date/time/timezone fields if they exist
+		delete (cleaned as any).date;
+		delete (cleaned as any).time;
+		delete (cleaned as any).timezone;
+		
+		return cleaned;
 	}
 
 	private saveEvents(events: TimelineEvent[]): void {
