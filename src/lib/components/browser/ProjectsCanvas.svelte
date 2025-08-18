@@ -53,6 +53,18 @@
 	let workingNodes = $state<Node[]>([]);
 	let lastProjectsLength = 0;
 
+	// Handle lock state reactively - set draggable property based on lock state
+	$effect(() => {
+		if (workingNodes.length > 0) {
+			workingNodes.forEach(node => {
+				if (node.data) {
+					// Set draggable property based on lock state - locked nodes can't be dragged
+					node.draggable = !(node.data.nodeData && node.data.nodeData.locked);
+				}
+			});
+		}
+	});
+
 	// Edit panel state
 	let showEditPanel = $state(false);
 	let editNodeId = $state('');

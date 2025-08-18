@@ -238,24 +238,24 @@
 		<!-- Action buttons (top-right corner) -->
 		<div class="absolute top-1 right-1 flex gap-1">
 			<button
+				onclick={toggleLock}
+				aria-label="{nodeData.locked ? 'Unlock node' : 'Lock node'}"
+				class="flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
+				title="{nodeData.locked ? 'Click to unlock node' : 'Click to lock node'}"
+			>
+				{#if nodeData.locked}
+					<Lock class="h-3 w-3 text-red-600 hover:text-red-700" />
+				{:else}
+					<Unlock class="h-3 w-3 text-gray-700 hover:text-borg-orange" />
+				{/if}
+			</button>
+			<button
 				class="flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
 				title="Delete sticker"
 				aria-label="Delete sticker"
 				onclick={handleDelete}
 			>
 				<Trash2 class="h-3 w-3 text-gray-700 hover:text-borg-orange" />
-			</button>
-			<button
-				onclick={toggleLock}
-				aria-label="{nodeData.locked ? 'Unlock node' : 'Lock node'}"
-				class="rounded p-0.5 {nodeData.locked ? 'text-red-600 hover:bg-red-50 hover:text-red-700' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}"
-				title="{nodeData.locked ? 'Click to unlock node' : 'Click to lock node'}"
-			>
-				{#if nodeData.locked}
-					<Lock class="h-3 w-3" />
-				{:else}
-					<Unlock class="h-3 w-3" />
-				{/if}
 			</button>
 		</div>
 
