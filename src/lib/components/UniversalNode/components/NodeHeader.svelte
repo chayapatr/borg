@@ -11,14 +11,17 @@
 		CircleDashed,
 		PencilRuler,
 		CheckCircle,
-		Lock
+		Lock,
+		Unlock
 	} from '@lucide/svelte';
 	import type { NodeTemplate } from '../../../templates';
 
-	let { template, templateType, nodeData, onDelete } = $props<{
+	let { template, templateType, nodeData, id, data, onDelete } = $props<{
 		template: NodeTemplate;
 		templateType: string;
 		nodeData: any;
+		id: string;
+		data: any;
 		onDelete: () => void;
 	}>();
 
@@ -129,6 +132,32 @@
 			onDelete();
 		}
 	}
+
+	function toggleLock(event: MouseEvent) {
+		event.stopPropagation();
+
+		const newLockState = !nodeData.locked;
+
+		// Update the data prop immediately
+		data.nodeData = {
+			...nodeData,
+			locked: newLockState
+		};
+
+		// Dispatch update event to save changes
+		const updateEvent = new CustomEvent('nodeUpdate', {
+			detail: {
+				nodeId: id,
+				data: {
+					nodeData: {
+						...nodeData,
+						locked: newLockState
+					}
+				}
+			}
+		});
+		document.dispatchEvent(updateEvent);
+	}
 </script>
 
 {#if template.id === 'project'}
@@ -168,11 +197,20 @@
 			>
 				<Trash2 class="h-3 w-3" />
 			</button>
-			{#if nodeData.locked}
-				<div class="rounded p-0.5 text-zinc-500" title="Node is locked">
+			<button
+				onclick={toggleLock}
+				aria-label={nodeData.locked ? 'Unlock node' : 'Lock node'}
+				class="rounded p-0.5 {nodeData.locked
+					? 'text-zinc-600 hover:bg-gray-100 hover:text-blue-600'
+					: 'text-gray-500 hover:bg-gray-100 hover:text-amber-700'}"
+				title={nodeData.locked ? 'Click to unlock node' : 'Click to lock node'}
+			>
+				{#if nodeData.locked}
 					<Lock class="h-3 w-3" />
-				</div>
-			{/if}
+				{:else}
+					<Unlock class="h-3 w-3" />
+				{/if}
+			</button>
 		</div>
 	</div>
 {/if}

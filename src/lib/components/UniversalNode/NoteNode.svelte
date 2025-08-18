@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import { Trash2, Pencil, Bold, Lock } from '@lucide/svelte';
+	import { Trash2, Pencil, Bold, Lock, Unlock } from '@lucide/svelte';
 
 	let {
 		data,
@@ -189,6 +189,32 @@
 		document.dispatchEvent(updateEvent);
 	}
 
+	function toggleLock(event: MouseEvent) {
+		event.stopPropagation();
+
+		const newLockState = !nodeData.locked;
+
+		// Update the data prop immediately
+		data.nodeData = {
+			...nodeData,
+			locked: newLockState
+		};
+
+		// Dispatch update event to save changes
+		const updateEvent = new CustomEvent('nodeUpdate', {
+			detail: {
+				nodeId: id,
+				data: {
+					nodeData: {
+						...nodeData,
+						locked: newLockState
+					}
+				}
+			}
+		});
+		document.dispatchEvent(updateEvent);
+	}
+
 	function startResize(event: MouseEvent) {
 		event.preventDefault();
 		event.stopPropagation();
@@ -331,11 +357,20 @@
 					<Trash2 class="h-3 w-3" />
 				</button>
 			</div>
-			{#if nodeData.locked}
-				<div class="p-1 text-gray-600" title="Node is locked">
+			<button
+				onclick={toggleLock}
+				aria-label={nodeData.locked ? 'Unlock node' : 'Lock node'}
+				class="rounded p-0.5 {nodeData.locked
+					? 'text-zinc-600 hover:bg-white/50 hover:text-blue-600'
+					: 'text-gray-500 hover:bg-white/50 hover:text-amber-700'}"
+				title={nodeData.locked ? 'Click to unlock node' : 'Click to lock node'}
+			>
+				{#if nodeData.locked}
 					<Lock class="h-3 w-3" />
-				</div>
-			{/if}
+				{:else}
+					<Unlock class="h-3 w-3" />
+				{/if}
+			</button>
 		</div>
 
 		<!-- Connection Handles -->

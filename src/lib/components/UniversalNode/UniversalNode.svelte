@@ -223,7 +223,7 @@
 	<div>
 		<!-- Project Node Header (outside the main node box) -->
 		{#if template.id === 'project'}
-			<NodeHeader {template} templateType={data.templateType} {nodeData} onDelete={handleDelete} />
+			<NodeHeader {template} templateType={data.templateType} {nodeData} {id} {data} onDelete={handleDelete} />
 		{/if}
 
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -249,6 +249,8 @@
 					{template}
 					templateType={data.templateType}
 					{nodeData}
+					{id}
+					{data}
 					onDelete={handleDelete}
 				/>
 			{/if}
