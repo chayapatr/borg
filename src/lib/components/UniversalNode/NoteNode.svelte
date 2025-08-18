@@ -72,15 +72,15 @@
 	let textarea = $state<HTMLTextAreaElement>();
 
 	function handleNodeClick() {
-		// Don't allow inline editing if the edit panel is open for this node
-		if (!isBeingEdited) {
+		// Don't allow inline editing if the edit panel is open for this node or if node is locked
+		if (!isBeingEdited && !nodeData.locked) {
 			startInlineEdit();
 		}
 	}
 
 	function startInlineEdit() {
-		// Extra safety check
-		if (isBeingEdited) return;
+		// Extra safety check - don't start editing if locked
+		if (isBeingEdited || nodeData.locked) return;
 
 		isEditingNote = true;
 		noteContent = nodeData.content || '';

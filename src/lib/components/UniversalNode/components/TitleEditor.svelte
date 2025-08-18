@@ -19,6 +19,7 @@
 	function startTitleEdit() {
 		if (isProjectNode) return; // Don't allow editing project titles
 		if (isBeingEdited) return; // Don't allow editing if edit panel is open
+		if (nodeData.locked) return; // Don't allow editing if node is locked
 		
 		isEditingTitle = true;
 		titleContent = nodeData.title || '';
@@ -55,6 +56,7 @@
 	function handleTitleClick(event: MouseEvent) {
 		if (isProjectNode) return; // Project titles can't be edited
 		if (isBeingEdited) return; // Don't allow editing if edit panel is open
+		if (nodeData.locked) return; // Don't allow editing if node is locked
 		
 		event.stopPropagation(); // Prevent node click when clicking title
 		startTitleEdit();
@@ -77,7 +79,7 @@
 {:else}
 	<div
 		onclick={handleTitleClick}
-		class="{isProjectNode ? '' : 'cursor-text'} py-1 font-semibold text-black {isProjectNode
+		class="{isProjectNode || nodeData.locked ? '' : 'cursor-text'} py-1 font-semibold text-black {isProjectNode
 			? '-mt-2 text-3xl'
 			: 'font-sans text-lg text-balance'}"
 	>
