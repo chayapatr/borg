@@ -12,6 +12,24 @@
 		readonly?: boolean;
 		mode?: 'display' | 'edit';
 	}>();
+
+	// Initialize with default value if available
+	$effect(() => {
+		if (!value && field.defaultValue) {
+			value = field.defaultValue;
+		}
+	});
+
+	// Helper function to format timezone display names
+	function formatTimezone(timezone: string): string {
+		if (!timezone) return '';
+		
+		// The timezone is already in the format "-5 (Boston)" so just return as-is
+		return timezone;
+	}
+
+	// Check if this field is for timezone selection (has timezone options)
+	const isTimezoneField = field.id === 'timezone' || field.label?.toLowerCase().includes('timezone') || field.label?.toLowerCase().includes('tz');
 </script>
 
 <div class="field-container">
@@ -23,12 +41,27 @@
 		{#if readonly || mode === 'display'}
 			{#if value}
 				<span class="inline-flex items-center rounded-full bg-black px-3 py-1 text-xs font-medium text-white">
-					{value}
+					{isTimezoneField ? formatTimezone(value) : value}
 				</span>
 			{:else}
 				<div class="py-1 text-black">-</div>
 			{/if}
+		{:else if isTimezoneField}
+			<!-- Dropdown for timezone selection -->
+			<select
+				bind:value
+				disabled={readonly}
+				class="w-full rounded border border-black bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
+			>
+				<option value="">Select timezone...</option>
+				{#each field.options || [] as option}
+					<option value={option}>
+						{formatTimezone(option)}
+					</option>
+				{/each}
+			</select>
 		{:else}
+			<!-- Button toggles for other select fields -->
 			<div class="flex flex-wrap gap-2">
 				{#each field.options || [] as option}
 					<button

@@ -32,10 +32,20 @@
 		
 		// If we have time and timezone, create a proper datetime
 		if (event.time && event.timezone) {
-			// Create a datetime string and use the Date constructor
-			// The Date constructor will interpret this in local time, which is what we want for countdown calculations
+			// Extract timezone offset from "-5 (Boston)" format
+			const offsetMatch = event.timezone.match(/^([+-]?\d+)/);
+			const offset = offsetMatch ? parseInt(offsetMatch[1]) : 0;
+			
+			// Create the base datetime
 			const isoString = `${event.date}T${event.time}:00`;
-			return new Date(isoString);
+			const eventDate = new Date(isoString);
+			
+			// Adjust for timezone offset (convert from event timezone to local time for comparison)
+			// The offset is in hours, multiply by 60 * 60 * 1000 for milliseconds
+			const localOffset = new Date().getTimezoneOffset() / 60; // Local offset in hours
+			const timezoneAdjustment = (offset - localOffset) * 60 * 60 * 1000;
+			
+			return new Date(eventDate.getTime() - timezoneAdjustment);
 		}
 		
 		// If we have time but no timezone, assume local time
@@ -57,8 +67,10 @@
 		const dateStr = eventDateTime.toLocaleDateString();
 		
 		if (event.time && event.timezone) {
-			const timezoneDisplay = event.timezone.split('/')[1]?.replace('_', ' ') || event.timezone;
-			return `${dateStr} at ${event.time} (${timezoneDisplay})`;
+			// Extract timezone abbreviation from "-5 (ET)" format
+			const timezoneMatch = event.timezone.match(/\(([^)]+)\)/);
+			const timezoneDisplay = timezoneMatch ? timezoneMatch[1] : 'UTC';
+			return `${dateStr} at ${event.time} ${timezoneDisplay}`;
 		} else if (event.time) {
 			return `${dateStr} at ${event.time}`;
 		}

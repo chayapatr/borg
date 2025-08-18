@@ -1,6 +1,13 @@
-import type { IProjectsService, ITaskService, IPeopleService, ITimelineService, INodesService, IStickerService } from './interfaces';
+import type {
+	IProjectsService,
+	ITaskService,
+	IPeopleService,
+	ITimelineService,
+	INodesService,
+	IStickerService
+} from './interfaces';
 import { ProjectsService } from './local/ProjectsService';
-import { TaskService } from './local/TaskService';  
+import { TaskService } from './local/TaskService';
 import { PeopleService } from './local/PeopleService';
 import { TimelineService } from './local/TimelineService';
 import { NodesService } from './local/NodesService';
@@ -59,7 +66,14 @@ export class ServiceFactory {
 	): INodesService {
 		const mode = this.getServiceMode();
 		if (mode === 'firebase') {
-			return new FirebaseNodesService(projectId, setNodes, getNodes, setEdges, getEdges, projectSlug);
+			return new FirebaseNodesService(
+				projectId,
+				setNodes,
+				getNodes,
+				setEdges,
+				getEdges,
+				projectSlug
+			);
 		}
 		return new NodesService(setNodes, getNodes, setEdges, getEdges, projectSlug);
 	}

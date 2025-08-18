@@ -56,7 +56,7 @@
 	// Handle lock state reactively - set draggable property based on lock state
 	$effect(() => {
 		if (workingNodes.length > 0) {
-			workingNodes.forEach(node => {
+			workingNodes.forEach((node) => {
 				if (node.data) {
 					// Set draggable property based on lock state - locked nodes can't be dragged
 					node.draggable = !(node.data.nodeData && node.data.nodeData.locked);
@@ -85,24 +85,26 @@
 			return;
 		}
 
-		// Create project nodes from projects array
-		const projectNodes: Node[] = projects.map((project: any, index: number) => ({
-			id: `project-${project.id}`,
-			type: 'projectCanvas',
-			position: getProjectNodePosition(project.id, index),
-			data: {
-				templateType: 'project',
-				nodeData: {
-					title: project.title,
-					status: project.status || 'To Do',
-					collaborators: project.collaborators || [],
-					website: project.website || '',
-					projectId: project.id,
-					projectSlug: project.slug
-				}
-			},
-			draggable: true
-		}));
+		// Create project nodes from projects array (exclude project-node)
+		const projectNodes: Node[] = projects
+			.filter((project: any) => project.id !== 'project-canvas')
+			.map((project: any, index: number) => ({
+				id: `project-${project.id}`,
+				type: 'projectCanvas',
+				position: getProjectNodePosition(project.id, index),
+				data: {
+					templateType: 'project',
+					nodeData: {
+						title: project.title,
+						status: project.status || 'To Do',
+						collaborators: project.collaborators || [],
+						website: project.website || '',
+						projectId: project.id,
+						projectSlug: project.slug
+					}
+				},
+				draggable: true
+			}));
 
 		// Get non-project canvas nodes (these maintain their own ordering)
 		const nonProjectCanvasNodes = canvasNodes.filter((node) => !node.id.startsWith('project-'));
@@ -469,7 +471,7 @@
 		if (!getViewport) return; // Not initialized yet
 
 		const projectsService = ServiceFactory.createProjectsService();
-		
+
 		// Get current user ID
 		const currentUser = $authStore.user;
 		if (!currentUser) {
@@ -485,27 +487,35 @@
 				zoom: viewport.zoom
 			};
 
-			console.log('ProjectsCanvas: Attempting to save viewport position for user:', currentUser.uid, viewportData);
-			
+			console.log(
+				'ProjectsCanvas: Attempting to save viewport position for user:',
+				currentUser.uid,
+				viewportData
+			);
+
 			// Get existing project-canvas project by slug
 			const project = await projectsService.getProject('project-canvas');
 			console.log('ProjectsCanvas: Existing project data:', project);
-			
+
 			// Get existing viewport positions object, or create new one
 			const existingViewportPositions = (project as any)?.viewportPositions || {};
-			
+
 			// Update viewport position for current user
 			const updatedViewportPositions = {
 				...existingViewportPositions,
 				[currentUser.uid]: viewportData
 			};
-			
+
 			// Save viewport positions
 			const result = await projectsService.updateProject('project-canvas', {
 				viewportPositions: updatedViewportPositions
 			} as any);
 			console.log('ProjectsCanvas: Update result:', result);
-			console.log('ProjectsCanvas: Saved viewport position for user:', currentUser.uid, viewportData);
+			console.log(
+				'ProjectsCanvas: Saved viewport position for user:',
+				currentUser.uid,
+				viewportData
+			);
 		} catch (error) {
 			console.error('ProjectsCanvas: Failed to save viewport position:', error);
 		}
@@ -515,7 +525,7 @@
 		if (!setViewport) return; // Not initialized yet
 
 		const projectsService = ServiceFactory.createProjectsService();
-		
+
 		// Get current user ID
 		const currentUser = $authStore.user;
 		if (!currentUser) {
@@ -528,16 +538,20 @@
 			const project = await projectsService.getProject('project-canvas');
 
 			console.log('ProjectsCanvas: Loaded project data:', project);
-			
+
 			// Check for user-specific viewport position
 			const userViewportPosition = (project as any)?.viewportPositions?.[currentUser.uid];
-			
+
 			if (userViewportPosition) {
 				const { x, y, zoom } = userViewportPosition;
 				// Use setTimeout to ensure SvelteFlow is fully mounted
 				setTimeout(() => {
 					setViewport({ x, y, zoom }, { duration: 200 });
-					console.log('ProjectsCanvas: Restored viewport position for user:', currentUser.uid, userViewportPosition);
+					console.log(
+						'ProjectsCanvas: Restored viewport position for user:',
+						currentUser.uid,
+						userViewportPosition
+					);
 				}, 100);
 			} else {
 				console.log('ProjectsCanvas: No saved viewport position found for user:', currentUser.uid);

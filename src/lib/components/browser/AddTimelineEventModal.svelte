@@ -29,7 +29,9 @@
 					timezone: editingEvent.timezone,
 					...editingEvent.eventData
 				}
-			: {}
+			: {
+					timezone: '-5 (ET)' // Default timezone for new events
+				}
 	);
 
 	// Get all available templates
@@ -64,7 +66,16 @@
 	// Reset form data when template changes (but not when editing)
 	$effect(() => {
 		if (!editingEvent) {
-			eventData = {};
+			// Initialize with default values from template fields
+			const newEventData: Record<string, any> = {
+				timezone: '-5 (ET)' // Always default to Eastern Time
+			};
+			currentTemplate.fields.forEach(field => {
+				if (field.defaultValue) {
+					newEventData[field.id] = field.defaultValue;
+				}
+			});
+			eventData = newEventData;
 		}
 	});
 
@@ -140,15 +151,60 @@
 				</div>
 
 				<!-- Dynamic fields based on selected template -->
-				{#each currentTemplate.fields as field}
-					<div>
-						<FieldRenderer
-							{field}
-							bind:value={eventData[field.id]}
-							readonly={isLoading}
-							mode="edit"
-						/>
-					</div>
+				{#each currentTemplate.fields as field, index}
+					{#if field.id === 'time'}
+						<!-- Special handling for time field - combine with timezone on one line -->
+						{@const timezoneField = currentTemplate.fields.find(f => f.id === 'timezone')}
+						{#if timezoneField}
+							<div>
+								<label class="mb-1 block text-sm font-medium text-zinc-600">Time & Timezone</label>
+								<div class="flex gap-3">
+									<div class="flex-1">
+										<input
+											type="time"
+											bind:value={eventData[field.id]}
+											placeholder={field.placeholder}
+											disabled={isLoading}
+											class="w-full rounded border border-black bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
+										/>
+									</div>
+									<div class="w-40">
+										<select
+											bind:value={eventData[timezoneField.id]}
+											disabled={isLoading}
+											class="w-full rounded border border-black bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
+										>
+											{#each timezoneField.options || [] as option}
+												<option value={option}>
+													{option}
+												</option>
+											{/each}
+										</select>
+									</div>
+								</div>
+							</div>
+						{:else}
+							<div>
+								<FieldRenderer
+									{field}
+									bind:value={eventData[field.id]}
+									readonly={isLoading}
+									mode="edit"
+								/>
+							</div>
+						{/if}
+					{:else if field.id === 'timezone'}
+						<!-- Skip timezone field as it's handled with time field -->
+					{:else}
+						<div>
+							<FieldRenderer
+								{field}
+								bind:value={eventData[field.id]}
+								readonly={isLoading}
+								mode="edit"
+							/>
+						</div>
+					{/if}
 				{/each}
 			</form>
 		</div>

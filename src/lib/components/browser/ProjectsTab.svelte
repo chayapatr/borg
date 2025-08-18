@@ -168,7 +168,7 @@
 				</div>
 			{:else}
 				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-					{#each projects as project}
+					{#each projects.filter((p) => p.id !== 'project-canvas') as project}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
@@ -228,7 +228,7 @@
 			<!-- Canvas View -->
 			<div class="h-full w-full">
 				<ProjectsCanvas
-					{projects}
+					projects={projects.filter((p) => p.id !== 'project-canvas')}
 					onProjectClick={handleOpenProject}
 					onProjectUpdate={loadProjects}
 					onCreateProject={() => (showCreateModal = true)}

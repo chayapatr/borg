@@ -246,7 +246,9 @@
 	>
 		<div class="flex flex-col gap-2 p-3">
 			<!-- Project Title -->
-			<h3 class="mr-1 text-2xl font-semibold text-black">{nodeData.title || 'Untitled Project'}</h3>
+			<h3 class="mr-1 text-2xl font-semibold text-black">
+				{nodeData.title || 'Untitled Project'}
+			</h3>
 
 			<div class="flex gap-1.5">
 				<!-- Collaborators -->

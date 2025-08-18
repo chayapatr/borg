@@ -34,7 +34,7 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 			{ id: 'title', label: 'Title', type: 'text', placeholder: 'Conference name' },
 			{ id: 'date', label: 'Date', type: 'date' },
 			{ id: 'time', label: 'Time', type: 'time', placeholder: 'HH:MM' },
-			{ id: 'timezone', label: 'Timezone', type: 'text', placeholder: 'America/New_York', defaultValue: 'America/New_York' },
+			{ id: 'timezone', label: 'TZ', type: 'select', options: ['-5 (ET)', '-4 (AOE)'], defaultValue: '-5 (ET)' },
 			{ id: 'venue', label: 'Venue', type: 'text', placeholder: 'Location or virtual' },
 			{ id: 'submissionDeadline', label: 'Submission Deadline', type: 'date' },
 			{ id: 'website', label: 'Website', type: 'link', placeholder: 'https://conference.org' },
@@ -50,7 +50,7 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 			{ id: 'title', label: 'Grant Name', type: 'text', placeholder: 'NSF CAREER Award' },
 			{ id: 'date', label: 'Deadline', type: 'date' },
 			{ id: 'time', label: 'Time', type: 'time', placeholder: 'HH:MM' },
-			{ id: 'timezone', label: 'Timezone', type: 'text', placeholder: 'America/New_York', defaultValue: 'America/New_York' },
+			{ id: 'timezone', label: 'TZ', type: 'select', options: ['-5 (ET)', '-4 (AOE)'], defaultValue: '-5 (ET)' },
 			{ id: 'amount', label: 'Amount', type: 'text', placeholder: '$500,000' },
 			{ id: 'agency', label: 'Agency', type: 'text', placeholder: 'NSF, NIH, etc.' },
 			{ id: 'website', label: 'Website', type: 'link' },
@@ -66,7 +66,7 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 			{ id: 'title', label: 'Title', type: 'text', placeholder: 'Paper submission' },
 			{ id: 'date', label: 'Deadline', type: 'date' },
 			{ id: 'time', label: 'Time', type: 'time', placeholder: 'HH:MM' },
-			{ id: 'timezone', label: 'Timezone', type: 'text', placeholder: 'America/New_York', defaultValue: 'America/New_York' },
+			{ id: 'timezone', label: 'TZ', type: 'select', options: ['-5 (ET)', '-4 (AOE)'], defaultValue: '-5 (ET)' },
 			{ id: 'description', label: 'Description', type: 'textarea', placeholder: 'What needs to be done' },
 			{ id: 'priority', label: 'Priority', type: 'status', options: ['Low', 'Medium', 'High', 'Critical'] }
 		]
@@ -80,7 +80,7 @@ export const timelineTemplates: Record<string, TimelineTemplate> = {
 			{ id: 'title', label: 'Event Name', type: 'text', placeholder: 'Workshop, meeting, etc.' },
 			{ id: 'date', label: 'Date', type: 'date' },
 			{ id: 'time', label: 'Time', type: 'time', placeholder: 'HH:MM' },
-			{ id: 'timezone', label: 'Timezone', type: 'text', placeholder: 'America/New_York', defaultValue: 'America/New_York' },
+			{ id: 'timezone', label: 'TZ', type: 'select', options: ['-5 (ET)', '-4 (AOE)'], defaultValue: '-5 (ET)' },
 			{ id: 'location', label: 'Location', type: 'text', placeholder: 'Room, building, or virtual' },
 			{ id: 'description', label: 'Description', type: 'textarea' },
 			{ id: 'attendees', label: 'Attendees', type: 'tags', placeholder: 'Add person' }
