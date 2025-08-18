@@ -664,8 +664,6 @@
 		if (hasStatusChange && onProjectUpdate) {
 			onProjectUpdate();
 		}
-
-		showEditPanel = false;
 	}
 
 	function handleEditPanelDelete(nodeId: string) {

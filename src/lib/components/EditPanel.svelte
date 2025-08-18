@@ -41,6 +41,18 @@
 		}
 	});
 
+	// Autosave when data changes (excluding initial load)
+	let hasInitialized = false;
+	$effect(() => {
+		// Track changes to editableData and customFields by JSON serializing them
+		const dataSnapshot = JSON.stringify({ editableData, customFields });
+		if (hasInitialized) {
+			autoSave();
+		} else if (editableData && customFields) {
+			hasInitialized = true;
+		}
+	});
+
 	function handleSave() {
 		// Include custom fields in the saved data
 		const dataToSave = {
@@ -49,6 +61,19 @@
 		};
 		onSave(nodeId, { nodeData: dataToSave });
 	}
+
+	function autoSave() {
+		// Debounced autosave to avoid excessive saves
+		if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+		isSaving = true;
+		autoSaveTimeout = setTimeout(() => {
+			handleSave();
+			isSaving = false;
+		}, 800); // 800ms gives enough time to see the indicator
+	}
+
+	let autoSaveTimeout: ReturnType<typeof setTimeout>;
+	let isSaving = $state(false);
 
 	function handleDelete() {
 		console.log('EditPanel.handleDelete called for:', { nodeId, templateType });
@@ -69,6 +94,9 @@
 	}
 
 	function handleClose() {
+		// Clear any pending autosave and save immediately before closing
+		if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+		handleSave();
 		isOpen = false;
 	}
 
@@ -123,6 +151,9 @@
 					>
 						{template.name}
 					</span>
+					{#if isSaving}
+						<span class="animate-pulse text-xs font-medium text-zinc-700">💾 Saving...</span>
+					{/if}
 				</div>
 				<button
 					onclick={handleClose}
@@ -220,21 +251,21 @@
 		</div>
 
 		<!-- Footer -->
-		<div class="flex gap-2 border-t border-zinc-800 p-4">
-			<button
+		<div class="flex gap-2 p-4">
+			<!-- <button
 				onclick={handleSave}
 				class="{templateType === 'project'
 					? 'w-full'
 					: 'flex-1'} rounded-lg bg-borg-violet px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-borg-blue focus:ring-2 focus:ring-borg-blue focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 			>
 				Save Changes
-			</button>
+			</button> -->
 			{#if templateType !== 'project'}
 				<button
 					onclick={handleDelete}
-					class="rounded-lg border border-borg-orange px-4 py-2 text-sm font-medium text-borg-orange transition-colors hover:bg-borg-orange hover:text-white focus:ring-2 focus:ring-borg-orange focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
+					class="w-full rounded-lg border border-borg-orange px-4 py-2 text-sm font-medium text-borg-orange transition-colors hover:bg-borg-orange hover:text-white focus:ring-2 focus:ring-borg-orange focus:ring-offset-2 focus:ring-offset-zinc-900 focus:outline-none"
 				>
-					Delete
+					Delete Node
 				</button>
 			{/if}
 		</div>
