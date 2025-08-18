@@ -6,6 +6,7 @@
 		Background,
 		Controls,
 		MiniMap,
+		useSvelteFlow,
 		type Node,
 		type Edge,
 		type Connection
@@ -41,6 +42,11 @@
 	let canvasEdges = $state<Edge[]>([]);
 	let nodesService: INodesService;
 	let mounted = $state(false);
+
+	// Svelte Flow helpers - will be initialized after SvelteFlow is ready
+	let getViewport: any;
+	let setViewport: any;
+	let svelteFlowReady = $state(false);
 
 	// Current working nodes (mutable for SvelteFlow)
 	let workingNodes = $state<Node[]>([]);
@@ -91,7 +97,7 @@
 		// Preserve existing order of workingNodes when updating
 		const existingWorkingNodes = new Map(workingNodes.map((n) => [n.id, n]));
 		const existingProjectNodeOrder = workingNodes.filter((node) => node.id.startsWith('project-'));
-		
+
 		// Update existing project nodes with fresh data while preserving order
 		const orderedUpdatedProjectNodes: Node[] = [];
 		const processedIds = new Set<string>();
@@ -122,7 +128,7 @@
 			const bTime = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
 			return aTime - bTime;
 		});
-		
+
 		workingNodes = [...orderedUpdatedProjectNodes, ...sortedCanvasNodes];
 	}
 
@@ -184,6 +190,25 @@
 		}
 	});
 
+	// Initialize Svelte Flow helpers after SvelteFlow is ready
+	function initializeSvelteFlowHelpers() {
+		if (!svelteFlowReady) {
+			try {
+				const svelteFlowHelpers = useSvelteFlow();
+				getViewport = svelteFlowHelpers.getViewport;
+				setViewport = svelteFlowHelpers.setViewport;
+				svelteFlowReady = true;
+
+				// Load viewport position after helpers are initialized
+				setTimeout(() => {
+					loadViewportPosition();
+				}, 100);
+			} catch (error) {
+				console.error('Failed to initialize SvelteFlow helpers:', error);
+			}
+		}
+	}
+
 	function handleConnect(connection: Connection) {
 		if (!connection.source || !connection.target) return;
 
@@ -226,13 +251,12 @@
 		});
 	}
 
-
 	function handleNodeDragStart(event: any) {
 		if (event && event.node) {
 			const draggedNodeId = event.node.id;
-			const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
-			const otherNodes = workingNodes.filter(node => node.id !== draggedNodeId);
-			
+			const draggedNode = workingNodes.find((node) => node.id === draggedNodeId);
+			const otherNodes = workingNodes.filter((node) => node.id !== draggedNodeId);
+
 			if (draggedNode) {
 				// Move dragged node to the end of the array (renders on top)
 				workingNodes = [...otherNodes, draggedNode];
@@ -246,10 +270,14 @@
 		try {
 			if (event?.targetNode) {
 				const draggedNodeId = event.targetNode.id;
-				const draggedNode = workingNodes.find(node => node.id === draggedNodeId);
-				
+				const draggedNode = workingNodes.find((node) => node.id === draggedNodeId);
+
 				if (draggedNode) {
-					console.log('ProjectsCanvas: Saving position for node:', draggedNodeId, draggedNode.position);
+					console.log(
+						'ProjectsCanvas: Saving position for node:',
+						draggedNodeId,
+						draggedNode.position
+					);
 					// Save only the dragged node - Firebase will set updatedAt for ordering
 					await nodesService.saveBatch([draggedNode], []);
 				}
@@ -385,20 +413,20 @@
 
 	async function handleAddSticker(event: CustomEvent) {
 		if (!nodesService) return;
-		
+
 		try {
 			const stickerData = event.detail;
-			
+
 			if (stickerData.type === 'sticker') {
 				// Create sticker at center of viewport with some randomization
 				const position = {
 					x: Math.random() * 600 + 200,
 					y: Math.random() * 400 + 200
 				};
-				
+
 				// First create a basic sticker node using the service
 				const baseNode = await nodesService.addNode('sticker', position);
-				
+
 				// Then immediately update it with the sticker-specific data
 				const stickerNodeData = {
 					title: stickerData.name,
@@ -409,7 +437,7 @@
 					height: 100,
 					rotation: 0
 				};
-				
+
 				await nodesService.updateNode(baseNode.id, {
 					nodeData: stickerNodeData
 				});
@@ -418,6 +446,95 @@
 			console.error('Failed to create sticker:', error);
 		}
 	}
+
+	// Viewport saving with debounce
+	let viewportSaveTimeout: ReturnType<typeof setTimeout>;
+	const VIEWPORT_SAVE_DELAY = 500; // Save after 500ms of inactivity
+
+	// Functions for viewport position management
+	async function saveViewportPosition() {
+		if (!getViewport) return; // Not initialized yet
+
+		const projectsService = ServiceFactory.createProjectsService();
+
+		try {
+			const viewport = getViewport();
+			const viewportData = {
+				x: viewport.x,
+				y: viewport.y,
+				zoom: viewport.zoom
+			};
+
+			console.log('ProjectsCanvas: Attempting to save viewport position:', viewportData);
+			
+			// First check if project-canvas exists, if not create it
+			let project = await projectsService.getProject('project-canvas');
+			console.log('ProjectsCanvas: Existing project data:', project);
+			
+			if (!project) {
+				console.log('ProjectsCanvas: Creating project-canvas project...');
+				project = await projectsService.createProject({
+					title: 'Projects Canvas',
+					description: 'Virtual project for projects canvas viewport',
+					status: 'active'
+				});
+				// Set the slug to match our identifier
+				await projectsService.updateProject(project.id, { slug: 'project-canvas' });
+			}
+			
+			// Save viewport position
+			const result = await projectsService.updateProject('project-canvas', {
+				viewportPosition: viewportData
+			} as any);
+			console.log('ProjectsCanvas: Update result:', result);
+			console.log('ProjectsCanvas: Saved viewport position:', viewportData);
+		} catch (error) {
+			console.error('ProjectsCanvas: Failed to save viewport position:', error);
+		}
+	}
+
+	async function loadViewportPosition() {
+		if (!setViewport) return; // Not initialized yet
+
+		const projectsService = ServiceFactory.createProjectsService();
+
+		try {
+			const projectResult = projectsService.getProject('project-canvas');
+			const project = projectResult instanceof Promise ? await projectResult : projectResult;
+
+			console.log('ProjectsCanvas: Loaded project data:', project);
+			
+			if ((project as any)?.viewportPosition) {
+				const { x, y, zoom } = (project as any).viewportPosition;
+				// Use setTimeout to ensure SvelteFlow is fully mounted
+				setTimeout(() => {
+					setViewport({ x, y, zoom }, { duration: 200 });
+					console.log('ProjectsCanvas: Restored viewport position:', (project as any).viewportPosition);
+				}, 100);
+			} else {
+				console.log('ProjectsCanvas: No saved viewport position found');
+			}
+		} catch (error) {
+			console.error('ProjectsCanvas: Failed to load viewport position:', error);
+		}
+	}
+
+	function debouncedSaveViewport() {
+		clearTimeout(viewportSaveTimeout);
+		viewportSaveTimeout = setTimeout(() => {
+			saveViewportPosition();
+		}, VIEWPORT_SAVE_DELAY);
+	}
+
+	// Handle viewport move events
+	function handleViewportChange() {
+		// Initialize helpers if not ready
+		if (!svelteFlowReady) {
+			initializeSvelteFlowHelpers();
+		}
+		// Save position when user moves the viewport (debounced)
+		debouncedSaveViewport();
+	}
 </script>
 
 <SvelteFlowProvider>
@@ -425,7 +542,12 @@
 		<!-- Canvas -->
 		<div class="relative flex-1">
 			<!-- Floating Toolbar -->
-			<Toolbar view="projects" onCreateNode={handleToolbarCreateNode} onShowStickers={handleShowStickers} onCreateProject={onCreateProject} />
+			<Toolbar
+				view="projects"
+				onCreateNode={handleToolbarCreateNode}
+				onShowStickers={handleShowStickers}
+				{onCreateProject}
+			/>
 
 			<SvelteFlow
 				class="h-full w-full bg-black"
@@ -437,6 +559,8 @@
 				ondelete={handleDelete}
 				onnodedragstart={handleNodeDragStart}
 				onnodedragstop={handleNodeDragStop}
+				oninit={initializeSvelteFlowHelpers}
+				onmoveend={handleViewportChange}
 				nodesDraggable={true}
 				nodesConnectable={true}
 				elevateNodesOnSelect={true}
@@ -462,10 +586,7 @@
 
 		<!-- Sticker Panel -->
 		{#if showStickerPanel}
-			<StickerPanel 
-				bind:isOpen={showStickerPanel} 
-				onClose={handleCloseStickerPanel}
-			/>
+			<StickerPanel bind:isOpen={showStickerPanel} onClose={handleCloseStickerPanel} />
 		{/if}
 	</div>
 </SvelteFlowProvider>

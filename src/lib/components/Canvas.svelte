@@ -64,20 +64,20 @@
 	let showTaskModal = $state(false);
 	let taskModalNodeId = $state('');
 	let taskModalTask = $state<Task | undefined>(undefined); // undefined for add mode, Task for edit mode
-	
+
 	// Sticker panel state
 	let showStickerPanel = $state(false);
-	
+
 	// Flag to prevent redundant auto-saves after explicit saves
 	let skipNextAutoSave = $state(false);
-	
+
 	// Project sync optimization
 	let lastProjectSyncTime = 0;
 	let lastKnownProjectData: any = null;
 	const PROJECT_SYNC_DEBOUNCE = 5000; // 5 seconds
 
 	// Get Svelte Flow helpers
-	const { screenToFlowPosition, getViewport } = useSvelteFlow();
+	const { screenToFlowPosition, getViewport, setViewport } = useSvelteFlow();
 
 	// Helper function to get viewport center position
 	function getViewportCenterPosition() {
@@ -96,7 +96,7 @@
 		return screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
 	}
 
-	// Auto-save positions when nodes change (e.g., after dragging) 
+	// Auto-save positions when nodes change (e.g., after dragging)
 	// but SKIP if nodes were just added/removed (handled by Firestore subscriptions)
 	$effect(() => {
 		if (nodesService && nodes.length > 0 && previousNodes.length > 0) {
@@ -109,37 +109,40 @@
 				previousEdges = [...edges];
 				return;
 			}
-			
+
 			// Check if this is a position change (from dragging) - save immediately
 			let hasPositionChanges = false;
 			if (previousNodes.length === nodes.length) {
 				for (let i = 0; i < nodes.length; i++) {
 					const current = nodes[i];
-					const previous = previousNodes.find(p => p.id === current.id);
-					if (previous && (
-						current.position.x !== previous.position.x || 
-						current.position.y !== previous.position.y
-					)) {
+					const previous = previousNodes.find((p) => p.id === current.id);
+					if (
+						previous &&
+						(current.position.x !== previous.position.x ||
+							current.position.y !== previous.position.y)
+					) {
 						hasPositionChanges = true;
 						break;
 					}
 				}
 			}
-			
+
 			clearTimeout(saveTimeout);
-			
+
 			// Use shorter timeout for position changes to prevent Firebase conflicts
 			const timeout = hasPositionChanges ? 100 : 500;
-			
+
 			saveTimeout = setTimeout(async () => {
 				// Skip auto-save if we just did an explicit save
 				if (skipNextAutoSave) {
 					skipNextAutoSave = false;
 					return;
 				}
-				
-				console.log(`Canvas: Auto-saving (hasPositionChanges: ${hasPositionChanges}, timeout: ${timeout}ms)`);
-				
+
+				console.log(
+					`Canvas: Auto-saving (hasPositionChanges: ${hasPositionChanges}, timeout: ${timeout}ms)`
+				);
+
 				// Use optimized batch save if available, otherwise fall back to regular batch save
 				if (
 					'saveBatchOptimized' in nodesService &&
@@ -183,6 +186,65 @@
 		}
 	});
 
+	// Viewport saving with debounce
+	let viewportSaveTimeout: ReturnType<typeof setTimeout>;
+	const VIEWPORT_SAVE_DELAY = 100; // Save after 500ms of inactivity
+
+	// Functions for viewport position management
+	async function saveViewportPosition() {
+		if (!projectSlug || !projectsService) return;
+
+		try {
+			const viewport = getViewport();
+			const viewportData = {
+				x: viewport.x,
+				y: viewport.y,
+				zoom: viewport.zoom
+			};
+
+			// Save to Firebase using projects service
+			await projectsService.updateProject(projectSlug, {
+				viewportPosition: viewportData
+			} as any);
+			console.log('Canvas: Saved viewport position:', viewportData);
+		} catch (error) {
+			console.error('Canvas: Failed to save viewport position:', error);
+		}
+	}
+
+	function debouncedSaveViewport() {
+		clearTimeout(viewportSaveTimeout);
+		viewportSaveTimeout = setTimeout(() => {
+			saveViewportPosition();
+		}, VIEWPORT_SAVE_DELAY);
+	}
+
+	async function loadViewportPosition() {
+		if (!projectSlug || !projectsService) return;
+
+		try {
+			const projectResult = projectsService.getProject(projectSlug);
+			const project = projectResult instanceof Promise ? await projectResult : projectResult;
+
+			if (project?.viewportPosition) {
+				const { x, y, zoom } = project.viewportPosition;
+				// Use setTimeout to ensure SvelteFlow is fully mounted
+				setTimeout(() => {
+					setViewport({ x, y, zoom }, { duration: 200 });
+					console.log('Canvas: Restored viewport position:', project.viewportPosition);
+				}, 100);
+			}
+		} catch (error) {
+			console.error('Canvas: Failed to load viewport position:', error);
+		}
+	}
+
+	// Handle viewport move events
+	function handleViewportChange() {
+		// Save position when user moves the viewport (debounced)
+		debouncedSaveViewport();
+	}
+
 	onMount(() => {
 		projectsService = ServiceFactory.createProjectsService();
 		taskService = ServiceFactory.createTaskService();
@@ -204,6 +266,9 @@
 					console.error('Failed to load project:', error);
 				}
 			}
+
+			// Load and restore viewport position
+			await loadViewportPosition();
 
 			nodesService = ServiceFactory.createNodesService(
 				actualProjectId,
@@ -435,20 +500,20 @@
 	// Handle add sticker event (click-based)
 	async function handleAddSticker(event: CustomEvent) {
 		console.log('🎨 Canvas received add sticker event:', event.detail);
-		
+
 		if (!nodesService) return;
-		
+
 		try {
 			const stickerData = event.detail;
-			
+
 			if (stickerData.type === 'sticker') {
 				// Create sticker at center of viewport
 				const position = getViewportCenterPosition();
-				
+
 				// First create a basic sticker node using the service
 				const baseNode = await (nodesService as any).addNode('sticker', position);
 				console.log('🎨 Created base sticker node:', baseNode);
-				
+
 				// Then immediately update it with the sticker-specific data
 				const stickerNodeData = {
 					title: stickerData.name,
@@ -459,11 +524,11 @@
 					height: 100,
 					rotation: 0
 				};
-				
+
 				const success = await (nodesService as any).updateNode(baseNode.id, {
 					nodeData: stickerNodeData
 				});
-				
+
 				if (success) {
 					console.log('✅ Sticker node created and updated with data');
 				} else {
@@ -556,7 +621,8 @@
 			// Include node count in the same update to batch requests
 			updates.nodeCount = nodes.length;
 
-			if (Object.keys(updates).length > 1) { // More than just nodeCount
+			if (Object.keys(updates).length > 1) {
+				// More than just nodeCount
 				projectsService.updateProject(projectSlug, updates);
 			}
 		}
@@ -589,9 +655,9 @@
 		if (event && event.node) {
 			const draggedNodeId = event.node.id;
 			// Remove the dragged node from its current position
-			const draggedNode = nodes.find(node => node.id === draggedNodeId);
-			const otherNodes = nodes.filter(node => node.id !== draggedNodeId);
-			
+			const draggedNode = nodes.find((node) => node.id === draggedNodeId);
+			const otherNodes = nodes.filter((node) => node.id !== draggedNodeId);
+
 			if (draggedNode) {
 				// Move dragged node to the end of the array (renders on top)
 				// The updatedAt will be set when saving, which will persist this ordering
@@ -665,7 +731,7 @@
 				}
 			}
 		}
-		
+
 		// Removed individual node position save to prevent triple saves
 		// The batch save above handles all position updates atomically
 	}
@@ -683,7 +749,7 @@
 			taskSidebarTasks = [...updatedTasks];
 		}
 
-		// For localStorage services only - refresh storage data  
+		// For localStorage services only - refresh storage data
 		if (nodesService.loadFromStorage) {
 			nodesService.loadFromStorage();
 		}
@@ -846,7 +912,11 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="relative flex-1" onclick={handleCanvasClick}>
 		<!-- Floating Toolbar -->
-		<Toolbar view="project" onCreateNode={handleToolbarCreateNode} onShowStickers={handleShowStickers} />
+		<Toolbar
+			view="project"
+			onCreateNode={handleToolbarCreateNode}
+			onShowStickers={handleShowStickers}
+		/>
 		<div class="h-full w-full">
 			<SvelteFlow
 				class="bg-black"
@@ -858,6 +928,7 @@
 				ondelete={handleDelete}
 				onnodedragstart={handleNodeDragStart}
 				onnodedragstop={handleNodeDragStop}
+				onmoveend={handleViewportChange}
 				nodesDraggable={true}
 				nodesConnectable={true}
 				elevateNodesOnSelect={true}
@@ -903,10 +974,7 @@
 
 	<!-- Sticker Panel -->
 	{#if showStickerPanel}
-		<StickerPanel 
-			bind:isOpen={showStickerPanel} 
-			onClose={() => showStickerPanel = false} 
-		/>
+		<StickerPanel bind:isOpen={showStickerPanel} onClose={() => (showStickerPanel = false)} />
 	{/if}
 </div>
 

@@ -8,6 +8,11 @@ export interface Project {
 	updatedAt: string;
 	nodeCount: number;
 	collaborators: string[];
+	viewportPosition?: {
+		x: number;
+		y: number;
+		zoom: number;
+	};
 }
 
 export class ProjectsService {
