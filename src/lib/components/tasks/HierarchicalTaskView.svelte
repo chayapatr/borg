@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Calendar, StickyNote, CheckCircle, Trash2, RotateCcw, Loader2 } from '@lucide/svelte';
+	import { Calendar, StickyNote, CheckCircle, Trash2, RotateCcw, Loader2, ExternalLink } from '@lucide/svelte';
 	import type { TaskWithContext } from '../../types/task';
 	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
 
@@ -145,17 +145,30 @@
 					)}
 					{@const isSelected = selectedProject === projectSlug}
 
-					<button
+					<div
 						onclick={() => selectProject(projectSlug)}
-						class="flex w-full items-center justify-between rounded-md border border-black p-3 text-left transition-colors {isSelected
+						onkeydown={(e) => e.key === 'Enter' && selectProject(projectSlug)}
+						role="button"
+						tabindex="0"
+						class="relative flex w-full items-center justify-between rounded-md border border-black p-3 text-left transition-colors cursor-pointer {isSelected
 							? 'bg-borg-brown'
 							: 'bg-white hover:bg-borg-beige'}"
 					>
-						<div class="flex flex-col">
+						<button
+							onclick={(e) => {
+								e.stopPropagation();
+								window.open(`/project/${projectSlug}`, '_blank');
+							}}
+							class="absolute top-2 right-2 flex items-center justify-center rounded border border-black p-1 bg-white transition-colors hover:bg-black/10"
+							title="Open project"
+						>
+							<ExternalLink class="h-3 w-3 text-black" />
+						</button>
+						<div class="flex flex-col pr-8">
 							<span class="font-semibold text-black">{projectData.project.title}</span>
 							<span class="text-xs text-zinc-600">{projectTaskCount} tasks</span>
 						</div>
-					</button>
+					</div>
 				{/each}
 			</div>
 		</div>
