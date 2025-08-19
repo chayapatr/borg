@@ -12,10 +12,13 @@
 	let events = $state<TimelineEvent[]>([]);
 	let upcomingEvents = $state<TimelineEvent[]>([]);
 	let pastEvents = $state<TimelineEvent[]>([]);
+	let filteredUpcomingEvents = $state<TimelineEvent[]>([]);
+	let filteredPastEvents = $state<TimelineEvent[]>([]);
 	let showAddModal = $state(false);
 	let editingEvent = $state<TimelineEvent | undefined>(undefined);
 	let dataLoaded = $state(false);
 	let selectedTab = $state<'upcoming' | 'past'>('upcoming');
+	let selectedTypeFilter = $state<string>('all');
 
 	// Lazy load data when tab becomes active
 	$effect(() => {
@@ -29,39 +32,88 @@
 
 		const result = timelineService.getEventsSortedByDate();
 		const allEvents = result instanceof Promise ? await result : result;
-		
+
 		const now = new Date();
-		
+
 		// Split events into upcoming and past
 		const upcoming: TimelineEvent[] = [];
 		const past: TimelineEvent[] = [];
-		
-		allEvents.forEach(event => {
-			const eventDate = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date(0);
+
+		allEvents.forEach((event) => {
+			const eventDate = event.timestamp
+				? new Date(event.timestamp)
+				: (event as any).date
+					? new Date((event as any).date)
+					: new Date(0);
 			if (eventDate >= now) {
 				upcoming.push(event);
 			} else {
 				past.push(event);
 			}
 		});
-		
+
 		// Sort upcoming events by deadline (soonest first)
 		upcomingEvents = upcoming.sort((a, b) => {
-			const dateA = a.timestamp ? new Date(a.timestamp) : (a as any).date ? new Date((a as any).date) : new Date(0);
-			const dateB = b.timestamp ? new Date(b.timestamp) : (b as any).date ? new Date((b as any).date) : new Date(0);
+			const dateA = a.timestamp
+				? new Date(a.timestamp)
+				: (a as any).date
+					? new Date((a as any).date)
+					: new Date(0);
+			const dateB = b.timestamp
+				? new Date(b.timestamp)
+				: (b as any).date
+					? new Date((b as any).date)
+					: new Date(0);
 			return dateA.getTime() - dateB.getTime();
 		});
-		
+
 		// Sort past events by deadline (most recent first)
 		pastEvents = past.sort((a, b) => {
-			const dateA = a.timestamp ? new Date(a.timestamp) : (a as any).date ? new Date((a as any).date) : new Date(0);
-			const dateB = b.timestamp ? new Date(b.timestamp) : (b as any).date ? new Date((b as any).date) : new Date(0);
+			const dateA = a.timestamp
+				? new Date(a.timestamp)
+				: (a as any).date
+					? new Date((a as any).date)
+					: new Date(0);
+			const dateB = b.timestamp
+				? new Date(b.timestamp)
+				: (b as any).date
+					? new Date((b as any).date)
+					: new Date(0);
 			return dateB.getTime() - dateA.getTime();
 		});
-		
+
 		events = allEvents; // Keep all events for compatibility
+		applyTypeFilter();
 		dataLoaded = true;
 	}
+
+	// Apply type filter to events
+	function applyTypeFilter() {
+		if (selectedTypeFilter === 'all') {
+			filteredUpcomingEvents = upcomingEvents;
+			filteredPastEvents = pastEvents;
+		} else {
+			filteredUpcomingEvents = upcomingEvents.filter(
+				(event) => event.templateType === selectedTypeFilter
+			);
+			filteredPastEvents = pastEvents.filter((event) => event.templateType === selectedTypeFilter);
+		}
+	}
+
+	// React to filter changes
+	$effect(() => {
+		applyTypeFilter();
+	});
+
+	// Get unique template types from all events
+	let availableTypes = $derived.by(() => {
+		const types = new Set<string>();
+		events.forEach((event) => types.add(event.templateType));
+		return Array.from(types).map((type) => ({
+			value: type,
+			label: getTemplateInfo(type).name
+		}));
+	});
 
 	async function handleAddEvent(templateType: string, eventData: Record<string, any>) {
 		const result = timelineService.addEvent(templateType, eventData);
@@ -122,39 +174,56 @@
 		if (event.timestamp && event.timestamp.includes('T')) {
 			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
 			const offset = timezoneMatch?.[1];
-			const timezone = offset === '-5' ? 'EST' : offset === '-4' ? 'EDT' : offset === '-12' ? 'AOE' : (offset === '+0' ? 'UTC' : `UTC${offset}`);
-			
+			const timezone =
+				offset === '-5'
+					? 'EST'
+					: offset === '-4'
+						? 'EDT'
+						: offset === '-12'
+							? 'AOE'
+							: offset === '+0'
+								? 'UTC'
+								: `UTC${offset}`;
+
 			// Parse the timestamp and format it directly to preserve the original timezone time
 			const datePart = event.timestamp.split('T')[0];
 			const timePart = event.timestamp.split('T')[1];
 			const timeOnly = timePart.split(/[+-]/)[0];
 			const timeComponents = timeOnly.split(':');
 			const timeStr = `${timeComponents[0]}:${timeComponents[1]}`;
-			
+
 			const date = new Date(datePart);
 			const dateStr = date.toLocaleDateString('en-US', {
 				month: 'short',
 				day: 'numeric',
 				year: 'numeric'
 			});
-			
+
 			return `${dateStr} at ${timeStr} ${timezone}`;
 		}
-		
+
 		// Fallback for legacy events
-		const date = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date();
+		const date = event.timestamp
+			? new Date(event.timestamp)
+			: (event as any).date
+				? new Date((event as any).date)
+				: new Date();
 		const dateStr = date.toLocaleDateString('en-US', {
 			month: 'short',
 			day: 'numeric',
 			year: 'numeric'
 		});
 		const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-		
+
 		return `${dateStr} at ${timeStr}`;
 	}
 
 	function isUpcoming(event: TimelineEvent) {
-		const eventDate = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date();
+		const eventDate = event.timestamp
+			? new Date(event.timestamp)
+			: (event as any).date
+				? new Date((event as any).date)
+				: new Date();
 		return eventDate >= new Date();
 	}
 
@@ -167,16 +236,20 @@
 		};
 	}
 
-	function getTimeLeft(event: TimelineEvent): { 
-		days: number; 
-		hours: number; 
-		minutes: number; 
+	function getTimeLeft(event: TimelineEvent): {
+		days: number;
+		hours: number;
+		minutes: number;
 		isOverdue: boolean;
 		displayText: string;
 	} {
 		const now = new Date();
-		const target = event.timestamp ? new Date(event.timestamp) : (event as any).date ? new Date((event as any).date) : new Date();
-		
+		const target = event.timestamp
+			? new Date(event.timestamp)
+			: (event as any).date
+				? new Date((event as any).date)
+				: new Date();
+
 		const diffMs = target.getTime() - now.getTime();
 
 		if (diffMs <= 0) {
@@ -198,6 +271,14 @@
 		}
 
 		return { days, hours, minutes, isOverdue: false, displayText };
+	}
+
+	function getTimeLeftColor(timeLeft: { days: number; hours: number; isOverdue: boolean }): string {
+		if (timeLeft.isOverdue) return 'text-rose-500';
+		if (timeLeft.days === 0) return 'text-rose-400'; // Same day - urgent
+		if (timeLeft.days === 1) return 'text-orange-600'; // Tomorrow - warning
+		if (timeLeft.days <= 7) return 'text-amber-500'; // Within a week - caution
+		return 'text-borg-blue'; // More than a week - normal
 	}
 </script>
 
@@ -224,30 +305,45 @@
 
 	<!-- Sub-tabs for Upcoming/Past -->
 	<div class="border-b bg-white px-6">
-		<div class="flex space-x-8">
-			<button
-				class="border-b-2 py-3 text-sm font-medium transition-colors {selectedTab === 'upcoming' 
-					? 'border-borg-blue text-borg-blue' 
-					: 'border-transparent text-zinc-500 hover:text-zinc-700'}"
-				onclick={() => selectedTab = 'upcoming'}
-			>
-				Upcoming ({upcomingEvents.length})
-			</button>
-			<button
-				class="border-b-2 py-3 text-sm font-medium transition-colors {selectedTab === 'past' 
-					? 'border-borg-blue text-borg-blue' 
-					: 'border-transparent text-zinc-500 hover:text-zinc-700'}"
-				onclick={() => selectedTab = 'past'}
-			>
-				Past ({pastEvents.length})
-			</button>
+		<div class="flex items-center justify-between">
+			<div class="flex space-x-8">
+				<button
+					class="border-b-2 py-3 text-sm font-medium transition-colors {selectedTab === 'upcoming'
+						? 'border-borg-blue text-borg-blue'
+						: 'border-transparent text-zinc-500 hover:text-zinc-700'}"
+					onclick={() => (selectedTab = 'upcoming')}
+				>
+					Upcoming ({filteredUpcomingEvents.length})
+				</button>
+				<button
+					class="border-b-2 py-3 text-sm font-medium transition-colors {selectedTab === 'past'
+						? 'border-borg-blue text-borg-blue'
+						: 'border-transparent text-zinc-500 hover:text-zinc-700'}"
+					onclick={() => (selectedTab = 'past')}
+				>
+					Past ({filteredPastEvents.length})
+				</button>
+			</div>
+			<!-- Filter by Type -->
+			<div class="flex items-center gap-2">
+				<span class="text-xs text-zinc-500">Filter:</span>
+				<select
+					bind:value={selectedTypeFilter}
+					class="rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-black focus:border-borg-blue focus:outline-none"
+				>
+					<option value="all">All Types</option>
+					{#each availableTypes as type}
+						<option value={type.value}>{type.label}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
 	</div>
 
 	<!-- Timeline Events -->
 	<div class="flex-1 overflow-y-auto p-6">
 		{#if selectedTab === 'upcoming'}
-			{@const currentEvents = upcomingEvents}
+			{@const currentEvents = filteredUpcomingEvents}
 			{#if currentEvents.length === 0}
 				<div class="flex h-64 flex-col items-center justify-center text-center">
 					<Fish class="mb-4 h-8 w-8" />
@@ -256,12 +352,12 @@
 					<p class="mb-4 text-zinc-500">Add your first conference, deadline, or event</p>
 				</div>
 			{:else}
-				<div class="space-y-4">
+				<div class="grid grid-cols-2 gap-4">
 					{#each currentEvents as event}
 						{@const template = getTemplateInfo(event.templateType)}
 						{@const timeLeft = getTimeLeft(event)}
 						<div
-							class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-4 transition-colors hover:bg-zinc-50"
+							class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-3 transition-colors hover:bg-zinc-50"
 							role="button"
 							tabindex="0"
 							onclick={() => handleEditEvent(event)}
@@ -305,7 +401,7 @@
 												{template.name}
 											</span>
 										</div>
-										<div class="mb-2 flex items-center gap-4 text-sm text-zinc-600">
+										<div class="mb-2 flex items-center gap-4 text-xs text-zinc-600">
 											<span class="flex items-center gap-1">
 												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path
@@ -318,7 +414,7 @@
 												{formatDateTime(event)}
 											</span>
 											{#if !timeLeft.isOverdue}
-												<span class="font-mono text-sm font-bold text-borg-blue">
+												<span class="font-mono text-xs font-bold {getTimeLeftColor(timeLeft)}">
 													{timeLeft.displayText}
 												</span>
 											{:else}
@@ -326,7 +422,7 @@
 											{/if}
 										</div>
 										{#if event.eventData.description}
-											<p class="line-clamp-2 border-zinc-600 text-sm">
+											<p class="line-clamp-2 border-zinc-600 text-xs">
 												{event.eventData.description}
 											</p>
 										{/if}
@@ -355,7 +451,7 @@
 				</div>
 			{/if}
 		{:else}
-			{@const currentEvents = pastEvents}
+			{@const currentEvents = filteredPastEvents}
 			{#if currentEvents.length === 0}
 				<div class="flex h-64 flex-col items-center justify-center text-center">
 					<Fish class="mb-4 h-8 w-8" />
@@ -364,12 +460,12 @@
 					<p class="mb-4 text-zinc-500">Past events will appear here</p>
 				</div>
 			{:else}
-				<div class="space-y-4">
+				<div class="grid grid-cols-2 gap-4">
 					{#each currentEvents as event}
 						{@const template = getTemplateInfo(event.templateType)}
 						{@const timeLeft = getTimeLeft(event)}
 						<div
-							class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-4 transition-colors hover:bg-zinc-50"
+							class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-3 transition-colors hover:bg-zinc-50"
 							role="button"
 							tabindex="0"
 							onclick={() => handleEditEvent(event)}
@@ -413,7 +509,7 @@
 												{template.name}
 											</span>
 										</div>
-										<div class="mb-2 flex items-center gap-4 text-sm text-zinc-600">
+										<div class="mb-2 flex items-center gap-4 text-xs text-zinc-600">
 											<span class="flex items-center gap-1">
 												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path
@@ -428,7 +524,7 @@
 											<span class="text-xs text-zinc-500">Past</span>
 										</div>
 										{#if event.eventData.description}
-											<p class="line-clamp-2 border-zinc-600 text-sm">
+											<p class="line-clamp-2 border-zinc-600 text-xs">
 												{event.eventData.description}
 											</p>
 										{/if}
