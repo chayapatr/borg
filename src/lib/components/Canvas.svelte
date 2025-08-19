@@ -38,7 +38,7 @@
 	// Add editing state to nodes and handle lock state without recreating objects to preserve positions
 	$effect(() => {
 		if (nodes.length > 0) {
-			nodes.forEach(node => {
+			nodes.forEach((node) => {
 				if (node.data) {
 					node.data.isBeingEdited = showEditPanel && editNodeId === node.id;
 					// Set draggable property based on lock state - locked nodes can't be dragged
@@ -226,10 +226,10 @@
 			// Get existing project data to preserve existing viewport positions
 			const projectResult = projectsService.getProject(projectSlug);
 			const project = projectResult instanceof Promise ? await projectResult : projectResult;
-			
+
 			// Get existing viewport positions object, or create new one
 			const existingViewportPositions = (project as any)?.viewportPositions || {};
-			
+
 			// Update viewport position for current user
 			const updatedViewportPositions = {
 				...existingViewportPositions,
@@ -249,7 +249,7 @@
 	function debouncedSaveViewport() {
 		clearTimeout(viewportSaveTimeout);
 		viewportSaveTimeout = setTimeout(() => {
-			saveViewportPosition();
+			// saveViewportPosition();
 		}, VIEWPORT_SAVE_DELAY);
 	}
 
@@ -274,9 +274,13 @@
 				const { x, y, zoom } = userViewportPosition;
 				// Use setTimeout to ensure SvelteFlow is fully mounted
 				setTimeout(() => {
-					setViewport({ x, y, zoom }, { duration: 200 });
-					console.log('Canvas: Restored viewport position for user:', currentUser.uid, userViewportPosition);
-				}, 100);
+					setViewport({ x, y, zoom }, { duration: 0 });
+					console.log(
+						'Canvas: Restored viewport position for user:',
+						currentUser.uid,
+						userViewportPosition
+					);
+				}, 0);
 			} else {
 				console.log('Canvas: No saved viewport position found for user:', currentUser.uid);
 			}
@@ -314,7 +318,7 @@
 			}
 
 			// Load and restore viewport position
-			await loadViewportPosition();
+			// await loadViewportPosition();
 
 			nodesService = ServiceFactory.createNodesService(
 				actualProjectId,
@@ -967,6 +971,7 @@
 				bind:nodes
 				bind:edges
 				{nodeTypes}
+				fitView
 				onconnect={handleConnect}
 				onbeforedelete={handleBeforeDelete}
 				ondelete={handleDelete}

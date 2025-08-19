@@ -216,7 +216,7 @@
 
 				// Load viewport position after helpers are initialized
 				setTimeout(() => {
-					loadViewportPosition();
+					// loadViewportPosition();
 				}, 100);
 			} catch (error) {
 				console.error('Failed to initialize SvelteFlow helpers:', error);
@@ -546,13 +546,13 @@
 				const { x, y, zoom } = userViewportPosition;
 				// Use setTimeout to ensure SvelteFlow is fully mounted
 				setTimeout(() => {
-					setViewport({ x, y, zoom }, { duration: 200 });
+					// setViewport({ x, y, zoom }, { duration: 0 });
 					console.log(
 						'ProjectsCanvas: Restored viewport position for user:',
 						currentUser.uid,
 						userViewportPosition
 					);
-				}, 100);
+				}, 0);
 			} else {
 				console.log('ProjectsCanvas: No saved viewport position found for user:', currentUser.uid);
 			}
@@ -564,7 +564,7 @@
 	function debouncedSaveViewport() {
 		clearTimeout(viewportSaveTimeout);
 		viewportSaveTimeout = setTimeout(() => {
-			saveViewportPosition();
+			// saveViewportPosition();
 		}, VIEWPORT_SAVE_DELAY);
 	}
 
@@ -596,6 +596,7 @@
 				bind:nodes={workingNodes}
 				bind:edges={canvasEdges}
 				{nodeTypes}
+				fitView
 				onconnect={handleConnect}
 				onbeforedelete={handleBeforeDelete}
 				ondelete={handleDelete}
