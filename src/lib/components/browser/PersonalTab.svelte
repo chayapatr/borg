@@ -13,6 +13,8 @@
 	}>();
 
 	let userTasks = $state<TaskWithContext[]>([]);
+	let resolvedUserTasks = $state<TaskWithContext[]>([]);
+	let viewTab = $state<'active' | 'resolved'>('active');
 	let personalData = $state({
 		preferredName: '',
 		loading: false,
@@ -41,6 +43,7 @@
 		if (activeTab === 'personal' && !dataLoaded) {
 			loadPersonalData();
 			loadUserTasks();
+			loadResolvedUserTasks();
 		}
 	});
 
@@ -92,6 +95,23 @@
 		}
 	}
 
+	async function loadResolvedUserTasks() {
+		const currentUser = $authStore.user;
+		if (!currentUser) return;
+
+		try {
+			let personId = currentUser.uid || currentUser.email || '';
+
+			// Get all resolved tasks and filter by person
+			const result = taskService.getResolvedTasks();
+			const allResolvedTasks = result instanceof Promise ? await result : result;
+			resolvedUserTasks = allResolvedTasks.filter((task: any) => task.assignee === personId);
+		} catch (error) {
+			console.error('Failed to load resolved user tasks:', error);
+			resolvedUserTasks = [];
+		}
+	}
+
 	async function savePersonalData() {
 		const currentUser = $authStore.user;
 		if (!currentUser) return;
@@ -123,6 +143,34 @@
 	let initialData = $state({
 		preferredName: ''
 	});
+
+	// Task handlers
+	async function handleDeleteTask(task: TaskWithContext) {
+		if (confirm('Are you sure you want to delete this task permanently?')) {
+			const result = taskService.deleteTask(task.nodeId, task.id, task.projectSlug);
+			if (result instanceof Promise) await result;
+			await loadUserTasks(); // Reload tasks
+		}
+	}
+
+	async function handleResolveTask(task: TaskWithContext) {
+		const result = taskService.resolveTask(task.nodeId, task.id, task.projectSlug);
+		if (result instanceof Promise) await result;
+		await loadUserTasks();
+		await loadResolvedUserTasks();
+	}
+
+	async function handleReactivateTask(task: TaskWithContext) {
+		const result = taskService.updateTask(
+			task.nodeId,
+			task.id,
+			{ status: 'active' } as any,
+			task.projectSlug
+		);
+		if (result instanceof Promise) await result;
+		await loadUserTasks();
+		await loadResolvedUserTasks();
+	}
 </script>
 
 <div class="flex flex-1 flex-col">
@@ -214,16 +262,67 @@
 			</div>
 
 			<!-- My Tasks Section -->
-			<div class="mt-8 flex items-center gap-3 px-6">
-				<CheckSquare class="h-6 w-6" />
-				<h3 class="text-2xl font-semibold text-black">My Tasks</h3>
-				<span class="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">
-					{userTasks.length}
-				</span>
+			<div class="mt-8 flex items-center justify-between px-6">
+				<div class="flex items-center gap-3">
+					<CheckSquare class="h-6 w-6" />
+					<h3 class="text-2xl font-semibold text-black">My Tasks</h3>
+				</div>
+				<div class="flex items-center gap-4">
+					<div class="flex items-center gap-1">
+						<span class="text-xs text-black">Active</span>
+						<span class="rounded-full bg-borg-orange px-2 py-1 text-xs text-white">
+							{userTasks.length}
+						</span>
+					</div>
+					<div class="flex items-center gap-1">
+						<span class="text-xs text-black">Resolved</span>
+						<span class="rounded-full bg-green-600 px-2 py-1 text-xs text-white">
+							{resolvedUserTasks.length}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Tab Navigation -->
+			<div class="mt-4 px-6">
+				<div class="flex border-b border-zinc-200">
+					<button
+						onclick={() => (viewTab = 'active')}
+						class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'active'
+							? 'border-b-2 border-borg-orange text-borg-orange'
+							: 'text-zinc-500 hover:text-zinc-700'}"
+					>
+						Active Tasks ({userTasks.length})
+					</button>
+					<button
+						onclick={() => (viewTab = 'resolved')}
+						class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'resolved'
+							? 'border-b-2 border-green-600 text-green-600'
+							: 'text-zinc-500 hover:text-zinc-700'}"
+					>
+						Resolved Tasks ({resolvedUserTasks.length})
+					</button>
+				</div>
 			</div>
 
 			<div class="p-6 pt-4">
-				<HierarchicalTaskView tasks={userTasks} showActions={false} isResolved={false} />
+				{#if viewTab === 'active'}
+					<HierarchicalTaskView 
+						tasks={userTasks} 
+						showActions={true} 
+						isResolved={false}
+						onResolveTask={handleResolveTask}
+						onDeleteTask={handleDeleteTask}
+					/>
+				{:else}
+					<HierarchicalTaskView 
+						tasks={resolvedUserTasks} 
+						showActions={true} 
+						isResolved={true}
+						onReactivateTask={handleReactivateTask}
+						onDeleteTask={handleDeleteTask}
+					/>
+				{/if}
 			</div>
 		</div>
 	{/if}
