@@ -1,7 +1,8 @@
 <script lang="ts">
-	let { onCreate, onClose } = $props<{
+	let { onCreate, onClose, isLoading = false } = $props<{
 		onCreate: (data: { title: string }) => void;
 		onClose: () => void;
+		isLoading?: boolean;
 	}>();
 
 	let title = $state('');
@@ -51,7 +52,8 @@
 					type="text"
 					placeholder="Enter project name"
 					required
-					class="w-full rounded border border-zinc-700 bg-white px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+					disabled={isLoading}
+					class="w-full rounded border border-zinc-700 bg-white px-3 py-2 text-black placeholder-zinc-400 focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
 					autofocus
 				/>
 			</div>
@@ -60,16 +62,22 @@
 				<button
 					type="button"
 					onclick={onClose}
-					class="flex-1 rounded bg-borg-brown px-4 py-2 text-zinc-700 transition-colors hover:bg-borg-brown/80"
+					disabled={isLoading}
+					class="flex-1 rounded bg-borg-brown px-4 py-2 text-zinc-700 transition-colors hover:bg-borg-brown/80 disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					Cancel
 				</button>
 				<button
 					type="submit"
-					disabled={!title.trim()}
-					class="flex-1 rounded bg-borg-violet px-4 py-2 text-white transition-colors hover:bg-borg-blue disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={!title.trim() || isLoading}
+					class="flex-1 rounded bg-borg-violet px-4 py-2 text-white transition-colors hover:bg-borg-blue disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
 				>
-					Create Project
+					{#if isLoading}
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+						Creating...
+					{:else}
+						Create Project
+					{/if}
 				</button>
 			</div>
 		</form>

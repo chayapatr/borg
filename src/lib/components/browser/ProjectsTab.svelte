@@ -24,6 +24,8 @@
 	let viewMode = $state<'list' | 'canvas'>('canvas');
 	let dataLoaded = $state(false);
 	let updatingCounts = $state(false);
+	let creatingProject = $state(false);
+	let deletingProjects = $state<Set<string>>(new Set());
 
 	let taskService: ITaskService;
 
@@ -81,12 +83,17 @@
 	}
 
 	async function handleCreateProject(projectData: any) {
-		const project = await projectsService.createProject(projectData);
-		await loadProjects(true); // Force reload to get new project
-		showCreateModal = false;
+		creatingProject = true;
+		try {
+			const project = await projectsService.createProject(projectData);
+			await loadProjects(true); // Force reload to get new project
+			showCreateModal = false;
 
-		// Navigate to the new project
-		// goto(`/project/${project.slug}`);
+			// Navigate to the new project
+			// goto(`/project/${project.slug}`);
+		} finally {
+			creatingProject = false;
+		}
 	}
 
 	function handleOpenProject(slug: string) {
@@ -105,9 +112,19 @@
 				`Are you sure you want to delete the project "${title}"? This action cannot be undone.`
 			)
 		) {
-			const success = await projectsService.deleteProject(slug);
-			if (success) {
-				await loadProjects(); // This will also update counts
+			// Add project to deleting set
+			deletingProjects.add(slug);
+			deletingProjects = new Set(deletingProjects);
+
+			try {
+				const success = await projectsService.deleteProject(slug);
+				if (success) {
+					await loadProjects(true); // Force reload to refresh UI
+				}
+			} finally {
+				// Remove project from deleting set
+				deletingProjects.delete(slug);
+				deletingProjects = new Set(deletingProjects);
 			}
 		}
 	}
@@ -169,11 +186,12 @@
 			{:else}
 				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 					{#each projects.filter((p) => p.id !== 'project-canvas') as project}
+						{@const isDeleting = deletingProjects.has(project.slug)}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="box-shadow-black rounded-sm border border-black bg-white p-4 transition-colors hover:bg-borg-beige"
-							onclick={() => handleOpenProject(project.slug)}
+							class="box-shadow-black rounded-sm border border-black bg-white p-4 transition-colors hover:bg-borg-beige {isDeleting ? 'opacity-50 pointer-events-none' : ''}"
+							onclick={() => !isDeleting && handleOpenProject(project.slug)}
 						>
 							<div class="mb-4 flex items-start justify-between">
 								<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-borg-violet">
@@ -181,11 +199,16 @@
 								</div>
 								<div class="flex items-center gap-2">
 									<button
-										onclick={(e) => handleDeleteProject(e, project.slug, project.title)}
+										onclick={(e) => !isDeleting && handleDeleteProject(e, project.slug, project.title)}
 										aria-label="Delete project"
-										class="rounded p-1 text-zinc-500 transition-colors hover:bg-borg-orange hover:text-white"
+										disabled={isDeleting}
+										class="rounded p-1 text-zinc-500 transition-colors hover:bg-borg-orange hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
 									>
-										<Trash2 class="h-4 w-4" />
+										{#if isDeleting}
+											<div class="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent"></div>
+										{:else}
+											<Trash2 class="h-4 w-4" />
+										{/if}
 									</button>
 								</div>
 							</div>
@@ -239,5 +262,5 @@
 </div>
 
 {#if showCreateModal}
-	<CreateProjectModal onCreate={handleCreateProject} onClose={() => (showCreateModal = false)} />
+	<CreateProjectModal onCreate={handleCreateProject} onClose={() => (showCreateModal = false)} isLoading={creatingProject} />
 {/if}
