@@ -19,6 +19,7 @@ import type { IProjectsService } from '../interfaces';
 
 export class FirebaseProjectsService implements IProjectsService {
 	async getAllProjects(): Promise<Project[]> {
+		// Only get active projects (not in recycle bin)
 		const q = query(collection(db, 'projects'), orderBy('updatedAt', 'desc'));
 		const snapshot = await getDocs(q);
 		return snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as Project);
@@ -97,20 +98,36 @@ export class FirebaseProjectsService implements IProjectsService {
 	async deleteProject(slugOrId: string): Promise<boolean> {
 		try {
 			let projectDoc = await this.getProjectDoc(slugOrId);
+			let projectData: any;
 
 			if (!projectDoc) {
 				// Try by ID
 				projectDoc = doc(db, 'projects', slugOrId);
 				const docSnap = await getDoc(projectDoc);
 				if (!docSnap.exists()) return false;
+				projectData = { ...docSnap.data(), id: docSnap.id };
+			} else {
+				const docSnap = await getDoc(projectDoc);
+				projectData = { ...docSnap.data(), id: docSnap.id };
 			}
 
-			// Delete subcollections (nodes, edges, people, timeline)
+			// Move to recycle-bin collection instead of deleting
+			await addDoc(collection(db, 'recycle-bin'), {
+				...projectData,
+				originalCollection: 'projects',
+				deletedAt: new Date().toISOString(),
+				deletedBy: 'user' // You could pass this as a parameter if needed
+			});
+
+			// Copy subcollections to recycle-bin project
+			await this.moveProjectSubcollections(projectDoc.id, projectData.id);
+
+			// Delete from original location
 			await this.deleteProjectSubcollections(projectDoc.id);
 			await deleteDoc(projectDoc);
 			return true;
 		} catch (error) {
-			console.error('Failed to delete project:', error);
+			console.error('Failed to move project to recycle bin:', error);
 			return false;
 		}
 	}
@@ -278,6 +295,25 @@ export class FirebaseProjectsService implements IProjectsService {
 		const q = query(collection(db, 'projects'), where('slug', '==', slug));
 		const snapshot = await getDocs(q);
 		return !snapshot.empty;
+	}
+
+	private async moveProjectSubcollections(fromProjectId: string, toProjectId: string): Promise<void> {
+		const subcollections = ['nodes', 'edges', 'people', 'timeline'];
+
+		for (const subcollectionName of subcollections) {
+			const fromRef = collection(db, 'projects', fromProjectId, subcollectionName);
+			const snapshot = await getDocs(fromRef);
+
+			const batch = writeBatch(db);
+			snapshot.docs.forEach((docSnapshot) => {
+				const toRef = doc(db, 'recycle-bin', toProjectId, subcollectionName, docSnapshot.id);
+				batch.set(toRef, docSnapshot.data());
+			});
+
+			if (!snapshot.empty) {
+				await batch.commit();
+			}
+		}
 	}
 
 	private async deleteProjectSubcollections(projectId: string): Promise<void> {

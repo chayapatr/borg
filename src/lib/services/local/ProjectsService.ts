@@ -33,6 +33,16 @@ export class ProjectsService {
 		}
 	}
 
+	getDeletedProjects(): Project[] {
+		try {
+			const stored = localStorage.getItem('things-recycle-bin');
+			return stored ? JSON.parse(stored) : [];
+		} catch (error) {
+			console.error('Failed to load deleted projects:', error);
+			return [];
+		}
+	}
+
 	getProject(slug: string): Project | null {
 		const projects = this.getAllProjects();
 		return projects.find((p) => p.slug === slug) || null;
@@ -78,17 +88,38 @@ export class ProjectsService {
 
 	deleteProject(slug: string): boolean {
 		const projects = this.getAllProjects();
+		const projectToDelete = projects.find((p) => p.slug === slug);
+		
+		if (!projectToDelete) return false;
+
+		// Remove from active projects
 		const filtered = projects.filter((p) => p.slug !== slug);
-
-		if (filtered.length === projects.length) return false;
-
 		this.saveProjects(filtered);
 
-		// Also delete project-specific data
+		// Move to recycle bin
+		const deletedProjects = this.getDeletedProjects();
+		const deletedProject = {
+			...projectToDelete,
+			deletedAt: new Date().toISOString(),
+			deletedBy: 'user'
+		};
+		deletedProjects.push(deletedProject);
+		
 		try {
-			localStorage.removeItem(`things-canvas-data-${slug}`);
+			localStorage.setItem('things-recycle-bin', JSON.stringify(deletedProjects));
 		} catch (error) {
-			console.error('Failed to delete project data:', error);
+			console.error('Failed to move project to recycle bin:', error);
+		}
+
+		// Move project canvas data to recycle bin
+		try {
+			const canvasData = localStorage.getItem(`things-canvas-data-${slug}`);
+			if (canvasData) {
+				localStorage.setItem(`things-recycle-canvas-data-${slug}`, canvasData);
+				localStorage.removeItem(`things-canvas-data-${slug}`);
+			}
+		} catch (error) {
+			console.error('Failed to move project canvas data:', error);
 		}
 
 		return true;

@@ -200,7 +200,7 @@
 								<div class="flex items-center gap-2">
 									<button
 										onclick={(e) => !isDeleting && handleDeleteProject(e, project.slug, project.title)}
-										aria-label="Delete project"
+										aria-label="Move to recycle bin"
 										disabled={isDeleting}
 										class="rounded p-1 text-zinc-500 transition-colors hover:bg-borg-orange hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
 									>

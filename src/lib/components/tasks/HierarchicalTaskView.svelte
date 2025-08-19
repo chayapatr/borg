@@ -45,12 +45,11 @@
 		expandedProjects = new Set(expandedProjects);
 	}
 
-
 	// Task action handlers with loading states
 	async function handleResolveTask(task: TaskWithContext) {
 		loadingTasks.add(task.id);
 		loadingTasks = new Set(loadingTasks);
-		
+
 		try {
 			await onResolveTask?.(task);
 		} finally {
@@ -62,7 +61,7 @@
 	async function handleReactivateTask(task: TaskWithContext) {
 		loadingTasks.add(task.id);
 		loadingTasks = new Set(loadingTasks);
-		
+
 		try {
 			await onReactivateTask?.(task);
 		} finally {
@@ -170,11 +169,13 @@
 
 							<!-- Node Header -->
 							<div class="space-y-3">
-								<div class="flex items-center gap-3 py-3">
+								<div class="flex items-center gap-3 pt-2">
 									<h4 class="text-base font-semibold text-black">
 										{nodeData.node.title}
 									</h4>
-									<span class="rounded-md border border-black bg-white px-2 py-1 text-xs font-medium text-black">
+									<span
+										class="rounded-md border border-black bg-white px-2 py-1 text-xs font-medium text-black"
+									>
 										{nodeData.node.type}
 									</span>
 									<span class="text-sm font-medium text-zinc-600">
@@ -198,17 +199,19 @@
 														<span class="text-sm text-zinc-900">
 															{task.title}
 														</span>
-														<div class="h-5 w-5 rounded-full bg-zinc-200 animate-pulse"></div>
+														<div class="h-5 w-5 animate-pulse rounded-full bg-zinc-200"></div>
 													</div>
 													<div class="flex items-center gap-3 text-xs text-zinc-500">
-														<div class="h-3 w-12 bg-zinc-200 rounded animate-pulse"></div>
+														<div class="h-3 w-12 animate-pulse rounded bg-zinc-200"></div>
 													</div>
 												</div>
 											</div>
 										{:then person}
 											{@const overdue = task.dueDate && isOverdue(task.dueDate)}
 
-											<div class="group flex items-start gap-3 rounded-md px-3 py-2 transition-colors hover:bg-zinc-50">
+											<div
+												class="group flex items-start gap-3 rounded-md px-3 py-2 transition-colors hover:bg-zinc-50"
+											>
 												<!-- Checkbox -->
 												<div class="flex items-center pt-0.5">
 													{#if showActions && !isResolved}
@@ -217,7 +220,9 @@
 																e.stopPropagation();
 																handleResolveTask(task);
 															}}
-															class="rounded border border-zinc-300 p-0.5 hover:border-green-500 hover:bg-green-50 {isLoading ? 'opacity-50' : ''}"
+															class="rounded border border-zinc-500 p-0.5 hover:border-green-500 hover:bg-green-50 {isLoading
+																? 'opacity-50'
+																: ''}"
 															title="Mark as resolved"
 															disabled={isLoading}
 														>
@@ -233,7 +238,9 @@
 																e.stopPropagation();
 																handleReactivateTask(task);
 															}}
-															class="rounded border border-green-500 bg-green-500 p-0.5 hover:bg-green-600 {isLoading ? 'opacity-50' : ''}"
+															class="rounded border border-green-500 bg-green-500 p-0.5 hover:bg-green-600 {isLoading
+																? 'opacity-50'
+																: ''}"
 															title="Reactivate task"
 															disabled={isLoading}
 														>
@@ -251,13 +258,17 @@
 												<!-- Task content -->
 												<div class="min-w-0 flex-1">
 													<div class="mb-1 flex items-center gap-2">
-														<span class="text-sm text-zinc-900 {isResolved ? 'line-through opacity-60' : ''}">
+														<span
+															class="text-sm text-zinc-900 {isResolved
+																? 'line-through opacity-60'
+																: ''}"
+														>
 															{task.title}
 														</span>
 														{#if peopleService && person?.photoUrl}
-															<img 
-																src={person.photoUrl} 
-																alt={person.name || 'Assignee'} 
+															<img
+																src={person.photoUrl}
+																alt={person.name || 'Assignee'}
 																class="h-5 w-5 rounded-full"
 																title={person.name || 'Unassigned'}
 															/>
@@ -287,7 +298,9 @@
 
 												<!-- Delete button -->
 												{#if showActions}
-													<div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+													<div
+														class="flex items-center opacity-0 transition-opacity group-hover:opacity-100"
+													>
 														<button
 															onclick={() => onDeleteTask?.(task)}
 															class="rounded p-1 hover:bg-rose-100"
