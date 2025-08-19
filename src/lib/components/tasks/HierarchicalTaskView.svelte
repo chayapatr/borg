@@ -134,10 +134,10 @@
 		</div>
 	</div>
 {:else}
-	<div class="flex h-full max-h-full gap-4">
+	<div class="flex h-full max-h-full gap-8">
 		<!-- Left sidebar: Projects list -->
 		<div class="w-80 flex-shrink-0 overflow-y-auto">
-			<div class="space-y-2 p-4">
+			<div class="space-y-3">
 				{#each Object.entries(tasksByProject) as [projectSlug, projectData]}
 					{@const projectTaskCount = Object.values(projectData.nodes).reduce(
 						(sum, nodeData) => sum + nodeData.tasks.length,
@@ -161,7 +161,7 @@
 		</div>
 
 		<!-- Right panel: Tasks -->
-		<div class="flex-1 overflow-y-auto p-4">
+		<div class="flex-1 overflow-y-auto">
 			{#if selectedProject && tasksByProject[selectedProject]}
 				{@const projectData = tasksByProject[selectedProject]}
 
