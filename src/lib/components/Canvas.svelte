@@ -553,40 +553,67 @@
 
 		if (!nodesService) return;
 
+		let baseNode: any = null;
 		try {
 			const stickerData = event.detail;
 
 			if (stickerData.type === 'sticker') {
+				// Validate sticker data first
+				if (!stickerData.name || !stickerData.stickerUrl) {
+					console.error('❌ Invalid sticker data - missing name or stickerUrl');
+					return;
+				}
+
 				// Create sticker at center of viewport
 				const position = getViewportCenterPosition();
 
-				// First create a basic sticker node using the service
-				const baseNode = await (nodesService as any).addNode('sticker', position);
-				console.log('🎨 Created base sticker node:', baseNode);
-
-				// Then immediately update it with the sticker-specific data
+				// Create sticker node with complete data in one step instead of two
 				const stickerNodeData = {
 					title: stickerData.name,
 					stickerUrl: stickerData.stickerUrl,
-					category: stickerData.category,
-					filename: stickerData.filename,
+					category: stickerData.category || '',
+					filename: stickerData.filename || '',
 					width: 100,
 					height: 100,
 					rotation: 0
 				};
 
+				// First create a basic sticker node using the service
+				baseNode = await (nodesService as any).addNode('sticker', position);
+				console.log('🎨 Created base sticker node:', baseNode);
+
+				// Then immediately update it with the sticker-specific data
 				const success = await (nodesService as any).updateNode(baseNode.id, {
 					nodeData: stickerNodeData
 				});
 
 				if (success) {
 					console.log('✅ Sticker node created and updated with data');
+					baseNode = null; // Clear reference since update succeeded
 				} else {
-					console.error('❌ Failed to update sticker node with data');
+					console.error('❌ Failed to update sticker node with data, cleaning up incomplete node');
+					// Clean up the incomplete node
+					try {
+						await (nodesService as any).deleteNode(baseNode.id);
+						console.log('🧹 Cleaned up incomplete sticker node');
+					} catch (deleteError) {
+						console.error('❌ Failed to clean up incomplete sticker node:', deleteError);
+					}
+					throw new Error('Failed to update sticker node with complete data');
 				}
 			}
 		} catch (error) {
 			console.error('❌ Failed to add sticker:', error);
+			
+			// Additional cleanup if baseNode was created but update failed
+			if (baseNode && baseNode.id) {
+				try {
+					await (nodesService as any).deleteNode(baseNode.id);
+					console.log('🧹 Emergency cleanup of incomplete sticker node');
+				} catch (deleteError) {
+					console.error('❌ Failed emergency cleanup of sticker node:', deleteError);
+				}
+			}
 		}
 	}
 

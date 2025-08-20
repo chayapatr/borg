@@ -352,7 +352,7 @@
 					<p class="mb-4 text-zinc-500">Add your first conference, deadline, or event</p>
 				</div>
 			{:else}
-				<div class="grid grid-cols-2 gap-4">
+				<div class="grid grid-cols-1 gap-4">
 					{#each currentEvents as event}
 						{@const template = getTemplateInfo(event.templateType)}
 						{@const timeLeft = getTimeLeft(event)}
@@ -460,7 +460,7 @@
 					<p class="mb-4 text-zinc-500">Past events will appear here</p>
 				</div>
 			{:else}
-				<div class="grid grid-cols-2 gap-4">
+				<div class="grid grid-cols-1 gap-4">
 					{#each currentEvents as event}
 						{@const template = getTemplateInfo(event.templateType)}
 						{@const timeLeft = getTimeLeft(event)}

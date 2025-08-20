@@ -49,27 +49,54 @@ export class FirebaseNodesService implements INodesService {
 
 	async addNode(templateType: string, position: { x: number; y: number }): Promise<Node> {
 		const template = getTemplate(templateType);
+		
+		// Validate template
+		if (!template) {
+			console.error(`Invalid template type: ${templateType}`);
+			throw new Error(`Invalid template type: ${templateType}`);
+		}
+		
+		if (!template.fields) {
+			console.warn(`Template ${templateType} has no fields, using defaults`);
+		}
 
 		// Initialize default data based on template
 		const nodeDataFields: Record<string, any> = {};
-		template.fields.forEach((field) => {
-			if (field.type === 'tags') {
-				nodeDataFields[field.id] = [];
-			} else if (field.type === 'select' && templateType === 'note') {
-				// Set defaults for note sizing - current behavior is small size
-				if (field.id === 'size') {
-					nodeDataFields[field.id] = 'Small';
+		
+		// Ensure at least a title field exists for all nodes
+		nodeDataFields.title = '';
+		
+		if (template.fields && template.fields.length > 0) {
+			template.fields.forEach((field) => {
+				if (field.type === 'tags') {
+					nodeDataFields[field.id] = [];
+				} else if (field.type === 'select' && templateType === 'note') {
+					// Set defaults for note sizing - current behavior is small size
+					if (field.id === 'size') {
+						nodeDataFields[field.id] = 'Small';
+					} else {
+						nodeDataFields[field.id] = '';
+					}
 				} else {
 					nodeDataFields[field.id] = '';
 				}
-			} else {
-				nodeDataFields[field.id] = '';
-			}
-		});
+			});
+		}
 
 		// Set countdown mode to true by default for time nodes
 		if (templateType === 'time') {
 			nodeDataFields.countdownMode = true;
+		}
+		
+		// Validate required data before saving
+		if (!nodeDataFields || Object.keys(nodeDataFields).length === 0) {
+			console.error(`No nodeData fields initialized for template: ${templateType}`);
+			throw new Error(`Failed to initialize nodeData for template: ${templateType}`);
+		}
+		
+		if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
+			console.error(`Invalid position data:`, position);
+			throw new Error(`Invalid position data provided`);
 		}
 
 		// Save to Firestore first to get the real document ID
@@ -377,7 +404,7 @@ export class FirebaseNodesService implements INodesService {
 				projectId: this.projectId,
 				nodeCount: nodes.length,
 				edgeCount: edges.length,
-				error: error.message
+				error: error instanceof Error ? error.message : String(error)
 			});
 			this.isUpdatingPositions = false;
 		}
@@ -555,8 +582,19 @@ export class FirebaseNodesService implements INodesService {
 				return;
 			}
 			
+			const validNodes: Node[] = [];
+			const invalidNodes: Array<{ id: string; data: any }> = [];
+			
 			const nodes = snapshot.docs.map(doc => {
 				const data = doc.data();
+				
+				// Validate node data before processing
+				const isValid = this.validateNodeData(doc.id, data);
+				if (!isValid) {
+					invalidNodes.push({ id: doc.id, data });
+					return null;
+				}
+				
 				const node = {
 					id: doc.id, // Use the Firestore document ID
 					type: data.type,
@@ -572,9 +610,18 @@ export class FirebaseNodesService implements INodesService {
 					createdAt: data.createdAt
 				} as Node & { updatedAt: any, createdAt: any };
 				
-				console.log('Mapped node:', node);
+				console.log('Mapped valid node:', node);
+				validNodes.push(node);
 				return node;
-			});
+			}).filter(node => node !== null);
+			
+			// Log invalid nodes for debugging
+			if (invalidNodes.length > 0) {
+				console.warn('Found invalid nodes (filtered out):', invalidNodes);
+				
+				// Optionally auto-cleanup invalid nodes (commented out for safety)
+				// this.cleanupInvalidNodes(invalidNodes);
+			}
 			
 			// Nodes are already ordered by updatedAt from Firestore query
 			// Older nodes come first (render behind), newer/recently updated nodes come last (render on top)
@@ -620,5 +667,60 @@ export class FirebaseNodesService implements INodesService {
 		});
 		
 		return counts;
+	}
+
+	private validateNodeData(nodeId: string, data: any): boolean {
+		// Check for required fields
+		if (!data) {
+			console.warn(`Node ${nodeId}: No data found`);
+			return false;
+		}
+
+		// Check for required position data
+		if (!data.position || typeof data.position.x !== 'number' || typeof data.position.y !== 'number') {
+			console.warn(`Node ${nodeId}: Invalid or missing position data`, data.position);
+			return false;
+		}
+
+		// Check for templateType
+		if (!data.templateType || typeof data.templateType !== 'string') {
+			console.warn(`Node ${nodeId}: Invalid or missing templateType`, data.templateType);
+			return false;
+		}
+
+		// Check for nodeData - this is critical as blank nodes typically have missing nodeData
+		if (!data.nodeData || typeof data.nodeData !== 'object') {
+			console.warn(`Node ${nodeId}: Invalid or missing nodeData - this is likely a blank node`, data.nodeData);
+			return false;
+		}
+
+		// Additional check for completely empty nodeData
+		if (Object.keys(data.nodeData).length === 0) {
+			console.warn(`Node ${nodeId}: Empty nodeData object - this is likely a blank node`);
+			return false;
+		}
+
+		// Check for basic node type
+		if (!data.type || data.type !== 'universal') {
+			console.warn(`Node ${nodeId}: Invalid node type`, data.type);
+			return false;
+		}
+
+		return true;
+	}
+
+	// Optional cleanup method for invalid nodes (commented out in subscription for safety)
+	private async cleanupInvalidNodes(invalidNodes: Array<{ id: string; data: any }>): Promise<void> {
+		console.log(`Starting cleanup of ${invalidNodes.length} invalid nodes`);
+		
+		for (const invalidNode of invalidNodes) {
+			try {
+				console.log(`Cleaning up invalid node: ${invalidNode.id}`, invalidNode.data);
+				await this.deleteNode(invalidNode.id);
+				console.log(`Successfully cleaned up invalid node: ${invalidNode.id}`);
+			} catch (error) {
+				console.error(`Failed to cleanup invalid node ${invalidNode.id}:`, error);
+			}
+		}
 	}
 }
