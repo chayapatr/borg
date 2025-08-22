@@ -9,7 +9,8 @@
 		Square,
 		Sticker,
 		FolderPlus,
-		Image
+		Image,
+		Monitor
 	} from '@lucide/svelte';
 	import { nodeTemplates } from '../templates';
 
@@ -27,7 +28,8 @@
 
 	const projectsToolbarItems = [
 		{ id: 'note', icon: StickyNote, template: nodeTemplates.note },
-		{ id: 'image', icon: Image, template: nodeTemplates.image }
+		{ id: 'image', icon: Image, template: nodeTemplates.image },
+		{ id: 'iframe', icon: Monitor, template: nodeTemplates.iframe }
 	];
 
 	const projectToolbarItems = [
@@ -37,6 +39,7 @@
 		{ id: 'time', icon: Calendar, template: nodeTemplates.time },
 		{ id: 'note', icon: StickyNote, template: nodeTemplates.note },
 		{ id: 'image', icon: Image, template: nodeTemplates.image },
+		{ id: 'iframe', icon: Monitor, template: nodeTemplates.iframe },
 		{ id: 'link', icon: Link, template: nodeTemplates.link },
 		{ id: 'blank', icon: Square, template: nodeTemplates.blank }
 	];

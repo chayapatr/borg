@@ -304,6 +304,35 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				required: false
 			}
 		]
+	},
+
+	iframe: {
+		id: 'iframe',
+		name: 'Iframe',
+		color: '#8b5cf6',
+		fields: [
+			{
+				id: 'title',
+				label: 'Iframe Title',
+				type: 'text',
+				placeholder: 'Enter iframe title...',
+				required: false
+			},
+			{
+				id: 'url',
+				label: 'URL',
+				type: 'text',
+				placeholder: 'Enter website URL...',
+				required: true
+			},
+			{
+				id: 'description',
+				label: 'Description',
+				type: 'textarea',
+				placeholder: 'Enter description...',
+				required: false
+			}
+		]
 	}
 };
 

@@ -9,7 +9,8 @@
 		StickyNote,
 		Link,
 		Square,
-		Image
+		Image,
+		Monitor
 	} from '@lucide/svelte';
 
 	let { position, onCreate, onClose } = $props<{
@@ -65,6 +66,8 @@
 				return Square;
 			case 'image':
 				return Image;
+			case 'iframe':
+				return Monitor;
 			default:
 				return Square;
 		}
