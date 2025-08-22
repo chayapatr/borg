@@ -3,18 +3,17 @@
 	import { Edit, Lock, Unlock, Trash2, ExternalLink } from '@lucide/svelte';
 	import { getTemplate } from '../../templates';
 
-	let { data, id, isBeingEdited } = $props<{
+	let { data, id } = $props<{
 		data: any;
 		id: string;
 		isBeingEdited?: boolean;
 	}>();
 
 	let nodeData = $derived(data.nodeData || {});
-	let template = $derived(getTemplate(data.templateType || 'iframe'));
 
 	// Iframe dimensions with defaults
-	let width = $state(nodeData.width || 400);
-	let height = $state(nodeData.height || 300);
+	let width = $state(400);
+	let height = $state(300);
 
 	// Update dimensions when nodeData changes
 	$effect(() => {
@@ -27,14 +26,6 @@
 	let resizeHandle = $state<string | null>(null);
 	let justResized = $state(false);
 
-	// Determine border color based on status
-	let borderColor = $derived.by(() => {
-		const status = nodeData.status;
-		if (status === 'To Do') return '#9333ea'; // purple-600
-		if (status === 'Doing') return '#0284c7'; // sky-600
-		if (status === 'Done') return '#16a34a'; // green-600
-		return '#8b5cf6'; // violet-600 - default for iframe nodes
-	});
 
 	function handleNodeClick() {
 		// Iframe nodes don't open edit panel on click - only via edit button
@@ -179,8 +170,8 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="group relative">
 	<div
-		class="iframe-node relative cursor-grab rounded-lg border-2 active:cursor-grabbing"
-		style="width: {width}px; height: {height}px; border-color: {borderColor};"
+		class="iframe-node relative cursor-grab rounded-lg active:cursor-grabbing"
+		style="width: {width}px; height: {height}px;"
 		onclick={handleNodeClick}
 	>
 		{#if nodeData.url && iframeSrc}
