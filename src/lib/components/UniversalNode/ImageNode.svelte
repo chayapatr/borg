@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import { Upload, X, Edit, Lock, Unlock } from '@lucide/svelte';
+	import { Upload, X, Edit, Lock, Unlock, Trash2 } from '@lucide/svelte';
 	import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 	import { app } from '../../firebase/config';
 	import { getTemplate } from '../../templates';
@@ -389,7 +389,7 @@
 			aria-label="Delete image node"
 			onclick={handleDelete}
 		>
-			<X class="h-3 w-3 text-gray-700 hover:text-borg-orange" />
+			<Trash2 class="h-3 w-3 text-gray-700 hover:text-borg-orange" />
 		</button>
 	</div>
 </div>

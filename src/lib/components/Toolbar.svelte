@@ -25,7 +25,10 @@
 		view: 'projects' | 'project';
 	}>();
 
-	const projectsToolbarItems = [{ id: 'note', icon: StickyNote, template: nodeTemplates.note }];
+	const projectsToolbarItems = [
+		{ id: 'note', icon: StickyNote, template: nodeTemplates.note },
+		{ id: 'image', icon: Image, template: nodeTemplates.image }
+	];
 
 	const projectToolbarItems = [
 		{ id: 'subproject', icon: GitBranch, template: nodeTemplates.subproject },
