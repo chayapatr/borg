@@ -52,8 +52,16 @@
 	// Get font weight class
 	let fontWeightClass = $derived(fontWeight === 'bold' ? 'font-semibold' : 'font-normal');
 
-	// Get background style based on selection
+	// Get note style setting with default (Post-It)
+	let noteStyle = $derived(nodeData.style || 'Post-It');
+
+	// Get background style based on selection and note style
 	let backgroundStyle = $derived.by(() => {
+		// Text Only style has no background
+		if (noteStyle === 'Text Only') {
+			return 'background: transparent';
+		}
+
 		const bgValue = nodeData.backgroundColor || '#fef08a';
 
 		if (bgValue.startsWith('linear-gradient')) {
@@ -219,6 +227,12 @@
 		event.preventDefault();
 		event.stopPropagation();
 
+		// Save any unsaved text content before starting resize
+		if (isEditingNote) {
+			saveNoteContent();
+			isEditingNote = false;
+		}
+
 		isResizing = true;
 
 		const startX = event.clientX;
@@ -280,10 +294,10 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div>
 	<div
-		class="group relative cursor-pointer rounded-lg border border-black p-1 {isResizing ||
+		class="group relative cursor-pointer rounded-lg p-1 {isResizing ||
 		isEditingNote
 			? ''
-			: 'transition-all duration-200'} {isEditingNote ? 'border-2 shadow-lg' : ''}"
+			: 'transition-all duration-200'} {isEditingNote ? 'border-2 shadow-lg' : ''} {noteStyle === 'Text Only' ? '' : 'border border-black'}"
 		style="{backgroundStyle}; width: {width}px; height: {height}px;"
 		onclick={handleNodeClick}
 	>

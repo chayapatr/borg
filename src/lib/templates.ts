@@ -217,6 +217,14 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				required: true
 			},
 			{
+				id: 'style',
+				label: 'Note Style',
+				type: 'select',
+				options: ['Post-It', 'Text Only'],
+				placeholder: 'Choose note style',
+				defaultValue: 'Post-It'
+			},
+			{
 				id: 'backgroundColor',
 				label: 'Background Color',
 				type: 'color-picker',
