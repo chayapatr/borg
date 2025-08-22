@@ -8,7 +8,8 @@
 		Calendar,
 		StickyNote,
 		Link,
-		Square
+		Square,
+		Image
 	} from '@lucide/svelte';
 
 	let { position, onCreate, onClose } = $props<{
@@ -62,6 +63,8 @@
 				return Link;
 			case 'blank':
 				return Square;
+			case 'image':
+				return Image;
 			default:
 				return Square;
 		}

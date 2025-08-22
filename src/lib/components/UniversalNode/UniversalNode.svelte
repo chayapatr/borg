@@ -3,6 +3,7 @@
 	import { getTemplate, type NodeTemplate } from '../../templates';
 	import NoteNode from './NoteNode.svelte';
 	import StickerNode from './StickerNode.svelte';
+	import ImageNode from './ImageNode.svelte';
 	import NodeHeader from './components/NodeHeader.svelte';
 	import NodeContent from './components/NodeContent.svelte';
 	import NodeTasks from './components/NodeTasks.svelte';
@@ -219,6 +220,9 @@
 {:else if template.id === 'sticker'}
 	<!-- Delegate entirely to StickerNode for sticker types -->
 	<StickerNode {data} {id} {isBeingEdited} />
+{:else if template.id === 'image'}
+	<!-- Delegate entirely to ImageNode for image types -->
+	<ImageNode {data} {id} {isBeingEdited} />
 {:else}
 	<div>
 		<!-- Project Node Header (outside the main node box) -->

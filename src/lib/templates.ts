@@ -266,6 +266,36 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				required: true
 			}
 		]
+	},
+
+	image: {
+		id: 'image',
+		name: 'Image',
+		color: '#10b981',
+		fields: [
+			{
+				id: 'title',
+				label: 'Image Title',
+				type: 'text',
+				placeholder: 'Enter image title...',
+				required: false
+			},
+			{
+				id: 'imageUrl',
+				label: 'Image URL',
+				type: 'text',
+				placeholder: 'Image URL will be set automatically...',
+				required: false,
+				showInDisplay: false
+			},
+			{
+				id: 'description',
+				label: 'Description',
+				type: 'textarea',
+				placeholder: 'Enter image description...',
+				required: false
+			}
+		]
 	}
 };
 

@@ -8,7 +8,8 @@
 		Link,
 		Square,
 		Sticker,
-		FolderPlus
+		FolderPlus,
+		Image
 	} from '@lucide/svelte';
 	import { nodeTemplates } from '../templates';
 
@@ -27,6 +28,7 @@
 		{ id: 'code', icon: Code, template: nodeTemplates.code },
 		{ id: 'time', icon: Calendar, template: nodeTemplates.time },
 		{ id: 'note', icon: StickyNote, template: nodeTemplates.note },
+		{ id: 'image', icon: Image, template: nodeTemplates.image },
 		{ id: 'link', icon: Link, template: nodeTemplates.link },
 		{ id: 'blank', icon: Square, template: nodeTemplates.blank }
 	];

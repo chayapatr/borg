@@ -430,7 +430,10 @@
 		};
 		const handleNodeEditEvent = (event: CustomEvent) => {
 			editNodeId = event.detail.nodeId;
-			editNodeData = event.detail.nodeData;
+			// Get the latest node data from the nodes array instead of the event
+			// This ensures we have the most up-to-date data, including any recent image uploads
+			const currentNode = nodes.find(n => n.id === event.detail.nodeId);
+			editNodeData = currentNode?.data?.nodeData || event.detail.nodeData;
 			editTemplateType = event.detail.templateType;
 			showEditPanel = true;
 			// Close other panels if open to avoid conflicts
