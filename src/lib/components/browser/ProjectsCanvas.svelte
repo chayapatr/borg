@@ -607,6 +607,7 @@
 				nodesDraggable={true}
 				nodesConnectable={true}
 				elevateNodesOnSelect={true}
+				minZoom={0.3}
 				deleteKey={['Delete', 'Backspace']}
 			>
 				<Background />

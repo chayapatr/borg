@@ -432,7 +432,7 @@
 			editNodeId = event.detail.nodeId;
 			// Get the latest node data from the nodes array instead of the event
 			// This ensures we have the most up-to-date data, including any recent image uploads
-			const currentNode = nodes.find(n => n.id === event.detail.nodeId);
+			const currentNode = nodes.find((n) => n.id === event.detail.nodeId);
 			editNodeData = currentNode?.data?.nodeData || event.detail.nodeData;
 			editTemplateType = event.detail.templateType;
 			showEditPanel = true;
@@ -607,7 +607,7 @@
 			}
 		} catch (error) {
 			console.error('❌ Failed to add sticker:', error);
-			
+
 			// Additional cleanup if baseNode was created but update failed
 			if (baseNode && baseNode.id) {
 				try {
@@ -1011,6 +1011,7 @@
 				nodesDraggable={true}
 				nodesConnectable={true}
 				elevateNodesOnSelect={true}
+				minZoom={0.3}
 				deleteKey={['Delete', 'Backspace']}
 			>
 				<Background />
