@@ -6,6 +6,8 @@
 	import type { Task, TaskWithContext } from '../../types/task';
 	import { goto } from '$app/navigation';
 	import HierarchicalTaskView from '../tasks/HierarchicalTaskView.svelte';
+	import { authStore } from '../../stores/authStore';
+	import { ServiceFactory } from '../../services/ServiceFactory';
 
 	let {
 		taskService,
@@ -36,10 +38,28 @@
 		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
 
 		const activeResult = taskService.getActiveTasks();
-		activeTasks = activeResult instanceof Promise ? await activeResult : activeResult;
+		let allActiveTasks = activeResult instanceof Promise ? await activeResult : activeResult;
 
 		const resolvedResult = taskService.getResolvedTasks();
-		resolvedTasks = resolvedResult instanceof Promise ? await resolvedResult : resolvedResult;
+		let allResolvedTasks = resolvedResult instanceof Promise ? await resolvedResult : resolvedResult;
+
+		// Filter tasks for collaborators - only show tasks from projects they're invited to
+		if ($authStore.userType === 'collaborator') {
+			const projectsService = ServiceFactory.createProjectsService();
+			const userProjects = await projectsService.getAllProjects(); // This already filters for collaborators
+			const projectSlugs = userProjects.map(p => p.slug);
+			
+			allActiveTasks = allActiveTasks.filter(task => 
+				task.projectSlug && projectSlugs.includes(task.projectSlug)
+			);
+			
+			allResolvedTasks = allResolvedTasks.filter(task => 
+				task.projectSlug && projectSlugs.includes(task.projectSlug)
+			);
+		}
+
+		activeTasks = allActiveTasks;
+		resolvedTasks = allResolvedTasks;
 
 		applyFilters();
 		dataLoaded = true;

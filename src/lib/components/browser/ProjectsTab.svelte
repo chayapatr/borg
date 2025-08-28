@@ -6,6 +6,7 @@
 	import ProjectsCanvas from './ProjectsCanvas.svelte';
 	import { Plus, FolderOpen, Trash2, Grid, Network } from '@lucide/svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
+	import { authStore } from '../../stores/authStore';
 
 	let {
 		projectsService,
@@ -21,13 +22,20 @@
 	let showCreateModal = $state(false);
 	let projectCounts = $state<Record<string, { todo: number; doing: number; done: number }>>({});
 	let projectTaskCounts = $state<Record<string, number>>({});
-	let viewMode = $state<'list' | 'canvas'>('canvas');
+	let viewMode = $state<'list' | 'canvas'>($authStore.userType === 'collaborator' ? 'list' : 'canvas');
 	let dataLoaded = $state(false);
 	let updatingCounts = $state(false);
 	let creatingProject = $state(false);
 	let deletingProjects = $state<Set<string>>(new Set());
 
 	let taskService: ITaskService;
+
+	// Force collaborators to use list view only
+	$effect(() => {
+		if ($authStore.userType === 'collaborator') {
+			viewMode = 'list';
+		}
+	});
 
 	onMount(() => {
 		taskService = ServiceFactory.createTaskService();
@@ -97,6 +105,8 @@
 	}
 
 	function handleOpenProject(slug: string) {
+		// Both members and collaborators can access project pages
+		// The canvas restriction is handled within the project page itself
 		goto(`/project/${slug}`);
 	}
 
@@ -144,31 +154,33 @@
 				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
 			</div>
 			<div class="flex items-center gap-4">
-				<!-- View Toggle -->
-				<div
-					class="flex h-10 items-center divide-x divide-black rounded-full border border-black bg-white"
-				>
-					<button
-						onclick={() => (viewMode = 'canvas')}
-						class="flex h-full items-center gap-2 rounded-full rounded-r-2xl px-3 py-1 text-sm transition-colors {viewMode ===
-						'canvas'
-							? 'bg-borg-brown text-black'
-							: 'text-black hover:bg-borg-beige'}"
+				<!-- View Toggle (hidden for collaborators) -->
+				{#if $authStore.userType !== 'collaborator'}
+					<div
+						class="flex h-10 items-center divide-x divide-black rounded-full border border-black bg-white"
 					>
-						<Network class="h-4 w-4" />
-						Canvas
-					</button>
-					<button
-						onclick={() => (viewMode = 'list')}
-						class="flex h-full items-center gap-2 rounded-full rounded-l-2xl px-3 py-1 text-sm transition-colors {viewMode ===
-						'list'
-							? 'bg-borg-brown text-black'
-							: 'text-black hover:bg-borg-beige'}"
-					>
-						<Grid class="h-4 w-4" />
-						List
-					</button>
-				</div>
+						<button
+							onclick={() => (viewMode = 'canvas')}
+							class="flex h-full items-center gap-2 rounded-full rounded-r-2xl px-3 py-1 text-sm transition-colors {viewMode ===
+							'canvas'
+								? 'bg-borg-brown text-black'
+								: 'text-black hover:bg-borg-beige'}"
+						>
+							<Network class="h-4 w-4" />
+							Canvas
+						</button>
+						<button
+							onclick={() => (viewMode = 'list')}
+							class="flex h-full items-center gap-2 rounded-full rounded-l-2xl px-3 py-1 text-sm transition-colors {viewMode ===
+							'list'
+								? 'bg-borg-brown text-black'
+								: 'text-black hover:bg-borg-beige'}"
+						>
+							<Grid class="h-4 w-4" />
+							List
+						</button>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>

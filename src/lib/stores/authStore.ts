@@ -5,6 +5,7 @@ import { FirebaseAuth } from '../services/firebase/FirebaseAuth';
 interface AuthState {
 	user: User | null;
 	isApproved: boolean;
+	userType: 'member' | 'collaborator' | null;
 	loading: boolean;
 	error: string | null;
 }
@@ -12,6 +13,7 @@ interface AuthState {
 const initialState: AuthState = {
 	user: null,
 	isApproved: false,
+	userType: null,
 	loading: true,
 	error: null
 };
@@ -24,11 +26,13 @@ const firebaseAuth = new FirebaseAuth();
 // Listen to auth state changes
 firebaseAuth.onAuthStateChange(async (user) => {
 	if (user) {
-		// Check approval status
+		// Check approval status and user data
 		const isApproved = await firebaseAuth.checkUserApproval(user.uid);
-		authStore.set({ user, isApproved, loading: false, error: null });
+		const userData = await firebaseAuth.getUserData(user.uid);
+		const userType = userData?.userType || 'member';
+		authStore.set({ user, isApproved, userType, loading: false, error: null });
 	} else {
-		authStore.set({ user: null, isApproved: false, loading: false, error: null });
+		authStore.set({ user: null, isApproved: false, userType: null, loading: false, error: null });
 	}
 });
 

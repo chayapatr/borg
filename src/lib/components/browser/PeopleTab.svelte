@@ -5,8 +5,8 @@
 	import AddPersonModal from './AddPersonModal.svelte';
 	import type { TaskWithContext } from '../../types/task';
 	import { PersonStandingIcon, UserCheck, UserX, Shield, Users } from '@lucide/svelte';
-	import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
-	import { db } from '../../firebase/config';
+	import { ServiceFactory } from '../../services/ServiceFactory';
+	import type { IUserService } from '../../services/interfaces';
 
 	let { peopleService, taskService, activeTab } = $props<{
 		peopleService: IPeopleService;
@@ -21,10 +21,13 @@
 	let dataLoaded = $state(false);
 	let unapprovedUsers = $state<any[]>([]);
 	let loadingUnapproved = $state(false);
+	let approvalUserTypes = $state<Map<string, 'member' | 'collaborator'>>(new Map());
+	let userService: IUserService;
 
 	// Lazy load data when tab becomes active
 	$effect(() => {
 		if (activeTab === 'people' && !dataLoaded) {
+			userService = ServiceFactory.createUserService();
 			loadPeople();
 			loadUnapprovedUsers();
 		}
@@ -33,8 +36,15 @@
 	async function loadPeople(force = false) {
 		if (dataLoaded && !force) return; // Prevent duplicate loading unless forced
 
-		const result = peopleService.getAllPeople();
-		people = result instanceof Promise ? await result : result;
+		// Use UserService to get proper user data with userType
+		const users = await userService.getApprovedUsers();
+		people = users.map((user) => ({
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			photoUrl: user.photoUrl,
+			userType: user.userType
+		}));
 
 		// Load task counts for each person
 		// await loadAllPersonTaskCounts();
@@ -60,19 +70,21 @@
 		personTasks = taskCounts;
 	}
 
-	// Load unapproved users from Firestore
+	// Load unapproved users
 	async function loadUnapprovedUsers() {
 		if (loadingUnapproved) return;
 		loadingUnapproved = true;
 
 		try {
-			const q = query(collection(db, 'users'), where('isApproved', '==', false));
-			const snapshot = await getDocs(q);
+			const users = await userService.getUnapprovedUsers();
+			unapprovedUsers = users;
 
-			unapprovedUsers = snapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data()
-			}));
+			// Initialize approval user types to default 'member'
+			const newApprovalTypes = new Map();
+			users.forEach((user) => {
+				newApprovalTypes.set(user.id, 'member');
+			});
+			approvalUserTypes = newApprovalTypes;
 		} catch (error) {
 			console.error('Failed to load unapproved users:', error);
 		} finally {
@@ -83,18 +95,27 @@
 	// Approve a user
 	async function approveUser(userId: string) {
 		try {
-			await updateDoc(doc(db, 'users', userId), {
-				isApproved: true,
-				approvedAt: new Date().toISOString()
-			});
+			const userType = approvalUserTypes.get(userId) || 'member';
+			const success = await userService.approveUser(userId, userType);
 
-			// Remove from unapproved list and refresh people list
-			unapprovedUsers = unapprovedUsers.filter((user) => user.id !== userId);
-			await loadPeople(true);
+			if (success) {
+				// Remove from unapproved list and refresh people list
+				unapprovedUsers = unapprovedUsers.filter((user) => user.id !== userId);
+				approvalUserTypes.delete(userId);
+				approvalUserTypes = new Map(approvalUserTypes);
+				await loadPeople(true);
+			} else {
+				alert('Failed to approve user');
+			}
 		} catch (error) {
 			console.error('Failed to approve user:', error);
 			alert('Failed to approve user');
 		}
+	}
+
+	function handleUserTypeChange(userId: string, userType: 'member' | 'collaborator') {
+		approvalUserTypes.set(userId, userType);
+		approvalUserTypes = new Map(approvalUserTypes);
 	}
 
 	async function handleAddPerson(personData: { name: string; email?: string }) {
@@ -138,6 +159,14 @@
 				person.email?.toLowerCase().includes(lowercaseQuery)
 		);
 	});
+
+	// Separate members and collaborators
+	let members = $derived(
+		filteredPeople.filter((person) => !person.userType || person.userType === 'member')
+	);
+	let collaborators = $derived(
+		filteredPeople.filter((person) => person.userType === 'collaborator')
+	);
 
 	function formatDate(dateString: string | { seconds: number }) {
 		if (typeof dateString === 'object' && dateString.seconds) {
@@ -200,54 +229,89 @@
 				</h3>
 			</div>
 		{:else}
-			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{#each filteredPeople as person}
-					{@const activeTaskCount = personTasks.get(person.id) || 0}
-					<div class="box-shadow-black rounded-lg border border-zinc-800 bg-white p-4">
-						<div class="mb-4 flex items-start justify-between">
-							<div class="flex items-center gap-3">
-								<div
-									class="flex h-10 w-10 items-center justify-center rounded-full border border-black bg-borg-green overflow-hidden"
-								>
-									{#if person.photoUrl}
-										<img src={person.photoUrl} alt={person.name} class="h-full w-full object-cover" />
-									{:else}
-										<span class="text-sm font-medium text-white">{getInitials(person.name)}</span>
-									{/if}
-								</div>
-								<div>
-									<h3 class="font-medium text-black">{person.name}</h3>
-									{#if person.email}
-										<p class="text-sm text-zinc-600">{person.email}</p>
-									{/if}
-								</div>
-							</div>
-						</div>
-
-						<!-- Task Count Section -->
-						<!-- {#if activeTaskCount > 0}
-							<div class="rounded-lg border border-black bg-borg-orange p-3">
-								<div class="flex items-center justify-between">
-									<span class="text-sm font-semibold text-white">ACTIVE TASKS</span>
-									<span
-										class="rounded-full border border-black bg-white px-2 py-1 text-xs font-medium"
-										>{activeTaskCount}</span
-									>
-								</div>
-							</div>
-						{:else}
-							<div class="rounded-lg border border-gray-300 bg-gray-100 p-3">
-								<div class="flex items-center justify-between">
-									<span class="text-sm font-medium text-gray-600">NO ACTIVE TASKS</span>
-									<span class="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-500"
-										>0</span
-									>
+			<!-- Members Section -->
+			{#if members.length > 0}
+				<div class="mb-8">
+					<h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-black">
+						<Users class="h-5 w-5 text-borg-violet" />
+						Members ({members.length})
+					</h3>
+					<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+						{#each members as person}
+							{@const activeTaskCount = personTasks.get(person.id) || 0}
+							<div class="box-shadow-black rounded-lg border border-zinc-800 bg-white p-4">
+								<div class="mb-4 flex items-start justify-between">
+									<div class="flex items-center gap-3">
+										<div
+											class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-black bg-borg-green"
+										>
+											{#if person.photoUrl}
+												<img
+													src={person.photoUrl}
+													alt={person.name}
+													class="h-full w-full object-cover"
+												/>
+											{:else}
+												<span class="text-sm font-medium text-white"
+													>{getInitials(person.name)}</span
+												>
+											{/if}
+										</div>
+										<div>
+											<h3 class="font-medium text-black">{person.name}</h3>
+											{#if person.email}
+												<p class="text-sm text-zinc-600">{person.email}</p>
+											{/if}
+										</div>
+									</div>
 								</div>
 							</div>
-						{/if} -->
+						{/each}
 					</div>
-				{/each}
-			</div>
+				</div>
+			{/if}
+
+			<!-- Collaborators Section -->
+			{#if collaborators.length > 0}
+				<div class="mb-8">
+					<h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-black">
+						<UserCheck class="h-5 w-5 text-borg-orange" />
+						Collaborators ({collaborators.length})
+					</h3>
+					<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+						{#each collaborators as person}
+							{@const activeTaskCount = personTasks.get(person.id) || 0}
+							<div class="box-shadow-black rounded-lg border border-black bg-white p-4">
+								<div class="mb-4 flex items-start justify-between">
+									<div class="flex items-center gap-3">
+										<div
+											class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-black bg-white"
+										>
+											{#if person.photoUrl}
+												<img
+													src={person.photoUrl}
+													alt={person.name}
+													class="h-full w-full object-cover"
+												/>
+											{:else}
+												<span class="text-sm font-medium text-zinc-800"
+													>{getInitials(person.name)}</span
+												>
+											{/if}
+										</div>
+										<div>
+											<h3 class="font-medium text-black">{person.name}</h3>
+											{#if person.email}
+												<p class="text-sm text-zinc-700">{person.email}</p>
+											{/if}
+										</div>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		{/if}
 
 		<!-- Allow People Section -->
@@ -277,9 +341,15 @@
 							class="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 p-4"
 						>
 							<div class="flex items-center gap-3">
-								<div class="flex h-8 w-8 items-center justify-center rounded-full bg-orange-200 overflow-hidden">
+								<div
+									class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-orange-200"
+								>
 									{#if user.photoUrl}
-										<img src={user.photoUrl} alt={user.name || user.email} class="h-full w-full object-cover" />
+										<img
+											src={user.photoUrl}
+											alt={user.name || user.email}
+											class="h-full w-full object-cover"
+										/>
 									{:else}
 										<span class="text-sm font-medium text-orange-800"
 											>{getInitials(user.name || user.email || 'U')}</span
@@ -294,13 +364,23 @@
 									{/if}
 								</div>
 							</div>
-							<button
-								onclick={() => approveUser(user.id)}
-								class="flex items-center gap-1 rounded-md border border-green-600 bg-green-600 px-3 py-1 text-sm text-white transition-colors hover:bg-green-700"
-							>
-								<UserCheck class="h-3 w-3" />
-								Approve
-							</button>
+							<div class="flex items-center gap-3">
+								<select
+									value={approvalUserTypes.get(user.id) || 'member'}
+									onchange={(e) => handleUserTypeChange(user.id, e.currentTarget.value)}
+									class="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+								>
+									<option value="member">Member</option>
+									<option value="collaborator">Collaborator</option>
+								</select>
+								<button
+									onclick={() => approveUser(user.id)}
+									class="flex items-center gap-1 rounded-md border border-green-600 bg-green-600 px-3 py-1 text-sm text-white transition-colors hover:bg-green-700"
+								>
+									<UserCheck class="h-3 w-3" />
+									Approve
+								</button>
+							</div>
 						</div>
 					{/each}
 				</div>

@@ -15,6 +15,12 @@ export interface Project {
 	};
 }
 
+// Import authStore for access control
+import { authStore } from '../../stores/authStore';
+import { get } from 'svelte/store';
+import { ServiceFactory } from '../ServiceFactory';
+import type { IUserService } from '../interfaces';
+
 export class ProjectsService {
 	private storageKey = 'things-projects';
 	private statusCountsCache = new Map<
@@ -26,7 +32,19 @@ export class ProjectsService {
 	getAllProjects(): Project[] {
 		try {
 			const stored = localStorage.getItem(this.storageKey);
-			return stored ? JSON.parse(stored) : [];
+			const allProjects = stored ? JSON.parse(stored) : [];
+			
+			// Filter projects based on user type
+			const authState = get(authStore);
+			if (authState.userType === 'collaborator' && authState.user) {
+				// Collaborators only see projects they're added to
+				return allProjects.filter((project: Project) => 
+					project.collaborators?.includes(authState.user!.uid)
+				);
+			}
+			
+			// Members see all projects
+			return allProjects;
 		} catch (error) {
 			console.error('Failed to load projects:', error);
 			return [];
@@ -223,6 +241,104 @@ export class ProjectsService {
 			localStorage.setItem(this.storageKey, JSON.stringify(projects));
 		} catch (error) {
 			console.error('Failed to save projects:', error);
+		}
+	}
+
+	// Helper method to get all projects without filtering (for internal operations)
+	private getAllProjectsUnfiltered(): Project[] {
+		try {
+			const stored = localStorage.getItem(this.storageKey);
+			return stored ? JSON.parse(stored) : [];
+		} catch (error) {
+			console.error('Failed to load projects:', error);
+			return [];
+		}
+	}
+
+	// Collaborator management methods
+	addCollaboratorToProject(projectSlug: string, userId: string): boolean {
+		try {
+			const projects = this.getAllProjectsUnfiltered();
+			const projectIndex = projects.findIndex(p => p.slug === projectSlug);
+			
+			if (projectIndex === -1) return false;
+
+			// Check if user is already a collaborator
+			if (projects[projectIndex].collaborators?.includes(userId)) {
+				return true; // Already a collaborator
+			}
+
+			const collaborators = projects[projectIndex].collaborators || [];
+			collaborators.push(userId);
+			projects[projectIndex].collaborators = collaborators;
+			projects[projectIndex].updatedAt = new Date().toISOString();
+
+			this.saveProjects(projects);
+			return true;
+		} catch (error) {
+			console.error('Failed to add collaborator to project:', error);
+			return false;
+		}
+	}
+
+	removeCollaboratorFromProject(projectSlug: string, userId: string): boolean {
+		try {
+			const projects = this.getAllProjectsUnfiltered();
+			const projectIndex = projects.findIndex(p => p.slug === projectSlug);
+			
+			if (projectIndex === -1) return false;
+
+			const collaborators = projects[projectIndex].collaborators?.filter(id => id !== userId) || [];
+			projects[projectIndex].collaborators = collaborators;
+			projects[projectIndex].updatedAt = new Date().toISOString();
+
+			this.saveProjects(projects);
+			return true;
+		} catch (error) {
+			console.error('Failed to remove collaborator from project:', error);
+			return false;
+		}
+	}
+
+	getProjectCollaborators(projectSlug: string): Array<{
+		id: string;
+		email: string;
+		name: string;
+		userType: 'member' | 'collaborator';
+	}> {
+		try {
+			const projects = this.getAllProjectsUnfiltered();
+			const project = projects.find(p => p.slug === projectSlug);
+			
+			if (!project || !project.collaborators) return [];
+
+			// Get user service to fetch user details
+			const userService = ServiceFactory.createUserService();
+			
+			// Get user details for each collaborator
+			const collaboratorDetails: Array<{
+				id: string;
+				email: string;
+				name: string;
+				userType: 'member' | 'collaborator';
+			}> = [];
+
+			project.collaborators.forEach(userId => {
+				const user = userService.getUser(userId);
+				if (user) {
+					collaboratorDetails.push({
+						id: userId,
+						email: user.email,
+						name: user.name,
+						userType: user.userType
+					});
+				}
+			});
+
+			return collaboratorDetails;
+		} catch (error) {
+			console.error('Failed to get project collaborators:', error);
+			return [];
 		}
 	}
 }

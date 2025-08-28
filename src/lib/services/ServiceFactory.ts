@@ -4,19 +4,22 @@ import type {
 	IPeopleService,
 	ITimelineService,
 	INodesService,
-	IStickerService
+	IStickerService,
+	IUserService
 } from './interfaces';
 import { ProjectsService } from './local/ProjectsService';
 import { TaskService } from './local/TaskService';
 import { PeopleService } from './local/PeopleService';
 import { TimelineService } from './local/TimelineService';
 import { NodesService } from './local/NodesService';
+import { UserService } from './local/UserService';
 import { FirebaseProjectsService } from './firebase/FirebaseProjectsService';
 import { FirebaseTaskService } from './firebase/FirebaseTaskService';
 import { FirebaseTimelineService } from './firebase/FirebaseTimelineService';
 import { FirebaseNodesService } from './firebase/FirebaseNodesService';
 import { FirebasePeopleService } from './firebase/FirebasePeopleService';
 import { FirebaseStickerService } from './firebase/FirebaseStickerService';
+import { FirebaseUserService } from './firebase/FirebaseUserService';
 import type { Node, Edge } from '@xyflow/svelte';
 
 export class ServiceFactory {
@@ -85,6 +88,14 @@ export class ServiceFactory {
 	static createStickerService(): IStickerService {
 		// Stickers always use Firebase Storage for images, regardless of service mode
 		return new FirebaseStickerService();
+	}
+
+	static createUserService(): IUserService {
+		const mode = this.getServiceMode();
+		if (mode === 'firebase') {
+			return new FirebaseUserService();
+		}
+		return new UserService();
 	}
 
 	static getCurrentMode(): 'local' | 'firebase' {

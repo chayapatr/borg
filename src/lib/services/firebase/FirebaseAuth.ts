@@ -51,6 +51,7 @@ export class FirebaseAuth {
 				photoUrl: user.photoURL || '',
 				createdAt: new Date(),
 				isApproved: false, // Must be manually approved
+				userType: 'member', // Default to member for new users
 				lastLoginAt: new Date()
 			});
 		} else {
@@ -62,6 +63,12 @@ export class FirebaseAuth {
 			if (userData?.photoUrl !== user.photoURL) {
 				updateData.photoUrl = user.photoURL || '';
 			}
+
+			// Migration: Add userType to existing users who don't have it
+			if (userData && !userData.userType) {
+				// If user is already approved, they should be a member (existing behavior)
+				updateData.userType = userData.isApproved ? 'member' : 'member';
+			}
 			
 			await setDoc(userRef, updateData, { merge: true });
 		}
@@ -71,6 +78,12 @@ export class FirebaseAuth {
 		const userRef = doc(db, 'users', userId);
 		const userDoc = await getDoc(userRef);
 		return userDoc.exists() ? userDoc.data()?.isApproved === true : false;
+	}
+
+	async getUserData(userId: string): Promise<any> {
+		const userRef = doc(db, 'users', userId);
+		const userDoc = await getDoc(userRef);
+		return userDoc.exists() ? userDoc.data() : null;
 	}
 
 	getCurrentUser(): User | null {

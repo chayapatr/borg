@@ -9,6 +9,7 @@
 	import { ChevronLeft, CheckSquare } from '@lucide/svelte';
 	import type { TaskWithContext } from '$lib/types/task';
 	import TaskSidebar from '$lib/components/tasks/TaskSidebar.svelte';
+	import { authStore } from '$lib/stores/authStore';
 
 	const projectSlug = $derived($page.params.slug);
 	let projectsService: IProjectsService;
@@ -21,10 +22,24 @@
 	let taskSubscriptionCleanup: (() => void) | null = null;
 
 	onMount(async () => {
+		// Wait for auth to load if still loading
+		if ($authStore.loading) {
+			const unsubscribe = authStore.subscribe((auth) => {
+				if (!auth.loading) {
+					unsubscribe();
+					initializeServices();
+				}
+			});
+		} else {
+			await initializeServices();
+		}
+	});
+
+	async function initializeServices() {
 		projectsService = ServiceFactory.createProjectsService();
 		taskService = ServiceFactory.createTaskService();
 		await loadProject();
-	});
+	}
 
 	// Cleanup on component destroy
 	$effect(() => {

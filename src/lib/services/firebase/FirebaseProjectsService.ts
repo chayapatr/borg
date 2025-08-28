@@ -16,13 +16,27 @@ import {
 import { db } from '../../firebase/config';
 import type { Project } from '../local/ProjectsService';
 import type { IProjectsService } from '../interfaces';
+import { authStore } from '../../stores/authStore';
+import { get } from 'svelte/store';
 
 export class FirebaseProjectsService implements IProjectsService {
 	async getAllProjects(): Promise<Project[]> {
 		// Only get active projects (not in recycle bin)
 		const q = query(collection(db, 'projects'), orderBy('updatedAt', 'desc'));
 		const snapshot = await getDocs(q);
-		return snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as Project);
+		const allProjects = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as Project);
+		
+		// Filter projects based on user type
+		const authState = get(authStore);
+		if (authState.userType === 'collaborator' && authState.user) {
+			// Collaborators only see projects they're added to
+			return allProjects.filter(project => 
+				project.collaborators?.includes(authState.user!.uid)
+			);
+		}
+		
+		// Members see all projects
+		return allProjects;
 	}
 
 	async getProject(slug: string): Promise<Project | null> {
@@ -228,14 +242,26 @@ export class FirebaseProjectsService implements IProjectsService {
 		const q = query(collection(db, 'projects'), orderBy('updatedAt', 'desc'));
 
 		return onSnapshot(q, (snapshot) => {
-			const projects = snapshot.docs.map(
+			const allProjects = snapshot.docs.map(
 				(doc) =>
 					({
 						...doc.data(),
 						id: doc.id
 					}) as Project
 			);
-			callback(projects);
+			
+			// Filter projects based on user type
+			const authState = get(authStore);
+			if (authState.userType === 'collaborator' && authState.user) {
+				// Collaborators only see projects they're added to
+				const filteredProjects = allProjects.filter(project => 
+					project.collaborators?.includes(authState.user!.uid)
+				);
+				callback(filteredProjects);
+			} else {
+				// Members see all projects
+				callback(allProjects);
+			}
 		});
 	}
 
@@ -335,6 +361,81 @@ export class FirebaseProjectsService implements IProjectsService {
 		} catch (error) {
 			// If no operations in batch, commit will succeed anyway
 			console.log('Batch commit completed (may have been empty)');
+		}
+	}
+
+	// Collaborator management methods
+	async addCollaboratorToProject(projectSlug: string, userId: string): Promise<boolean> {
+		try {
+			const project = await this.getProject(projectSlug);
+			if (!project) return false;
+
+			// Check if user is already a collaborator
+			if (project.collaborators?.includes(userId)) {
+				return true; // Already a collaborator
+			}
+
+			const collaborators = project.collaborators || [];
+			collaborators.push(userId);
+
+			const updated = await this.updateProject(projectSlug, { collaborators });
+			return !!updated;
+		} catch (error) {
+			console.error('Failed to add collaborator to project:', error);
+			return false;
+		}
+	}
+
+	async removeCollaboratorFromProject(projectSlug: string, userId: string): Promise<boolean> {
+		try {
+			const project = await this.getProject(projectSlug);
+			if (!project) return false;
+
+			const collaborators = project.collaborators?.filter(id => id !== userId) || [];
+			const updated = await this.updateProject(projectSlug, { collaborators });
+			return !!updated;
+		} catch (error) {
+			console.error('Failed to remove collaborator from project:', error);
+			return false;
+		}
+	}
+
+	async getProjectCollaborators(projectSlug: string): Promise<Array<{
+		id: string;
+		email: string;
+		name: string;
+		userType: 'member' | 'collaborator';
+	}>> {
+		try {
+			const project = await this.getProject(projectSlug);
+			if (!project || !project.collaborators) return [];
+
+			// Get user details for each collaborator
+			const collaboratorDetails = await Promise.all(
+				project.collaborators.map(async (userId) => {
+					const userDoc = await getDoc(doc(db, 'users', userId));
+					if (userDoc.exists()) {
+						const userData = userDoc.data();
+						return {
+							id: userId,
+							email: userData.email || '',
+							name: userData.name || '',
+							userType: userData.userType || 'member'
+						};
+					}
+					return null;
+				})
+			);
+
+			return collaboratorDetails.filter(collab => collab !== null) as Array<{
+				id: string;
+				email: string;
+				name: string;
+				userType: 'member' | 'collaborator';
+			}>;
+		} catch (error) {
+			console.error('Failed to get project collaborators:', error);
+			return [];
 		}
 	}
 }
