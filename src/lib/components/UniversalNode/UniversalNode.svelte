@@ -241,7 +241,7 @@
 			class="group relative cursor-pointer border transition-all duration-200 {template.id ===
 			'note'
 				? `aspect-square ${nodeSizeClass} rounded-lg p-1`
-				: 'max-w-64 min-w-48'} {template.id !== 'note' ? 'rounded-t-lg' : 'rounded-lg'}"
+				: 'max-w-64 min-w-48'} rounded-lg"
 			style="box-shadow: {template.id === 'note'
 				? '0;'
 				: '0;'}; border-color: {borderColor}; background-color: {template.id === 'note' &&
