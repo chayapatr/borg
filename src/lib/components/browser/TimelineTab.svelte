@@ -192,8 +192,9 @@
 			const timeComponents = timeOnly.split(':');
 			const timeStr = `${timeComponents[0]}:${timeComponents[1]}`;
 
-			const date = new Date(datePart);
-			const dateStr = date.toLocaleDateString('en-US', {
+			// Parse the date components manually to avoid timezone conversion issues
+			const [year, month, day] = datePart.split('-').map(Number);
+			const dateStr = new Date(year, month - 1, day).toLocaleDateString('en-US', {
 				month: 'short',
 				day: 'numeric',
 				year: 'numeric'
@@ -203,19 +204,35 @@
 		}
 
 		// Fallback for legacy events
-		const date = event.timestamp
-			? new Date(event.timestamp)
-			: (event as any).date
-				? new Date((event as any).date)
-				: new Date();
-		const dateStr = date.toLocaleDateString('en-US', {
-			month: 'short',
-			day: 'numeric',
-			year: 'numeric'
-		});
-		const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		const timestamp = event.timestamp || (event as any).date;
+		if (timestamp && typeof timestamp === 'string' && timestamp.includes('T')) {
+			// Handle ISO timestamps in fallback case
+			const datePart = timestamp.split('T')[0];
+			const [year, month, day] = datePart.split('-').map(Number);
+			const date = new Date(year, month - 1, day);
+			const dateStr = date.toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				year: 'numeric'
+			});
+			
+			// For time, we can use the original timestamp since time zones are handled correctly
+			const originalDate = new Date(timestamp);
+			const timeStr = originalDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+			
+			return `${dateStr} at ${timeStr}`;
+		} else {
+			// Handle other date formats or create new date
+			const date = timestamp ? new Date(timestamp) : new Date();
+			const dateStr = date.toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				year: 'numeric'
+			});
+			const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-		return `${dateStr} at ${timeStr}`;
+			return `${dateStr} at ${timeStr}`;
+		}
 	}
 
 	function isUpcoming(event: TimelineEvent) {

@@ -174,7 +174,7 @@
 					disabled={readonly}
 					class="w-full rounded border border-black bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
 				>
-					<option value="-4">ET (Auto)</option>
+					<option value="-4">ET</option>
 					<option value="-12">AOE</option>
 				</select>
 			</div>

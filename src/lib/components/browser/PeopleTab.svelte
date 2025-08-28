@@ -7,6 +7,7 @@
 	import { PersonStandingIcon, UserCheck, UserX, Shield, Users } from '@lucide/svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { IUserService } from '../../services/interfaces';
+	import { authStore } from '../../stores/authStore';
 
 	let { peopleService, taskService, activeTab } = $props<{
 		peopleService: IPeopleService;
@@ -234,7 +235,7 @@
 				<div class="mb-8">
 					<h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-black">
 						<Users class="h-5 w-5 text-borg-violet" />
-						Members ({members.length})
+						Group Members ({members.length})
 					</h3>
 					<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 						{#each members as person}
@@ -316,7 +317,8 @@
 			{/if}
 		{/if}
 
-		<!-- Allow People Section -->
+		<!-- Allow People Section (Members Only) -->
+		{#if $authStore.userType === 'member'}
 		<div class="mt-8 border-t border-zinc-300 pt-6">
 			<div class="mb-4 flex items-center gap-2">
 				<Shield class="h-5 w-5 text-borg-orange" />
@@ -389,6 +391,7 @@
 				</div>
 			{/if}
 		</div>
+		{/if}
 	</div>
 </div>
 
