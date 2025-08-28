@@ -65,7 +65,8 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'website',
 				label: 'Website',
 				type: 'link',
-				placeholder: 'https://...'
+				placeholder: 'https://...',
+				showInDisplay: false
 			}
 		]
 	},
@@ -98,7 +99,8 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'website',
 				label: 'Website',
 				type: 'link',
-				placeholder: 'https://...'
+				placeholder: 'https://...',
+				showInDisplay: false
 			}
 		]
 	},
