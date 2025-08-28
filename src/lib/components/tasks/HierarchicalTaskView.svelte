@@ -1,13 +1,5 @@
 <script lang="ts">
-	import {
-		Calendar,
-		StickyNote,
-		CheckCircle,
-		Trash2,
-		RotateCcw,
-		Loader2,
-		ExternalLink
-	} from '@lucide/svelte';
+	import { Calendar, CheckCircle, Trash2, RotateCcw, Loader2, ExternalLink } from '@lucide/svelte';
 	import type { TaskWithContext } from '../../types/task';
 	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
 
@@ -18,7 +10,8 @@
 		isResolved = false,
 		onResolveTask,
 		onDeleteTask,
-		onReactivateTask
+		onReactivateTask,
+		groupByProject = true
 	} = $props<{
 		tasks: TaskWithContext[];
 		peopleService?: IPeopleService;
@@ -27,6 +20,7 @@
 		onResolveTask?: (task: TaskWithContext) => void;
 		onDeleteTask?: (task: TaskWithContext) => void;
 		onReactivateTask?: (task: TaskWithContext) => void;
+		groupByProject?: boolean;
 	}>();
 
 	// Selected project state
@@ -58,6 +52,18 @@
 
 		try {
 			await onReactivateTask?.(task);
+		} finally {
+			loadingTasks.delete(task.id);
+			loadingTasks = new Set(loadingTasks);
+		}
+	}
+
+	async function handleDeleteTask(task: TaskWithContext) {
+		loadingTasks.add(task.id);
+		loadingTasks = new Set(loadingTasks);
+
+		try {
+			await onDeleteTask?.(task);
 		} finally {
 			loadingTasks.delete(task.id);
 			loadingTasks = new Set(loadingTasks);
@@ -118,6 +124,26 @@
 	// Get project and node grouped tasks
 	let tasksByProject = $derived(groupTasksByProjectAndNode(tasks));
 
+	// Group tasks by time period for flat view
+	let tasksByTimePeriod = $derived(() => {
+		const sevenDaysAgo = new Date();
+		sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+		const recent: TaskWithContext[] = [];
+		const older: TaskWithContext[] = [];
+
+		tasks.forEach((task) => {
+			const taskDate = task.updatedAt ? new Date(task.updatedAt) : new Date(task.createdAt);
+			if (taskDate >= sevenDaysAgo) {
+				recent.push(task);
+			} else {
+				older.push(task);
+			}
+		});
+
+		return { recent, older };
+	});
+
 	// Auto-select first project if none selected
 	$effect(() => {
 		const projectSlugs = Object.keys(tasksByProject);
@@ -141,7 +167,7 @@
 			</p>
 		</div>
 	</div>
-{:else}
+{:else if groupByProject}
 	<div class="flex h-full max-h-full gap-8">
 		<!-- Left sidebar: Projects list -->
 		<div class="w-80 flex-shrink-0 overflow-y-auto pr-1 pb-2">
@@ -312,10 +338,7 @@
 													{/if}
 
 													{#if task.notes}
-														<div class="flex items-center gap-1">
-															<StickyNote class="h-3 w-3" />
-															<span>Has notes</span>
-														</div>
+														<span class="text-xs text-zinc-600 italic">"{task.notes}"</span>
 													{/if}
 												</div>
 											</div>
@@ -354,4 +377,334 @@
 			{/if}
 		</div>
 	</div>
+{:else}
+	<!-- Flat view: All tasks grouped by time period -->
+	{#if true}
+		{@const timePeriods = tasksByTimePeriod()}
+		<div class="space-y-6">
+			{#if timePeriods.recent.length > 0}
+				<div>
+					<h3 class="mb-3 border-b border-zinc-200 pb-2 text-base font-semibold text-zinc-800">
+						Last week ({timePeriods.recent.length})
+					</h3>
+					<div class="space-y-1">
+						{#each timePeriods.recent as task}
+							{@const personResult = peopleService?.getPerson(task.assignee)}
+							{@const isLoading = loadingTasks.has(task.id)}
+							{#await personResult instanceof Promise ? personResult : Promise.resolve(personResult)}
+								<!-- Loading state for person data -->
+								<div class="group flex items-start gap-3 rounded-md px-3 py-2 opacity-60">
+									<div class="flex items-center pt-0.5">
+										<div class="h-4 w-4 rounded border border-zinc-300"></div>
+									</div>
+									<div class="min-w-0 flex-1">
+										<div class="mb-1 flex items-center gap-2">
+											<span class="text-sm text-zinc-900">
+												{task.title}
+											</span>
+											<div class="h-5 w-5 animate-pulse rounded-full bg-zinc-200"></div>
+										</div>
+										<div class="flex items-center gap-3 text-xs text-zinc-500">
+											<div class="h-3 w-12 animate-pulse rounded bg-zinc-200"></div>
+										</div>
+									</div>
+								</div>
+							{:then person}
+								{@const overdue = task.dueDate && isOverdue(task.dueDate)}
+
+								<div
+									class="group flex items-start gap-3 rounded-md px-3 py-2 transition-colors hover:bg-zinc-50"
+								>
+									<div class="flex items-center pt-0.5">
+										<div class="h-4 w-4 rounded border border-zinc-300 bg-green-500"></div>
+									</div>
+									<div class="min-w-0 flex-1">
+										<div class="mb-1 flex items-center gap-2">
+											<span class="text-sm text-zinc-900">
+												{task.title}
+											</span>
+											{#if person}
+												<img
+													src={person.profileImageUrl}
+													alt={person.name}
+													class="h-5 w-5 rounded-full border border-zinc-200"
+													onerror={(e) =>
+														((e.currentTarget as HTMLImageElement).style.display = 'none')}
+												/>
+											{/if}
+											<!-- Project and Node Info -->
+											<span class="text-xs text-zinc-500">
+												{task.projectTitle} • {task.nodeTitle}
+											</span>
+										</div>
+										<div class="flex items-center gap-3 text-xs text-zinc-500">
+											{#if person}
+												<span>{person.name}</span>
+											{/if}
+											{#if task.updatedAt}
+												<div class="flex items-center gap-1">
+													<Calendar class="h-3 w-3" />
+													<span>Resolved {formatDate(task.updatedAt)}</span>
+												</div>
+											{/if}
+											{#if task.dueDate}
+												<div class="flex items-center gap-1 {overdue ? 'text-red-600' : ''}">
+													<Calendar class="h-3 w-3" />
+													<span>Due {formatDate(task.dueDate)}</span>
+													{#if overdue}<span class="font-medium">(was overdue)</span>{/if}
+												</div>
+											{/if}
+											{#if task.notes}
+												<span class="text-xs text-zinc-600 italic">"{task.notes}"</span>
+											{/if}
+										</div>
+									</div>
+									<!-- Actions -->
+									{#if showActions}
+										<div
+											class="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100"
+										>
+											{#if isResolved}
+												<button
+													onclick={() => handleReactivateTask(task)}
+													disabled={isLoading}
+													class="rounded-md p-1.5 text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+													title="Reactivate task"
+												>
+													{#if isLoading}
+														<Loader2 class="h-4 w-4 animate-spin" />
+													{:else}
+														<RotateCcw class="h-4 w-4" />
+													{/if}
+												</button>
+											{:else}
+												<button
+													onclick={() => handleResolveTask(task)}
+													disabled={isLoading}
+													class="rounded-md p-1.5 text-green-600 hover:bg-green-50 disabled:opacity-50"
+													title="Mark as resolved"
+												>
+													{#if isLoading}
+														<Loader2 class="h-4 w-4 animate-spin" />
+													{:else}
+														<CheckCircle class="h-4 w-4" />
+													{/if}
+												</button>
+											{/if}
+											<button
+												onclick={() => handleDeleteTask(task)}
+												disabled={isLoading}
+												class="rounded-md p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50"
+												title="Delete task"
+											>
+												{#if isLoading}
+													<Loader2 class="h-4 w-4 animate-spin" />
+												{:else}
+													<Trash2 class="h-4 w-4" />
+												{/if}
+											</button>
+										</div>
+									{/if}
+								</div>
+							{:catch error}
+								<!-- Error state for person data -->
+								<div class="group flex items-start gap-3 rounded-md px-3 py-2 opacity-75">
+									<div class="flex items-center pt-0.5">
+										<div class="h-4 w-4 rounded border border-zinc-300 bg-green-500"></div>
+									</div>
+									<div class="min-w-0 flex-1">
+										<div class="mb-1 flex items-center gap-2">
+											<span class="text-sm text-zinc-900">
+												{task.title}
+											</span>
+											<span class="text-xs text-zinc-500">
+												{task.projectTitle} • {task.nodeTitle}
+											</span>
+										</div>
+										<div class="flex items-center gap-3 text-xs text-zinc-500">
+											<span>Error loading assignee</span>
+											{#if task.updatedAt}
+												<div class="flex items-center gap-1">
+													<Calendar class="h-3 w-3" />
+													<span>Resolved {formatDate(task.updatedAt)}</span>
+												</div>
+											{/if}
+											{#if task.dueDate}
+												<div class="flex items-center gap-1">
+													<Calendar class="h-3 w-3" />
+													<span>Due {formatDate(task.dueDate)}</span>
+												</div>
+											{/if}
+										</div>
+									</div>
+								</div>
+							{/await}
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			{#if timePeriods.older.length > 0}
+				<div>
+					<h3 class="mb-3 border-b border-zinc-200 pb-2 text-base font-semibold text-zinc-800">
+						Last month ({timePeriods.older.length})
+					</h3>
+					<div class="space-y-1">
+						{#each timePeriods.older as task}
+							{@const personResult = peopleService?.getPerson(task.assignee)}
+							{@const isLoading = loadingTasks.has(task.id)}
+							{#await personResult instanceof Promise ? personResult : Promise.resolve(personResult)}
+								<!-- Loading state for person data -->
+								<div class="group flex items-start gap-3 rounded-md px-3 py-2 opacity-60">
+									<div class="flex items-center pt-0.5">
+										<div class="h-4 w-4 rounded border border-zinc-300"></div>
+									</div>
+									<div class="min-w-0 flex-1">
+										<div class="mb-1 flex items-center gap-2">
+											<span class="text-sm text-zinc-900">
+												{task.title}
+											</span>
+											<div class="h-5 w-5 animate-pulse rounded-full bg-zinc-200"></div>
+										</div>
+										<div class="flex items-center gap-3 text-xs text-zinc-500">
+											<div class="h-3 w-12 animate-pulse rounded bg-zinc-200"></div>
+										</div>
+									</div>
+								</div>
+							{:then person}
+								{@const overdue = task.dueDate && isOverdue(task.dueDate)}
+
+								<div
+									class="group flex items-start gap-3 rounded-md px-3 py-2 transition-colors hover:bg-zinc-50"
+								>
+									<div class="flex items-center pt-0.5">
+										<div class="h-4 w-4 rounded border border-zinc-300 bg-green-500"></div>
+									</div>
+									<div class="min-w-0 flex-1">
+										<div class="mb-1 flex items-center gap-2">
+											<span class="text-sm text-zinc-900">
+												{task.title}
+											</span>
+											{#if person}
+												<img
+													src={person.profileImageUrl}
+													alt={person.name}
+													class="h-5 w-5 rounded-full border border-zinc-200"
+													onerror={(e) =>
+														((e.currentTarget as HTMLImageElement).style.display = 'none')}
+												/>
+											{/if}
+											<!-- Project and Node Info -->
+											<span class="text-xs text-zinc-500">
+												{task.projectTitle} • {task.nodeTitle}
+											</span>
+										</div>
+										<div class="flex items-center gap-3 text-xs text-zinc-500">
+											{#if person}
+												<span>{person.name}</span>
+											{/if}
+											{#if task.updatedAt}
+												<div class="flex items-center gap-1">
+													<Calendar class="h-3 w-3" />
+													<span>Resolved {formatDate(task.updatedAt)}</span>
+												</div>
+											{/if}
+											{#if task.dueDate}
+												<div class="flex items-center gap-1 {overdue ? 'text-red-600' : ''}">
+													<Calendar class="h-3 w-3" />
+													<span>Due {formatDate(task.dueDate)}</span>
+													{#if overdue}<span class="font-medium">(was overdue)</span>{/if}
+												</div>
+											{/if}
+											{#if task.notes}
+												<span class="text-xs text-zinc-600 italic">"{task.notes}"</span>
+											{/if}
+										</div>
+									</div>
+									<!-- Actions -->
+									{#if showActions}
+										<div
+											class="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100"
+										>
+											{#if isResolved}
+												<button
+													onclick={() => handleReactivateTask(task)}
+													disabled={isLoading}
+													class="rounded-md p-1.5 text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+													title="Reactivate task"
+												>
+													{#if isLoading}
+														<Loader2 class="h-4 w-4 animate-spin" />
+													{:else}
+														<RotateCcw class="h-4 w-4" />
+													{/if}
+												</button>
+											{:else}
+												<button
+													onclick={() => handleResolveTask(task)}
+													disabled={isLoading}
+													class="rounded-md p-1.5 text-green-600 hover:bg-green-50 disabled:opacity-50"
+													title="Mark as resolved"
+												>
+													{#if isLoading}
+														<Loader2 class="h-4 w-4 animate-spin" />
+													{:else}
+														<CheckCircle class="h-4 w-4" />
+													{/if}
+												</button>
+											{/if}
+											<button
+												onclick={() => handleDeleteTask(task)}
+												disabled={isLoading}
+												class="rounded-md p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50"
+												title="Delete task"
+											>
+												{#if isLoading}
+													<Loader2 class="h-4 w-4 animate-spin" />
+												{:else}
+													<Trash2 class="h-4 w-4" />
+												{/if}
+											</button>
+										</div>
+									{/if}
+								</div>
+							{:catch error}
+								<!-- Error state for person data -->
+								<div class="group flex items-start gap-3 rounded-md px-3 py-2 opacity-75">
+									<div class="flex items-center pt-0.5">
+										<div class="h-4 w-4 rounded border border-zinc-300 bg-green-500"></div>
+									</div>
+									<div class="min-w-0 flex-1">
+										<div class="mb-1 flex items-center gap-2">
+											<span class="text-sm text-zinc-900">
+												{task.title}
+											</span>
+											<span class="text-xs text-zinc-500">
+												{task.projectTitle} • {task.nodeTitle}
+											</span>
+										</div>
+										<div class="flex items-center gap-3 text-xs text-zinc-500">
+											<span>Error loading assignee</span>
+											{#if task.updatedAt}
+												<div class="flex items-center gap-1">
+													<Calendar class="h-3 w-3" />
+													<span>Resolved {formatDate(task.updatedAt)}</span>
+												</div>
+											{/if}
+											{#if task.dueDate}
+												<div class="flex items-center gap-1">
+													<Calendar class="h-3 w-3" />
+													<span>Due {formatDate(task.dueDate)}</span>
+												</div>
+											{/if}
+										</div>
+									</div>
+								</div>
+							{/await}
+						{/each}
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
 {/if}

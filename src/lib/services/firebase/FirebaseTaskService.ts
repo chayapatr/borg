@@ -26,6 +26,7 @@ export interface StoredTask {
 	dueDate: string;
 	notes: string;
 	createdAt: string;
+	updatedAt?: string;
 	status?: 'active' | 'resolved';
 	projectId: string;
 	projectSlug: string;
@@ -305,6 +306,21 @@ export class FirebaseTaskService implements ITaskService {
 			collection(db, 'tasks'),
 			where('status', '==', 'resolved'),
 			orderBy('createdAt', 'desc')
+		);
+		const snapshot = await getDocs(q);
+		return snapshot.docs.map(doc => this.toTaskWithContext(doc.data() as StoredTask));
+	}
+
+	async getPersonResolvedTasksLog(personId: string, daysBack: number = 30): Promise<TaskWithContext[]> {
+		const cutoffDate = new Date();
+		cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+		
+		const q = query(
+			collection(db, 'tasks'),
+			where('assignee', '==', personId),
+			where('status', '==', 'resolved'),
+			where('updatedAt', '>=', cutoffDate.toISOString()),
+			orderBy('updatedAt', 'desc')
 		);
 		const snapshot = await getDocs(q);
 		return snapshot.docs.map(doc => this.toTaskWithContext(doc.data() as StoredTask));
@@ -620,6 +636,7 @@ export class FirebaseTaskService implements ITaskService {
 			dueDate: storedTask.dueDate,
 			notes: storedTask.notes,
 			createdAt: storedTask.createdAt,
+			updatedAt: storedTask.updatedAt,
 			status: storedTask.status || 'active',
 			projectSlug: storedTask.projectSlug,
 			projectTitle: storedTask.projectTitle,

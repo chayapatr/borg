@@ -14,6 +14,7 @@ export interface TaskWithContext extends Task {
 	nodeId: string;
 	nodeTitle: string;
 	nodeType: string;
+	updatedAt?: string;
 }
 
 export interface TaskCounts {

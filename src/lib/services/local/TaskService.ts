@@ -11,6 +11,7 @@ interface StoredTask extends Task {
 	nodeTitle: string;
 	nodeType: string;
 	createdBy?: string;
+	updatedAt?: string;
 	
 	// Computed fields for efficient filtering
 	isOverdue: boolean;
@@ -171,6 +172,7 @@ export class TaskService {
 			dueDate: storedTask.dueDate,
 			notes: storedTask.notes,
 			createdAt: storedTask.createdAt,
+			updatedAt: storedTask.updatedAt,
 			status: storedTask.status || 'active',
 			projectSlug: storedTask.projectSlug,
 			projectTitle: storedTask.projectTitle,
@@ -357,6 +359,7 @@ export class TaskService {
 		allTasks[taskIndex] = {
 			...allTasks[taskIndex],
 			...updates,
+			updatedAt: new Date().toISOString(),
 			// Recompute isOverdue if dueDate changed
 			isOverdue: updates.dueDate ? new Date(updates.dueDate) < new Date() : allTasks[taskIndex].isOverdue
 		};
@@ -401,6 +404,32 @@ export class TaskService {
 		console.log('TaskService.getResolvedTasks: Task statuses:', storedTasks.map(t => ({id: t.id, title: t.title, status: t.status})));
 		const resolvedTasks = storedTasks.filter(task => (task.status || 'active') === 'resolved');
 		console.log('TaskService.getResolvedTasks: Found resolved tasks:', resolvedTasks.length);
+		return resolvedTasks.map(task => this.toTaskWithContext(task));
+	}
+
+	getPersonResolvedTasksLog(personId: string, daysBack: number = 30): TaskWithContext[] {
+		const storedTasks = this.getAllStoredTasks();
+		const cutoffDate = new Date();
+		cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+		
+		const resolvedTasks = storedTasks.filter(task => {
+			// Filter by assignee and status
+			if (task.assignee !== personId || (task.status || 'active') !== 'resolved') {
+				return false;
+			}
+			
+			// Filter by date (use updatedAt if available, otherwise createdAt)
+			const taskDate = task.updatedAt ? new Date(task.updatedAt) : new Date(task.createdAt);
+			return taskDate >= cutoffDate;
+		});
+
+		// Sort by date (updatedAt if available, otherwise createdAt) in descending order
+		resolvedTasks.sort((a, b) => {
+			const dateA = a.updatedAt ? new Date(a.updatedAt) : new Date(a.createdAt);
+			const dateB = b.updatedAt ? new Date(b.updatedAt) : new Date(b.createdAt);
+			return dateB.getTime() - dateA.getTime();
+		});
+
 		return resolvedTasks.map(task => this.toTaskWithContext(task));
 	}
 

@@ -6,6 +6,7 @@
 	import { doc, updateDoc, getDoc } from 'firebase/firestore';
 	import { db } from '../../firebase/config';
 	import HierarchicalTaskView from '../tasks/HierarchicalTaskView.svelte';
+	import TaskLog from '../tasks/TaskLog.svelte';
 
 	let { taskService, activeTab } = $props<{
 		taskService: ITaskService;
@@ -14,7 +15,7 @@
 
 	let userTasks = $state<TaskWithContext[]>([]);
 	let resolvedUserTasks = $state<TaskWithContext[]>([]);
-	let viewTab = $state<'active' | 'resolved'>('active');
+	let viewTab = $state<'active' | 'resolved' | 'log'>('active');
 	let personalData = $state({
 		preferredName: '',
 		loading: false,
@@ -302,6 +303,14 @@
 					>
 						Resolved Tasks ({resolvedUserTasks.length})
 					</button>
+					<button
+						onclick={() => (viewTab = 'log')}
+						class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'log'
+							? 'border-b-2 border-blue-600 text-blue-600'
+							: 'text-zinc-500 hover:text-zinc-700'}"
+					>
+						Log
+					</button>
 				</div>
 			</div>
 
@@ -314,7 +323,7 @@
 						onResolveTask={handleResolveTask}
 						onDeleteTask={handleDeleteTask}
 					/>
-				{:else}
+				{:else if viewTab === 'resolved'}
 					<HierarchicalTaskView 
 						tasks={resolvedUserTasks} 
 						showActions={true} 
@@ -322,6 +331,8 @@
 						onReactivateTask={handleReactivateTask}
 						onDeleteTask={handleDeleteTask}
 					/>
+				{:else if viewTab === 'log'}
+					<TaskLog {taskService} />
 				{/if}
 			</div>
 		</div>
