@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { Calendar, StickyNote, CheckCircle, Trash2, RotateCcw, Loader2, ExternalLink } from '@lucide/svelte';
+	import {
+		Calendar,
+		StickyNote,
+		CheckCircle,
+		Trash2,
+		RotateCcw,
+		Loader2,
+		ExternalLink
+	} from '@lucide/svelte';
 	import type { TaskWithContext } from '../../types/task';
 	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
 
@@ -136,7 +144,7 @@
 {:else}
 	<div class="flex h-full max-h-full gap-8">
 		<!-- Left sidebar: Projects list -->
-		<div class="w-80 flex-shrink-0 overflow-y-auto">
+		<div class="w-80 flex-shrink-0 overflow-y-auto pr-1 pb-2">
 			<div class="space-y-3">
 				{#each Object.entries(tasksByProject) as [projectSlug, projectData]}
 					{@const projectTaskCount = Object.values(projectData.nodes).reduce(
@@ -150,7 +158,7 @@
 						onkeydown={(e) => e.key === 'Enter' && selectProject(projectSlug)}
 						role="button"
 						tabindex="0"
-						class="relative flex w-full items-center justify-between rounded-md border border-black p-3 text-left transition-colors cursor-pointer {isSelected
+						class="box-shadow-black relative flex w-full cursor-pointer items-center justify-between rounded-md border border-black p-3 text-left transition-colors {isSelected
 							? 'bg-borg-brown'
 							: 'bg-white hover:bg-borg-beige'}"
 					>
@@ -159,7 +167,7 @@
 								e.stopPropagation();
 								window.open(`/project/${projectSlug}`, '_blank');
 							}}
-							class="absolute top-2 right-2 flex items-center justify-center rounded border border-black p-1 bg-white transition-colors hover:bg-black/10"
+							class="absolute top-2 right-2 flex items-center justify-center rounded border border-black bg-white p-1 transition-colors hover:bg-borg-orange"
 							title="Open project"
 						>
 							<ExternalLink class="h-3 w-3 text-black" />
@@ -286,6 +294,7 @@
 															alt={person.name || 'Assignee'}
 															class="h-5 w-5 rounded-full"
 															title={person.name || 'Unassigned'}
+															referrerpolicy="no-referrer"
 														/>
 													{/if}
 												</div>

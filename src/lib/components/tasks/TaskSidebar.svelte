@@ -91,7 +91,12 @@
 										<div class="mt-2 flex items-center gap-2 text-xs text-zinc-700">
 											<!-- {JSON.stringify(person)} -->
 											{#if person?.name}
-												<img src={person.photoUrl} alt="" class="h-4 w-4 rounded-full" />
+												<img
+													referrerpolicy="no-referrer"
+													src={person.photoUrl}
+													alt=""
+													class="h-4 w-4 rounded-full"
+												/>
 											{/if}
 											{person?.name ||
 												(task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}

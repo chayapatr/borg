@@ -249,6 +249,7 @@
 												<img
 													src={person.photoUrl}
 													alt={person.name}
+													referrerpolicy="no-referrer"
 													class="h-full w-full object-cover"
 												/>
 											{:else}
@@ -291,6 +292,7 @@
 												<img
 													src={person.photoUrl}
 													alt={person.name}
+													referrerpolicy="no-referrer"
 													class="h-full w-full object-cover"
 												/>
 											{:else}
@@ -348,6 +350,7 @@
 										<img
 											src={user.photoUrl}
 											alt={user.name || user.email}
+											referrerpolicy="no-referrer"
 											class="h-full w-full object-cover"
 										/>
 									{:else}

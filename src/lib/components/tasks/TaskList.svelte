@@ -170,7 +170,12 @@
 
 				<div class="mt-2 mb-1 flex items-center gap-2 text-xs whitespace-nowrap text-black">
 					{#if person?.name}
-						<img src={person.photoUrl} alt="" class="h-4 w-4 rounded-full" />
+						<img
+							src={person.photoUrl}
+							referrerpolicy="no-referrer"
+							alt=""
+							class="h-4 w-4 rounded-full"
+						/>
 					{/if}
 					{person?.name || (task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}
 				</div>
