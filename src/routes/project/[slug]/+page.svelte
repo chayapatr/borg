@@ -190,7 +190,13 @@
 				<div class="h-4 w-px bg-black"></div>
 
 				<button
-					onclick={() => (showTaskSidebar = !showTaskSidebar)}
+					onclick={() => {
+						showTaskSidebar = !showTaskSidebar;
+						if (showTaskSidebar) {
+							// Close Canvas panels when opening task sidebar
+							document.dispatchEvent(new CustomEvent('closeCanvasPanels'));
+						}
+					}}
 					class="flex items-center gap-2 rounded-lg bg-black px-3 py-2 text-sm text-white transition-colors hover:bg-borg-orange"
 				>
 					<CheckSquare class="h-4 w-4" />
@@ -210,7 +216,11 @@
 			<!-- Canvas -->
 			<div class="flex-1">
 				<SvelteFlowProvider>
-					<Canvas {projectSlug} onProjectUpdate={handleProjectUpdate} />
+					<Canvas 
+						{projectSlug} 
+						onProjectUpdate={handleProjectUpdate} 
+						onPanelOpen={() => (showTaskSidebar = false)}
+					/>
 				</SvelteFlowProvider>
 			</div>
 

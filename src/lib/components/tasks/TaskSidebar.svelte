@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { ChevronLeft, CheckSquare } from '@lucide/svelte';
+	import { X } from '@lucide/svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
-	import type { IPeopleService } from '../../services/interfaces';
 	import type { TaskWithContext } from '../../types/task';
 
 	interface Props {
@@ -10,9 +9,18 @@
 		onClose: () => void;
 	}
 
-	let { projectSlug, projectTasks, onClose }: Props = $props();
+	let { projectTasks, onClose }: Props = $props();
 
 	const peopleService = ServiceFactory.createPeopleService();
+	const taskService = ServiceFactory.createTaskService();
+
+	async function handleCompleteTask(task: TaskWithContext) {
+		try {
+			await taskService.updateTask(task.id, { status: 'resolved' });
+		} catch (error) {
+			console.error('Failed to complete task:', error);
+		}
+	}
 	let allPeople = $state<any[]>([]);
 
 	// Load all people once for efficient lookup
@@ -33,7 +41,7 @@
 				onclick={onClose}
 				class="rounded-lg p-1 text-zinc-400 hover:bg-black hover:text-white"
 			>
-				<ChevronLeft class="h-5 w-5" />
+				<X class="h-5 w-5" />
 			</button>
 		</div>
 		{#if projectTasks}
@@ -46,69 +54,94 @@
 	</div>
 
 	<!-- Task List -->
-	<div class="flex-1 overflow-auto p-4">
-		{#if projectTasks}
+	<div class="flex-1 overflow-auto p-5">
+		{#if projectTasks && projectTasks.length > 0}
 			{@const activeTasks = projectTasks.filter((t) => (t.status || 'active') === 'active')}
+			{@const tasksByNode = activeTasks.reduce(
+				(acc, task) => {
+					if (!acc[task.nodeId]) {
+						acc[task.nodeId] = {
+							nodeTitle: task.nodeTitle,
+							nodeType: task.nodeType,
+							tasks: []
+						};
+					}
+					acc[task.nodeId].tasks.push(task);
+					return acc;
+				},
+				{} as Record<string, { nodeTitle: string; nodeType: string; tasks: typeof activeTasks }>
+			)}
+
 			{#if activeTasks.length === 0}
 				<div class="py-8 text-center">
-					<CheckSquare class="mx-auto mb-4 h-12 w-12 text-zinc-600" />
-					<h4 class="mb-2 text-lg font-medium text-black">No tasks yet</h4>
+					<div
+						class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-borg-beige"
+					>
+						<X class="h-6 w-6 text-zinc-600" />
+					</div>
+					<h4 class="mb-2 text-lg font-medium text-black">No active tasks</h4>
 					<p class="text-sm text-zinc-500">Add tasks to nodes to track progress</p>
 				</div>
 			{:else}
-				<!-- Group active tasks by node -->
-				{@const tasksByNode = activeTasks.reduce(
-					(acc: Record<string, typeof activeTasks>, task) => {
-						if (!acc[task.nodeId]) {
-							acc[task.nodeId] = [];
-						}
-						acc[task.nodeId].push(task);
-						return acc;
-					},
-					{} as Record<string, typeof activeTasks>
-				)}
-
-				<div class="space-y-4">
-					{#each Object.entries(tasksByNode) as [nodeId, tasks]}
-						{@const nodeTasks = tasks}
-						<div class="rounded-lg border border-black bg-borg-beige p-3">
-							<div class="mb-3 flex items-center gap-3">
-								<h4 class="font-medium text-black">{nodeTasks[0].nodeTitle}</h4>
+				<div class="space-y-6">
+					{#each Object.entries(tasksByNode) as [, nodeData]}
+						<div>
+							<div class="mb-2 flex items-center gap-2">
+								<h4 class="text-sm font-medium text-black">{nodeData.nodeTitle}</h4>
 								<span
-									class="rounded-md border border-black bg-white px-2 py-0.5 text-xs font-medium text-black"
+									class="rounded-md border border-black bg-white px-1.5 py-0.5 text-xs font-medium text-black"
 								>
-									{nodeTasks[0].nodeType}
+									{nodeData.nodeType}
 								</span>
 							</div>
 
-							<div class="space-y-4">
-								{#each nodeTasks as task}
+							<div class="space-y-1">
+								{#each nodeData.tasks as task}
 									{@const person = allPeople.find((p) => p.id === task.assignee)}
-									<div class=" rounded border border-black bg-white p-3">
-										<p class="text-sm font-medium text-black">
-											{task.title}
-										</p>
-										<div class="mt-2 flex items-center gap-2 text-xs text-zinc-700">
-											<!-- {JSON.stringify(person)} -->
-											{#if person?.name}
-												<img
-													referrerpolicy="no-referrer"
-													src={person.photoUrl}
-													alt=""
-													class="h-4 w-4 rounded-full"
-												/>
-											{/if}
-											{person?.name ||
-												(task.assignee ? `User ${task.assignee.slice(0, 8)}` : 'Unassigned')}
+									<div class="group flex items-start gap-3 rounded-md py-2">
+										<!-- Checkbox -->
+										<div class="flex items-center pt-0.5">
+											<button
+												onclick={(e) => {
+													e.stopPropagation();
+													handleCompleteTask(task);
+												}}
+												class="h-4 w-4 rounded border border-zinc-300 transition-colors hover:border-green-500 hover:bg-green-50"
+											></button>
 										</div>
-										{#if task.dueDate}
-											<p class="mt-2 text-xs text-zinc-500">
-												Due: {new Date(task.dueDate).toLocaleDateString()}
-											</p>
-										{/if}
-										{#if task.notes}
-											<p class="mt-2 text-xs text-zinc-500">{task.notes}</p>
-										{/if}
+
+										<!-- Task content -->
+										<div class="min-w-0 flex-1">
+											<div class="mb-1">
+												<h3 class="w-full text-sm text-balance text-zinc-900">
+													{task.title}
+												</h3>
+											</div>
+
+											<!-- Task meta info -->
+											<div class="space-y-1 text-xs text-zinc-500">
+												{#if task.dueDate}
+													<div>Due {new Date(task.dueDate).toLocaleDateString()}</div>
+												{/if}
+												{#if task.notes}
+													<div class="text-xs text-zinc-600 italic">"{task.notes}"</div>
+												{/if}
+												{#if person}
+													<div class="mt-2 flex items-center gap-1">
+														<span>{person.name?.split(' ')[0] || 'Unknown'}</span>
+														{#if person.photoUrl}
+															<img
+																src={person.photoUrl}
+																alt={person.name || 'Assignee'}
+																class="h-3 w-3 rounded-full"
+																title={person.name || 'Unassigned'}
+																referrerpolicy="no-referrer"
+															/>
+														{/if}
+													</div>
+												{/if}
+											</div>
+										</div>
 									</div>
 								{/each}
 							</div>
@@ -118,7 +151,11 @@
 			{/if}
 		{:else}
 			<div class="py-8 text-center">
-				<CheckSquare class="mx-auto mb-4 h-12 w-12 text-zinc-600" />
+				<div
+					class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-borg-beige"
+				>
+					<X class="h-6 w-6 text-zinc-600" />
+				</div>
 				<h4 class="mb-2 text-lg font-medium text-black">No tasks yet</h4>
 				<p class="text-sm text-zinc-500">Add tasks to nodes to track progress</p>
 			</div>

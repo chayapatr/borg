@@ -26,9 +26,10 @@
 	import '@xyflow/svelte/dist/style.css';
 	import './svelteflow.css';
 
-	let { projectSlug, onProjectUpdate } = $props<{
+	let { projectSlug, onProjectUpdate, onPanelOpen } = $props<{
 		projectSlug?: string;
 		onProjectUpdate?: () => void;
+		onPanelOpen?: () => void;
 	}>();
 
 	const nodeTypes = {
@@ -439,6 +440,8 @@
 			// Close other panels if open to avoid conflicts
 			showNodeTaskSidebar = false;
 			showStickerPanel = false;
+			// Notify parent to close other panels
+			onPanelOpen?.();
 		};
 
 		const handleNodeTasksOpenEvent = (event: CustomEvent) => {
@@ -452,6 +455,8 @@
 			taskSidebarNodeTitle = event.detail.nodeTitle;
 			taskSidebarTasks = event.detail.tasks;
 			showNodeTaskSidebar = true;
+			// Notify parent to close other panels
+			onPanelOpen?.();
 
 			// Set up real-time subscription if available
 			if (taskService.subscribeToNodeTasks) {
@@ -486,6 +491,7 @@
 		document.addEventListener('nodeTasksOpen', handleNodeTasksOpenEvent as EventListener);
 		document.addEventListener('addTask', handleAddTaskEvent as EventListener);
 		document.addEventListener('addSticker', handleAddStickerEvent as EventListener);
+		document.addEventListener('closeCanvasPanels', handleCloseCanvasPanels as EventListener);
 
 		return () => {
 			document.removeEventListener('nodeDelete', handleNodeDeleteEvent as EventListener);
@@ -494,6 +500,7 @@
 			document.removeEventListener('nodeTasksOpen', handleNodeTasksOpenEvent as EventListener);
 			document.removeEventListener('addTask', handleAddTaskEvent as EventListener);
 			document.removeEventListener('addSticker', handleAddStickerEvent as EventListener);
+			document.removeEventListener('closeCanvasPanels', handleCloseCanvasPanels as EventListener);
 
 			// Clean up task subscription
 			if (taskSubscriptionCleanup) {
@@ -547,7 +554,16 @@
 		showEditPanel = false;
 		showNodeTaskSidebar = false;
 		showStickerPanel = true;
+		// Notify parent to close other panels
+		onPanelOpen?.();
 		console.log('🎨 showStickerPanel set to:', showStickerPanel);
+	}
+
+	function handleCloseCanvasPanels() {
+		console.log('🎨 handleCloseCanvasPanels called - closing all Canvas panels');
+		showEditPanel = false;
+		showNodeTaskSidebar = false;
+		showStickerPanel = false;
 	}
 
 	// Handle add sticker event (click-based)
