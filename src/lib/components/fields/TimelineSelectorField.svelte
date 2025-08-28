@@ -53,24 +53,41 @@
 		if (event.timestamp && event.timestamp.includes('T')) {
 			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
 			const offset = timezoneMatch?.[1];
-			const timezone = offset === '-5' ? 'EST' : offset === '-4' ? 'EDT' : offset === '-12' ? 'AOE' : (offset === '+0' ? 'UTC' : `UTC${offset}`);
-			
+			const timezone =
+				offset === '-5'
+					? 'EST'
+					: offset === '-4'
+						? 'EDT'
+						: offset === '-12'
+							? 'AOE'
+							: offset === '+0'
+								? 'UTC'
+								: `UTC${offset}`;
+
 			// Parse the timestamp and format it directly to preserve the original timezone time
 			const datePart = event.timestamp.split('T')[0];
 			const timePart = event.timestamp.split('T')[1];
 			const timeOnly = timePart.split(/[+-]/)[0];
 			const timeComponents = timeOnly.split(':');
 			const timeStr = `${timeComponents[0]}:${timeComponents[1]}`;
-			
-			const date = new Date(datePart);
-			const dateStr = date.toLocaleDateString();
-			
-			return `${dateStr} at ${timeStr} ${timezone}`;
+
+			// Parse the date components manually to avoid timezone conversion issues
+			const [year, month, day] = datePart.split('-').map(Number);
+			const dateStr = new Date(year, month - 1, day).toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric'
+			});
+
+			return `${dateStr}, ${timeStr} (${timezone})`;
 		}
 		
 		// Fallback for legacy events
 		const eventDateTime = createEventDateTime(event);
-		const dateStr = eventDateTime.toLocaleDateString();
+		const dateStr = eventDateTime.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric'
+		});
 		const timeStr = eventDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 		
 		return `${dateStr} at ${timeStr}`;
@@ -230,6 +247,9 @@
 								</div>
 							</div>
 						{/if}
+						<div class="mt-3 text-xs text-zinc-500 text-center">
+							{formatEventDateTime(event)}
+						</div>
 					</div>
 				{:else}
 					<!-- Normal mode: standard display -->
