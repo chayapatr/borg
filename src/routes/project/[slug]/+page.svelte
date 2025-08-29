@@ -226,7 +226,15 @@
 
 			<!-- Task Sidebar -->
 			{#if showTaskSidebar && projectSlug}
-				<TaskSidebar {projectSlug} {projectTasks} onClose={() => (showTaskSidebar = false)} />
+				<TaskSidebar 
+					{projectSlug} 
+					{projectTasks} 
+					onClose={() => (showTaskSidebar = false)}
+					onTasksUpdated={async () => {
+						await loadProjectTasks();
+						await updateStatusCounts();
+					}}
+				/>
 			{/if}
 		</div>
 	</div>

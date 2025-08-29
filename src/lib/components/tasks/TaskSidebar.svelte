@@ -7,18 +7,28 @@
 		projectSlug: string;
 		projectTasks: TaskWithContext[];
 		onClose: () => void;
+		onTasksUpdated?: () => void;
 	}
 
-	let { projectTasks, onClose }: Props = $props();
+	let { projectSlug, projectTasks, onClose, onTasksUpdated }: Props = $props();
 
 	const peopleService = ServiceFactory.createPeopleService();
 	const taskService = ServiceFactory.createTaskService();
 
 	async function handleCompleteTask(task: TaskWithContext) {
 		try {
-			await taskService.updateTask(task.id, { status: 'resolved' });
+			console.log('TaskSidebar: Starting to resolve task', { 
+				taskId: task.id, 
+				nodeId: task.nodeId, 
+				projectSlug: task.projectSlug 
+			});
+			const result = taskService.resolveTask(task.nodeId, task.id, task.projectSlug);
+			if (result instanceof Promise) await result;
+			console.log('TaskSidebar: Task resolved successfully, calling onTasksUpdated');
+			onTasksUpdated?.();
 		} catch (error) {
 			console.error('Failed to complete task:', error);
+			alert('Failed to complete task. Please try again.');
 		}
 	}
 	let allPeople = $state<any[]>([]);
@@ -107,6 +117,7 @@
 													handleCompleteTask(task);
 												}}
 												class="h-4 w-4 rounded border border-zinc-300 transition-colors hover:border-green-500 hover:bg-green-50"
+												aria-label="Mark task as complete"
 											></button>
 										</div>
 
