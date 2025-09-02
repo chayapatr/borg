@@ -53,6 +53,8 @@ docker-compose up -d
 pnpm dev
 ```
 
+When using Firebase emulators, the fake Google Sign-In dialog will let you create fake accounts and sign in with any email address. Use an email starting with "admin" (e.g., `admin@example.com`) to automatically get admin permissions.
+
 ### Building
 
 ```bash
