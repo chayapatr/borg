@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { connectAuthEmulator, getAuth } from 'firebase/auth';
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
+import { connectStorageEmulator, getStorage } from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -16,13 +17,18 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 
-// Connect to emulators in development
-// if (import.meta.env.DEV) {
-// 	try {
-// 		connectFirestoreEmulator(db, 'localhost', 8080);
-// 		connectAuthEmulator(auth, 'http://localhost:9099');
-// 	} catch {
-// 		// Emulators already connected
-// 	}
-// }
+export let isEmulator = false;
+
+// Connect to emulators if project ID starts with 'demo-'
+if (firebaseConfig.projectId.startsWith('demo-')) {
+	isEmulator = true;
+	try {
+		connectFirestoreEmulator(db, 'localhost', 8080);
+		connectAuthEmulator(auth, 'http://localhost:9099');
+		connectStorageEmulator(storage, 'localhost', 9199);
+	} catch {
+		// Emulators already connected
+	}
+}
