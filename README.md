@@ -1,38 +1,77 @@
-# sv
+# Borg
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A visual project management and knowledge organization platform built with SvelteKit. Borg combines canvas-based project visualization with traditional task management, creating a collaborative workspace where teams can organize projects, tasks, timelines, and knowledge in an interconnected visual interface.
 
-## Creating a project
+## Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+### 🎨 Visual Canvas Interface
 
-```sh
-# create a new project in the current directory
-npx sv create
+- **Project Canvas**: Individual project workspaces with rich node-based content
+- **Project Portfolio**: Overview canvas showing all projects with summary information
+- **Universal Nodes**: Support for notes (Post-It style), images, iframes, and stickers
+- **Drag & Drop**: Intuitive visual organization with @xyflow/svelte
 
-# create a new project in my-app
-npx sv create my-app
+### 📋 Task Management
+
+- **Node-Centric Tasks**: Tasks attached to specific canvas elements
+- **Person Assignment**: Assign tasks to team members with profile integration
+- **Due Dates**: Track deadlines with overdue detection
+- **Status Tracking**: Active/resolved task states with reactivation capability
+- **Hierarchical Views**: Organize tasks by Project → Node → Task structure
+
+### 👥 Collaboration
+
+- **People Management**: Team member profiles and contact information
+- **Project Collaboration**: Multi-user access with member/collaborator roles
+- **Real-time Updates**: Live synchronization when using Firebase backend
+- **Timeline Events**: Track project milestones and important dates
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22
+- pnpm
+
+### Installation
+
+```bash
+# Install dependencies
+pnpm install
+
+# Set up environment
+cp .env.example .env
 ```
 
-## Developing
+### Development
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+```bash
+# Run Firebase emulators
+docker-compose up -d
 
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+# Start app
+pnpm dev
 ```
 
-## Building
+When using Firebase emulators, the fake Google Sign-In dialog will let you create fake accounts and sign in with any email address. Use an email starting with "admin" (e.g., `admin@example.com`) to automatically get admin permissions.
 
-To create a production version of your app:
+### Building
 
-```sh
-npm run build
+```bash
+# Create production build
+pnpm build
+
+# Preview production build
+pnpm preview
 ```
 
-You can preview the production build with `npm run preview`.
+## Code Quality
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```bash
+# Type checking
+pnpm check
+
+# Linting and formatting
+pnpm lint
+pnpm format
+```

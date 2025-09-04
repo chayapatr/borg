@@ -1,0 +1,16 @@
+services:
+  firebase:
+    image: ghcr.io/dtinth/firebase-emulator-suite:main
+    volumes:
+      - ./firebase.emulator.docker.json:/project/firebase.json:ro
+      - ./firestore.rules:/project/firestore.rules:ro
+      - ./firestore.indexes.json:/project/firestore.indexes.json:ro
+    ports:
+      - 9099:9099
+      - 8080:8080
+      - 9000:9000
+      - 8085:8085
+      - 9199:9199
+      - 4000:4000
+      - 4500:4500
+      - 9150:9150

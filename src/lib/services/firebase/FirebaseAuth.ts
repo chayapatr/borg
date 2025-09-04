@@ -1,12 +1,12 @@
-import { 
-	signInWithPopup, 
-	GoogleAuthProvider, 
+import {
+	GoogleAuthProvider,
 	signOut as firebaseSignOut,
 	onAuthStateChanged,
-	type User 
+	signInWithPopup,
+	type User
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../../firebase/config';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db, isEmulator } from '../../firebase/config';
 
 export class FirebaseAuth {
 	private currentUser: User | null = null;
@@ -15,24 +15,24 @@ export class FirebaseAuth {
 	constructor() {
 		onAuthStateChanged(auth, async (user) => {
 			this.currentUser = user;
-			
+
 			if (user) {
 				// Create/update user document
 				await this.createUserDocument(user);
 			}
-			
+
 			// Notify subscribers
-			this.authCallbacks.forEach(callback => callback(user));
+			this.authCallbacks.forEach((callback) => callback(user));
 		});
 	}
 
 	async signInWithGoogle(): Promise<{ user: User; isApproved: boolean }> {
 		const provider = new GoogleAuthProvider();
 		const result = await signInWithPopup(auth, provider);
-		
+
 		// Check if user is approved
 		const isApproved = await this.checkUserApproval(result.user.uid);
-		
+
 		return { user: result.user, isApproved };
 	}
 
@@ -43,14 +43,14 @@ export class FirebaseAuth {
 	private async createUserDocument(user: User): Promise<void> {
 		const userRef = doc(db, 'users', user.uid);
 		const userDoc = await getDoc(userRef);
-		
+
 		if (!userDoc.exists()) {
 			await setDoc(userRef, {
 				name: user.displayName || '',
 				email: user.email || '',
 				photoUrl: user.photoURL || '',
 				createdAt: new Date(),
-				isApproved: false, // Must be manually approved
+				isApproved: isEmulator ? user.email?.startsWith('admin') : false, // Must be manually approved
 				userType: 'member', // Default to member for new users
 				lastLoginAt: new Date()
 			});
@@ -58,7 +58,7 @@ export class FirebaseAuth {
 			// Update last login and sync photoUrl if it has changed
 			const userData = userDoc.data();
 			const updateData: any = { lastLoginAt: new Date() };
-			
+
 			// Only update photoUrl if it has changed
 			if (userData?.photoUrl !== user.photoURL) {
 				updateData.photoUrl = user.photoURL || '';
@@ -69,7 +69,7 @@ export class FirebaseAuth {
 				// If user is already approved, they should be a member (existing behavior)
 				updateData.userType = userData.isApproved ? 'member' : 'member';
 			}
-			
+
 			await setDoc(userRef, updateData, { merge: true });
 		}
 	}
