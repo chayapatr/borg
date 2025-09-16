@@ -26,11 +26,16 @@
 	let ws: WebSocket | null = null;
 	let currentUser: User | null = $state(null);
 	let isConnected = $state(false);
+	let userColor = $state('');
 
 	// Subscribe to auth store
 	$effect(() => {
 		const unsubscribe = authStore.subscribe((auth) => {
 			currentUser = auth.user;
+			// Generate color once when user changes
+			if (auth.user && !userColor) {
+				userColor = generateUserColor();
+			}
 		});
 		return unsubscribe;
 	});
@@ -153,7 +158,7 @@
 			pointer,
 			userId: currentUser.uid,
 			userName: currentUser.displayName || 'Anonymous',
-			color: generateUserColor()
+			color: userColor
 		};
 
 		ws.send(JSON.stringify({
