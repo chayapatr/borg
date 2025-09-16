@@ -21,6 +21,7 @@
 	import TaskModal from './tasks/TaskModal.svelte';
 	import Toolbar from './Toolbar.svelte';
 	import StickerPanel from './stickers/StickerPanel.svelte';
+	import Cursor from './Cursor.svelte';
 	import type { Task } from '../types/task';
 	import { authStore } from '../stores/authStore';
 	import '@xyflow/svelte/dist/style.css';
@@ -1092,3 +1093,6 @@
 		onTaskUpdated={handleTaskModalComplete}
 	/>
 {/if}
+
+<!-- Real-time cursors -->
+<Cursor {projectSlug} />

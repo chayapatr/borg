@@ -1,0 +1,5 @@
+{
+  "name": "borg-cursors",
+  "main": "party/cursor-server.ts",
+  "compatibilityDate": "2023-11-30"
+}
