@@ -250,7 +250,7 @@
 	function debouncedSaveViewport() {
 		clearTimeout(viewportSaveTimeout);
 		viewportSaveTimeout = setTimeout(() => {
-			// saveViewportPosition();
+			saveViewportPosition();
 		}, VIEWPORT_SAVE_DELAY);
 	}
 
@@ -319,7 +319,7 @@
 			}
 
 			// Load and restore viewport position
-			// await loadViewportPosition();
+			await loadViewportPosition();
 
 			nodesService = ServiceFactory.createNodesService(
 				actualProjectId,
@@ -1012,12 +1012,12 @@
 			onShowStickers={handleShowStickers}
 		/>
 		<div class="h-full w-full">
+			<!-- fitView -->
 			<SvelteFlow
 				class="bg-black"
 				bind:nodes
 				bind:edges
 				{nodeTypes}
-				fitView
 				onconnect={handleConnect}
 				onbeforedelete={handleBeforeDelete}
 				ondelete={handleDelete}
