@@ -93,7 +93,7 @@
 	const PROJECT_SYNC_DEBOUNCE = 5000; // 5 seconds
 
 	// Get Svelte Flow helpers
-	const { screenToFlowPosition, getViewport, setViewport } = useSvelteFlow();
+	const { screenToFlowPosition, flowToScreenPosition, getViewport, setViewport } = useSvelteFlow();
 
 	// Helper function to get viewport center position
 	function getViewportCenterPosition() {
@@ -1095,4 +1095,4 @@
 {/if}
 
 <!-- Real-time cursors -->
-<Cursor {projectSlug} />
+<Cursor {projectSlug} {screenToFlowPosition} {flowToScreenPosition} />

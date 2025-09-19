@@ -1,8 +1,8 @@
 import type * as Party from "partykit/server";
 
 export interface CursorData {
-  x: number;
-  y: number;
+  x: number; // XYFlow canvas coordinate (not screen coordinate)
+  y: number; // XYFlow canvas coordinate (not screen coordinate)
   pointer: 'mouse' | 'touch';
   userId: string;
   userName: string;

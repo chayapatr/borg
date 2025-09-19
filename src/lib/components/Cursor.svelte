@@ -4,8 +4,8 @@
 	import type { User } from 'firebase/auth';
 
 	interface CursorData {
-		x: number;
-		y: number;
+		x: number; // XYFlow canvas coordinate (not screen coordinate)
+		y: number; // XYFlow canvas coordinate (not screen coordinate) 
 		pointer: 'mouse' | 'touch';
 		userId: string;
 		userName: string;
@@ -20,7 +20,11 @@
 		lastSeen: number;
 	}
 
-	let { projectSlug } = $props<{ projectSlug?: string }>();
+	let { projectSlug, screenToFlowPosition, flowToScreenPosition } = $props<{ 
+		projectSlug?: string;
+		screenToFlowPosition?: (screenPoint: { x: number; y: number }) => { x: number; y: number };
+		flowToScreenPosition?: (flowPoint: { x: number; y: number }) => { x: number; y: number };
+	}>();
 
 	let otherCursors: Map<string, CursorUser> = $state(new Map());
 	let ws: WebSocket | null = null;
@@ -171,23 +175,20 @@
 	let isTracking = false;
 
 	function handleMouseMove(event: MouseEvent) {
-		if (!isTracking) return;
-		const rect = document.documentElement.getBoundingClientRect();
-		sendCursorPosition(
-			event.clientX / window.innerWidth,
-			event.clientY / window.innerHeight,
-			'mouse'
-		);
+		if (!isTracking || !screenToFlowPosition) return;
+		
+		// Always convert to flow coordinates - this is our ground truth
+		const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+		sendCursorPosition(flowPosition.x, flowPosition.y, 'mouse');
 	}
 
 	function handleTouchMove(event: TouchEvent) {
-		if (!isTracking || event.touches.length === 0) return;
+		if (!isTracking || event.touches.length === 0 || !screenToFlowPosition) return;
 		const touch = event.touches[0];
-		sendCursorPosition(
-			touch.clientX / window.innerWidth,
-			touch.clientY / window.innerHeight,
-			'touch'
-		);
+		
+		// Always convert to flow coordinates - this is our ground truth
+		const flowPosition = screenToFlowPosition({ x: touch.clientX, y: touch.clientY });
+		sendCursorPosition(flowPosition.x, flowPosition.y, 'touch');
 	}
 
 	function handleMouseLeave() {
@@ -261,10 +262,11 @@
 <!-- Cursor overlay container -->
 <div class="fixed inset-0 pointer-events-none z-50 overflow-hidden">
 	{#each Array.from(otherCursors.values()) as user (user.userId)}
-		{#if user.cursor}
+		{#if user.cursor && flowToScreenPosition}
+			{@const screenPosition = flowToScreenPosition({ x: user.cursor.x, y: user.cursor.y })}
 			<div
 				class="absolute transition-transform duration-75 ease-out"
-				style="transform: translate({user.cursor.x * window.innerWidth}px, {user.cursor.y * window.innerHeight}px)"
+				style="transform: translate({screenPosition.x}px, {screenPosition.y}px)"
 			>
 				<!-- Cursor pointer -->
 				<div class="relative">
