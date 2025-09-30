@@ -25,7 +25,7 @@
 			if (!nodeData.fieldVisibility) {
 				nodeData.fieldVisibility = {};
 			}
-			const currentVisibility = nodeData.fieldVisibility[fieldId] ?? (fieldId === 'title');
+			const currentVisibility = nodeData.fieldVisibility[fieldId] ?? fieldId === 'title';
 			nodeData.fieldVisibility[fieldId] = !currentVisibility;
 			nodeData = { ...nodeData }; // Trigger reactivity
 		}
@@ -33,9 +33,9 @@
 
 	function getFieldVisibility(field: TemplateField, isCustom: boolean = false): boolean {
 		if (isCustom) {
-			return field.showInDisplay ?? (field.id === 'title' || field.type === 'link');
+			return field.showInDisplay ?? field.id === 'title';
 		} else {
-			return nodeData.fieldVisibility?.[field.id] ?? (field.id === 'title' || field.type === 'link');
+			return nodeData.fieldVisibility?.[field.id] ?? field.showInDisplay ?? field.id === 'title';
 		}
 	}
 

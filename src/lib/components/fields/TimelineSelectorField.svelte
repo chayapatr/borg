@@ -48,7 +48,7 @@
 	// Helper function to format event datetime for display
 	function formatEventDateTime(event: any): string {
 		if (!event.timestamp && !event.date) return 'No date';
-		
+
 		// Extract timezone from timestamp if available
 		if (event.timestamp && event.timestamp.includes('T')) {
 			const timezoneMatch = event.timestamp.match(/([+-]\d{1,2}):\d{2}$/);
@@ -80,7 +80,7 @@
 
 			return `${dateStr}, ${timeStr} (${timezone})`;
 		}
-		
+
 		// Fallback for legacy events
 		const eventDateTime = createEventDateTime(event);
 		const dateStr = eventDateTime.toLocaleDateString('en-US', {
@@ -89,7 +89,7 @@
 			year: 'numeric'
 		});
 		const timeStr = eventDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-		
+
 		return `${dateStr} at ${timeStr}`;
 	}
 
@@ -161,7 +161,9 @@
 		const updatedResult = timelineService.getEventsSortedByDate();
 		const updatedEvents = updatedResult instanceof Promise ? await updatedResult : updatedResult;
 		const newEvent = updatedEvents.find(
-			(e) => e.title === eventData.title && (e.timestamp === eventData.timestamp || (e as any).date === eventData.date)
+			(e) =>
+				e.title === eventData.title &&
+				(e.timestamp === eventData.timestamp || (e as any).date === eventData.date)
 		);
 		if (newEvent) {
 			value = newEvent.id;
@@ -193,7 +195,7 @@
 					<div class="py-2 text-center">
 						<div class="font-sanss mb-3 text-lg font-semibold text-black">{event.title}</div>
 						{#if countdown.isOverdue}
-							<div class="font-mono text-2xl font-bold text-red-600">⚠️ OVERDUE</div>
+							<div class="font-mono text-2xl font-bold text-indigo-600">🏁 ENDED!</div>
 						{:else if countdown.days < 1}
 							<!-- Less than 1 day: show hours and minutes only -->
 							<div class="flex justify-center gap-4">
@@ -247,7 +249,7 @@
 								</div>
 							</div>
 						{/if}
-						<div class="mt-3 text-xs text-zinc-500 text-center">
+						<div class="mt-3 text-center text-xs text-zinc-500">
 							{formatEventDateTime(event)}
 						</div>
 					</div>

@@ -5,7 +5,7 @@
 
 	interface CursorData {
 		x: number; // XYFlow canvas coordinate (not screen coordinate)
-		y: number; // XYFlow canvas coordinate (not screen coordinate) 
+		y: number; // XYFlow canvas coordinate (not screen coordinate)
 		pointer: 'mouse' | 'touch';
 		userId: string;
 		userName: string;
@@ -20,7 +20,7 @@
 		lastSeen: number;
 	}
 
-	let { projectSlug, screenToFlowPosition, flowToScreenPosition } = $props<{ 
+	let { projectSlug, screenToFlowPosition, flowToScreenPosition } = $props<{
 		projectSlug?: string;
 		screenToFlowPosition?: (screenPoint: { x: number; y: number }) => { x: number; y: number };
 		flowToScreenPosition?: (flowPoint: { x: number; y: number }) => { x: number; y: number };
@@ -56,7 +56,7 @@
 			'#8b5cf6', // violet-500
 			'#d946ef', // fuchsia-500
 			'#f43f5e', // rose-500
-			'#10b981'  // emerald-500
+			'#10b981' // emerald-500
 		];
 		return colors[Math.floor(Math.random() * colors.length)];
 	}
@@ -67,9 +67,9 @@
 
 		// Always use wss for PartyKit deployed URLs
 		const wsUrl = `wss://borg-cursors.chayapatr.partykit.dev/party/${projectSlug}`;
-		
+
 		ws = new WebSocket(wsUrl);
-		
+
 		ws.onopen = () => {
 			isConnected = true;
 			console.log('Cursor WebSocket connected');
@@ -165,10 +165,12 @@
 			color: userColor
 		};
 
-		ws.send(JSON.stringify({
-			type: 'cursor_update',
-			...cursorData
-		}));
+		ws.send(
+			JSON.stringify({
+				type: 'cursor_update',
+				...cursorData
+			})
+		);
 	}
 
 	// Mouse/touch tracking
@@ -176,7 +178,7 @@
 
 	function handleMouseMove(event: MouseEvent) {
 		if (!isTracking || !screenToFlowPosition) return;
-		
+
 		// Always convert to flow coordinates - this is our ground truth
 		const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
 		sendCursorPosition(flowPosition.x, flowPosition.y, 'mouse');
@@ -185,7 +187,7 @@
 	function handleTouchMove(event: TouchEvent) {
 		if (!isTracking || event.touches.length === 0 || !screenToFlowPosition) return;
 		const touch = event.touches[0];
-		
+
 		// Always convert to flow coordinates - this is our ground truth
 		const flowPosition = screenToFlowPosition({ x: touch.clientX, y: touch.clientY });
 		sendCursorPosition(flowPosition.x, flowPosition.y, 'touch');
@@ -193,10 +195,12 @@
 
 	function handleMouseLeave() {
 		if (!ws || ws.readyState !== WebSocket.OPEN || !currentUser) return;
-		ws.send(JSON.stringify({
-			type: 'cursor_leave',
-			userId: currentUser.uid
-		}));
+		ws.send(
+			JSON.stringify({
+				type: 'cursor_leave',
+				userId: currentUser.uid
+			})
+		);
 	}
 
 	function startTracking() {
@@ -260,7 +264,7 @@
 </script>
 
 <!-- Cursor overlay container -->
-<div class="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+<div class="pointer-events-none fixed inset-0 z-0 overflow-hidden">
 	{#each Array.from(otherCursors.values()) as user (user.userId)}
 		{#if user.cursor && flowToScreenPosition}
 			{@const screenPosition = flowToScreenPosition({ x: user.cursor.x, y: user.cursor.y })}
@@ -288,14 +292,14 @@
 						</svg>
 					{:else}
 						<div
-							class="w-3 h-3 rounded-full border-2 border-white drop-shadow-sm"
+							class="h-3 w-3 rounded-full border-2 border-white drop-shadow-sm"
 							style="background-color: {user.color}"
 						></div>
 					{/if}
 
 					<!-- User name label -->
 					<div
-						class="absolute top-6 left-2 px-2 py-1 rounded text-xs text-white font-medium whitespace-nowrap drop-shadow-sm"
+						class="absolute top-6 left-2 rounded px-2 py-1 text-xs font-medium whitespace-nowrap text-white drop-shadow-sm"
 						style="background-color: {user.color}"
 					>
 						{user.userName}
@@ -308,7 +312,7 @@
 
 <!-- Connection indicator (optional) -->
 {#if !isConnected && currentUser && projectSlug}
-	<div class="fixed bottom-4 right-4 px-3 py-1 bg-yellow-500 text-white text-sm rounded z-50">
+	<div class="fixed right-4 bottom-4 z-50 rounded bg-yellow-500 px-3 py-1 text-sm text-white">
 		Reconnecting cursors...
 	</div>
 {/if}
