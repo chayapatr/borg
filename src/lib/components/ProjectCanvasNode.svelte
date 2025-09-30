@@ -246,7 +246,7 @@
 	>
 		<div class="flex flex-col gap-2 p-3">
 			<!-- Project Title -->
-			<h3 class="mr-1 text-2xl font-semibold text-black">
+			<h3 class="mr-1 text-xl font-semibold text-black">
 				{nodeData.title || 'Untitled Project'}
 			</h3>
 
@@ -292,7 +292,7 @@
 		</div>
 
 		<!-- Task Counts Section (Bottom Box like UniversalNode) -->
-		{#if totalTaskCount > 0 || projectStatusCounts.todo > 0 || projectStatusCounts.doing > 0 || projectStatusCounts.done > 0}
+		<!-- {#if totalTaskCount > 0 || projectStatusCounts.todo > 0 || projectStatusCounts.doing > 0 || projectStatusCounts.done > 0}
 			<div
 				class="relative w-full cursor-pointer rounded-b-lg border-t bg-borg-beige p-3"
 				style="border-color: {borderColor};"
@@ -315,7 +315,7 @@
 					</span>
 				</div>
 			</div>
-		{/if}
+		{/if} -->
 
 		<!-- Connection Handles -->
 		<Handle type="target" position={Position.Left} class="!h-2 !w-2 !bg-zinc-600" />

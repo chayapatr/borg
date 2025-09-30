@@ -23,6 +23,12 @@
 	import type { Project } from '../../services/local/ProjectsService';
 	import { getTemplate } from '../../templates';
 	import { authStore } from '../../stores/authStore';
+	import {
+		updateMatchingNodes as updateMatches,
+		navigateToMatch,
+		nextMatch as goToNextMatch,
+		previousMatch as goToPreviousMatch
+	} from '../../utils/canvasSearch';
 	import '@xyflow/svelte/dist/style.css';
 	import '../svelteflow.css';
 
