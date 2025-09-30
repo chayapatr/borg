@@ -26,7 +26,6 @@
 	let resizeHandle = $state<string | null>(null);
 	let justResized = $state(false);
 
-
 	function handleNodeClick() {
 		// Iframe nodes don't open edit panel on click - only via edit button
 		return;
@@ -153,15 +152,15 @@
 	// Get a clean URL for iframe src
 	let iframeSrc = $derived.by(() => {
 		if (!nodeData.url) return '';
-		
+
 		let url = nodeData.url.trim();
 		if (!url) return '';
-		
+
 		// Add protocol if missing
 		if (!url.startsWith('http://') && !url.startsWith('https://')) {
 			url = 'https://' + url;
 		}
-		
+
 		return url;
 	});
 </script>
@@ -269,7 +268,7 @@
 		image-rendering: -webkit-optimize-contrast;
 		image-rendering: crisp-edges;
 	}
-	
+
 	.iframe-node iframe {
 		/* Force hardware acceleration and crisp rendering */
 		transform: translate3d(0, 0, 0);

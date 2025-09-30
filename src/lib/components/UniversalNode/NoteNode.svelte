@@ -294,10 +294,12 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div>
 	<div
-		class="group relative cursor-pointer rounded-lg p-1 {isResizing ||
-		isEditingNote
+		class="group relative cursor-pointer rounded-lg p-1 {isResizing || isEditingNote
 			? ''
-			: 'transition-all duration-200'} {isEditingNote ? 'border-2 shadow-lg' : ''} {noteStyle === 'Text Only' ? '' : 'border border-black'}"
+			: 'transition-all duration-200'} {isEditingNote ? 'border-2 shadow-lg' : ''} {noteStyle ===
+		'Text Only'
+			? ''
+			: 'border border-black'}"
 		style="{backgroundStyle}; width: {width}px; height: {height}px;"
 		onclick={handleNodeClick}
 	>

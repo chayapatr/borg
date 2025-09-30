@@ -8,6 +8,7 @@
 		useSvelteFlow,
 		type Node,
 		type Edge,
+		type Viewport,
 		type Connection
 	} from '@xyflow/svelte';
 	import UniversalNode from './UniversalNode/UniversalNode.svelte';
@@ -76,6 +77,11 @@
 	let taskSidebarTasks = $state<Task[]>([]);
 	let taskSubscriptionCleanup: (() => void) | null = null;
 
+	// Search state
+	let searchQuery = $state('');
+	let matchingNodeIds = $state<string[]>([]);
+	let currentMatchIndex = $state(0);
+
 	// Task modal state
 	let showTaskModal = $state(false);
 	let taskModalNodeId = $state('');
@@ -93,7 +99,56 @@
 	const PROJECT_SYNC_DEBOUNCE = 5000; // 5 seconds
 
 	// Get Svelte Flow helpers
-	const { screenToFlowPosition, flowToScreenPosition, getViewport, setViewport } = useSvelteFlow();
+	const { screenToFlowPosition, flowToScreenPosition, getViewport, setViewport, fitView } =
+		useSvelteFlow();
+
+	// Search functionality
+	function updateMatchingNodes() {
+		const query = searchQuery.trim().toLowerCase();
+		if (!query) {
+			matchingNodeIds = [];
+			currentMatchIndex = 0;
+			return;
+		}
+
+		matchingNodeIds = nodes
+			.filter((node) => {
+				const title = node.data?.nodeData?.title || '';
+				const content = node.data?.nodeData?.content || '';
+				return title.toLowerCase().includes(query) || content.toLowerCase().includes(query);
+			})
+			.map((node) => node.id);
+
+		currentMatchIndex = 0;
+		if (matchingNodeIds.length > 0) {
+			navigateToCurrentMatch();
+		}
+	}
+
+	function navigateToCurrentMatch() {
+		if (matchingNodeIds.length === 0) return;
+
+		const nodeId = matchingNodeIds[currentMatchIndex];
+		const node = nodes.find((n) => n.id === nodeId);
+		if (node && node.position) {
+			setViewport(
+				{ x: -node.position.x + 400, y: -node.position.y + 300, zoom: 1 },
+				{ duration: 300 }
+			);
+		}
+	}
+
+	function nextMatch() {
+		if (matchingNodeIds.length === 0) return;
+		currentMatchIndex = (currentMatchIndex + 1) % matchingNodeIds.length;
+		navigateToCurrentMatch();
+	}
+
+	function previousMatch() {
+		if (matchingNodeIds.length === 0) return;
+		currentMatchIndex = (currentMatchIndex - 1 + matchingNodeIds.length) % matchingNodeIds.length;
+		navigateToCurrentMatch();
+	}
 
 	// Helper function to get viewport center position
 	function getViewportCenterPosition() {
@@ -1012,6 +1067,68 @@
 			onCreateNode={handleToolbarCreateNode}
 			onShowStickers={handleShowStickers}
 		/>
+
+		<!-- Search Box -->
+		<div class="absolute top-4 right-4 z-20 flex items-center gap-2">
+			<input
+				type="text"
+				bind:value={searchQuery}
+				oninput={updateMatchingNodes}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') {
+						e.shiftKey ? previousMatch() : nextMatch();
+					}
+				}}
+				placeholder="Search nodes..."
+				class="w-64 rounded-md border border-black bg-white px-3 py-2 text-sm text-black placeholder-zinc-400 focus:border-borg-blue focus:ring-1 focus:ring-borg-blue focus:outline-none"
+			/>
+			{#if matchingNodeIds.length > 0}
+				<div class="flex items-center gap-1 rounded-md border border-black bg-white px-2 py-1">
+					<span class="text-xs text-black">
+						{currentMatchIndex + 1} / {matchingNodeIds.length}
+					</span>
+				</div>
+				<button
+					onclick={previousMatch}
+					class="rounded-md border border-black bg-white p-2 text-black hover:bg-zinc-100"
+					title="Previous (Shift+Enter)"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<polyline points="15 18 9 12 15 6"></polyline>
+					</svg>
+				</button>
+				<button
+					onclick={nextMatch}
+					class="rounded-md border border-black bg-white p-2 text-black hover:bg-zinc-100"
+					title="Next (Enter)"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<polyline points="9 18 15 12 9 6"></polyline>
+					</svg>
+				</button>
+			{/if}
+		</div>
+
 		<div class="h-full w-full">
 			<!-- fitView -->
 			<SvelteFlow
