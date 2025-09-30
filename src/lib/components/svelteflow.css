@@ -2,6 +2,17 @@
 	--xy-background-color: #edede9;
 }
 
+/* Thicker outline for search-highlighted nodes */
+.svelte-flow__node.search-highlighted > div {
+	outline: 6px solid #3b82f6 !important; /* Blue outline to indicate search focus */
+	border-radius: 8px; /* Round the corners */
+}
+
+/* Dim non-matching nodes during search */
+.svelte-flow__node.search-dimmed > div {
+	opacity: 0.3 !important;
+}
+
 /* .svelte-flow__connection-path {
 	stroke: #ff0000;
 	stroke-width: 400px;

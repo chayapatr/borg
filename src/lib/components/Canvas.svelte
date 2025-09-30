@@ -108,14 +108,25 @@
 		if (!query) {
 			matchingNodeIds = [];
 			currentMatchIndex = 0;
+			// Clear all search styling when search is empty
+			document.querySelectorAll('.search-highlighted').forEach((el) => {
+				el.classList.remove('search-highlighted');
+			});
+			document.querySelectorAll('.search-dimmed').forEach((el) => {
+				el.classList.remove('search-dimmed');
+			});
 			return;
 		}
 
 		matchingNodeIds = nodes
 			.filter((node) => {
-				const title = node.data?.nodeData?.title || '';
-				const content = node.data?.nodeData?.content || '';
-				return title.toLowerCase().includes(query) || content.toLowerCase().includes(query);
+				// Search through all fields in nodeData
+				const nodeData = node.data?.nodeData || {};
+				const searchableText = Object.values(nodeData)
+					.filter((value) => typeof value === 'string')
+					.join(' ')
+					.toLowerCase();
+				return searchableText.includes(query);
 			})
 			.map((node) => node.id);
 
@@ -128,6 +139,24 @@
 	function navigateToCurrentMatch() {
 		if (matchingNodeIds.length === 0) return;
 
+		// Remove highlight and dimming from all nodes
+		document.querySelectorAll('.search-highlighted').forEach((el) => {
+			el.classList.remove('search-highlighted');
+		});
+		document.querySelectorAll('.search-dimmed').forEach((el) => {
+			el.classList.remove('search-dimmed');
+		});
+
+		// Dim all non-matching nodes
+		nodes.forEach((node) => {
+			if (!matchingNodeIds.includes(node.id)) {
+				const nodeElement = document.querySelector(`[data-id="${node.id}"]`);
+				if (nodeElement) {
+					nodeElement.classList.add('search-dimmed');
+				}
+			}
+		});
+
 		const nodeId = matchingNodeIds[currentMatchIndex];
 		const node = nodes.find((n) => n.id === nodeId);
 		if (node && node.position) {
@@ -135,6 +164,14 @@
 				{ x: -node.position.x + 400, y: -node.position.y + 300, zoom: 1 },
 				{ duration: 300 }
 			);
+
+			// Add highlight to current node after a short delay to ensure it's rendered
+			setTimeout(() => {
+				const nodeElement = document.querySelector(`[data-id="${nodeId}"]`);
+				if (nodeElement) {
+					nodeElement.classList.add('search-highlighted');
+				}
+			}, 100);
 		}
 	}
 
