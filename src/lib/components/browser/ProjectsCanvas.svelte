@@ -74,6 +74,95 @@
 	// Sticker panel state
 	let showStickerPanel = $state(false);
 
+	// Search functionality
+	let searchQuery = $state('');
+	let matchingNodeIds = $state<string[]>([]);
+	let currentMatchIndex = $state(0);
+
+	function updateMatchingNodes() {
+		const query = searchQuery.trim().toLowerCase();
+		if (!query) {
+			matchingNodeIds = [];
+			currentMatchIndex = 0;
+			// Clear all search styling when search is empty
+			document.querySelectorAll('.search-highlighted').forEach((el) => {
+				el.classList.remove('search-highlighted');
+			});
+			document.querySelectorAll('.search-dimmed').forEach((el) => {
+				el.classList.remove('search-dimmed');
+			});
+			return;
+		}
+
+		matchingNodeIds = workingNodes
+			.filter((node) => {
+				// Search through all fields in nodeData
+				const nodeData = node.data?.nodeData || {};
+				const searchableText = Object.values(nodeData)
+					.filter((value) => typeof value === 'string')
+					.join(' ')
+					.toLowerCase();
+				return searchableText.includes(query);
+			})
+			.map((node) => node.id);
+
+		currentMatchIndex = 0;
+		if (matchingNodeIds.length > 0) {
+			navigateToCurrentMatch();
+		}
+	}
+
+	function navigateToCurrentMatch() {
+		if (matchingNodeIds.length === 0) return;
+
+		// Remove highlight and dimming from all nodes
+		document.querySelectorAll('.search-highlighted').forEach((el) => {
+			el.classList.remove('search-highlighted');
+		});
+		document.querySelectorAll('.search-dimmed').forEach((el) => {
+			el.classList.remove('search-dimmed');
+		});
+
+		// Dim all non-matching nodes
+		workingNodes.forEach((node) => {
+			if (!matchingNodeIds.includes(node.id)) {
+				const nodeElement = document.querySelector(`[data-id="${node.id}"]`);
+				if (nodeElement) {
+					nodeElement.classList.add('search-dimmed');
+				}
+			}
+		});
+
+		const nodeId = matchingNodeIds[currentMatchIndex];
+		const node = workingNodes.find((n) => n.id === nodeId);
+		if (node && node.position) {
+			setViewport(
+				{ x: -node.position.x + 400, y: -node.position.y + 300, zoom: 1 },
+				{ duration: 300 }
+			);
+
+			// Add highlight to current node after a short delay to ensure it's rendered
+			setTimeout(() => {
+				const nodeElement = document.querySelector(`[data-id="${nodeId}"]`);
+				if (nodeElement) {
+					nodeElement.classList.add('search-highlighted');
+				}
+			}, 100);
+		}
+	}
+
+	function nextMatch() {
+		if (matchingNodeIds.length === 0) return;
+		currentMatchIndex = (currentMatchIndex + 1) % matchingNodeIds.length;
+		navigateToCurrentMatch();
+	}
+
+	function previousMatch() {
+		if (matchingNodeIds.length === 0) return;
+		currentMatchIndex = (currentMatchIndex - 1 + matchingNodeIds.length) % matchingNodeIds.length;
+		navigateToCurrentMatch();
+	}
+
 	function updateWorkingNodes() {
 		if (!mounted) {
 			workingNodes = canvasNodes.slice();
@@ -590,6 +679,68 @@
 				onShowStickers={handleShowStickers}
 				{onCreateProject}
 			/>
+
+			<!-- Search Box -->
+			<div class="absolute top-4 right-4 z-20 flex items-center gap-2">
+				<input
+					type="text"
+					bind:value={searchQuery}
+					oninput={updateMatchingNodes}
+					onkeydown={(e) => {
+						if (e.key === 'Enter') {
+							e.preventDefault();
+							e.shiftKey ? previousMatch() : nextMatch();
+						}
+					}}
+					placeholder="Search nodes..."
+					class="w-64 rounded-md border border-black bg-white px-3 py-2 text-sm text-black placeholder-zinc-400 focus:border-borg-blue focus:ring-1 focus:ring-borg-blue focus:outline-none"
+				/>
+				{#if matchingNodeIds.length > 0}
+					<div class="flex items-center gap-1 rounded-md border border-black bg-white px-2 py-1">
+						<span class="text-xs text-black">
+							{currentMatchIndex + 1} / {matchingNodeIds.length}
+						</span>
+					</div>
+					<button
+						onclick={previousMatch}
+						class="rounded-md border border-black bg-white p-2 text-black hover:bg-zinc-100"
+						title="Previous (Shift+Enter)"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<polyline points="15 18 9 12 15 6"></polyline>
+						</svg>
+					</button>
+					<button
+						onclick={nextMatch}
+						class="rounded-md border border-black bg-white p-2 text-black hover:bg-zinc-100"
+						title="Next (Enter)"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<polyline points="9 18 15 12 9 6"></polyline>
+						</svg>
+					</button>
+				{/if}
+			</div>
 
 			<!-- fitView -->
 
