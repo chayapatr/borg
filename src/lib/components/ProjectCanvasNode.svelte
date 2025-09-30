@@ -10,102 +10,102 @@
 	let nodeData = $derived(data.nodeData || {});
 
 	// Services
-	const taskService: ITaskService = ServiceFactory.createTaskService();
-	const projectsService: IProjectsService = ServiceFactory.createProjectsService();
+	// const taskService: ITaskService = ServiceFactory.createTaskService();
+	// const projectsService: IProjectsService = ServiceFactory.createProjectsService();
 	const peopleService: IPeopleService = ServiceFactory.createPeopleService();
 
 	// Project counts (matching project card logic)
-	let projectStatusCounts = $state({ todo: 0, doing: 0, done: 0 });
-	let totalTaskCount = $state(0);
-	let refreshTrigger = $state(0);
+	// let projectStatusCounts = $state({ todo: 0, doing: 0, done: 0 });
+	// let totalTaskCount = $state(0);
+	// let refreshTrigger = $state(0);
 
 	// Collaborator data
 	let collaboratorsData = $state<Person[]>([]);
 
 	// Debounced refresh to prevent excessive requests
-	let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+	// let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	// Removed global task update listener - Firebase subscriptions handle updates automatically
 	// Project counts will update when Firebase data changes via the Canvas subscriptions
 
 	// Use real-time subscriptions for project data
-	$effect(() => {
-		const projectSlug = nodeData.projectSlug;
-		if (!projectSlug) return;
+	// $effect(() => {
+	// 	const projectSlug = nodeData.projectSlug;
+	// 	if (!projectSlug) return;
 
-		// Use task subscription for real-time task count updates
-		if ((taskService as any).subscribeToProjectTasks) {
-			console.log(
-				`ProjectCanvasNode: Setting up real-time task subscription for project ${projectSlug}`
-			);
+	// 	// Use task subscription for real-time task count updates
+	// 	if ((taskService as any).subscribeToProjectTasks) {
+	// 		console.log(
+	// 			`ProjectCanvasNode: Setting up real-time task subscription for project ${projectSlug}`
+	// 		);
 
-			const unsubscribeTaskSub = (taskService as any).subscribeToProjectTasks(
-				projectSlug,
-				(updatedTasks: any[]) => {
-					console.log(
-						`ProjectCanvasNode: Project ${projectSlug} received ${updatedTasks.length} tasks via subscription`
-					);
-					totalTaskCount = updatedTasks.length;
-				}
-			);
+	// 		const unsubscribeTaskSub = (taskService as any).subscribeToProjectTasks(
+	// 			projectSlug,
+	// 			(updatedTasks: any[]) => {
+	// 				console.log(
+	// 					`ProjectCanvasNode: Project ${projectSlug} received ${updatedTasks.length} tasks via subscription`
+	// 				);
+	// 				totalTaskCount = updatedTasks.length;
+	// 			}
+	// 		);
 
-			// Get initial status counts (still using one-time fetch since status counts are computed from nodes, not tasks)
-			(async () => {
-				try {
-					const statusCounts = await projectsService.getProjectStatusCounts(projectSlug);
-					projectStatusCounts = statusCounts;
-				} catch (error) {
-					console.error('Failed to load project status counts:', error);
-					projectStatusCounts = { todo: 0, doing: 0, done: 0 };
-				}
-			})();
+	// 		// Get initial status counts (still using one-time fetch since status counts are computed from nodes, not tasks)
+	// 		(async () => {
+	// 			try {
+	// 				const statusCounts = await projectsService.getProjectStatusCounts(projectSlug);
+	// 				projectStatusCounts = statusCounts;
+	// 			} catch (error) {
+	// 				console.error('Failed to load project status counts:', error);
+	// 				projectStatusCounts = { todo: 0, doing: 0, done: 0 };
+	// 			}
+	// 		})();
 
-			return () => {
-				console.log(`ProjectCanvasNode: Cleaning up task subscription for project ${projectSlug}`);
-				unsubscribeTaskSub();
-			};
-		} else {
-			// Fallback to one-time fetch with caching for non-Firebase services
-			const cacheKey = `project-counts-${projectSlug}`;
-			const cacheTimeout = 30000;
+	// 		return () => {
+	// 			console.log(`ProjectCanvasNode: Cleaning up task subscription for project ${projectSlug}`);
+	// 			unsubscribeTaskSub();
+	// 		};
+	// 	} else {
+	// 		// Fallback to one-time fetch with caching for non-Firebase services
+	// 		const cacheKey = `project-counts-${projectSlug}`;
+	// 		const cacheTimeout = 30000;
 
-			const cached = sessionStorage.getItem(cacheKey);
-			if (cached) {
-				try {
-					const { data: cachedData, timestamp } = JSON.parse(cached);
-					if (Date.now() - timestamp < cacheTimeout) {
-						projectStatusCounts = cachedData.statusCounts;
-						totalTaskCount = cachedData.totalTaskCount;
-						return;
-					}
-				} catch (e) {
-					// Invalid cache, proceed to fetch
-				}
-			}
+	// 		const cached = sessionStorage.getItem(cacheKey);
+	// 		if (cached) {
+	// 			try {
+	// 				const { data: cachedData, timestamp } = JSON.parse(cached);
+	// 				if (Date.now() - timestamp < cacheTimeout) {
+	// 					projectStatusCounts = cachedData.statusCounts;
+	// 					totalTaskCount = cachedData.totalTaskCount;
+	// 					return;
+	// 				}
+	// 			} catch (e) {
+	// 				// Invalid cache, proceed to fetch
+	// 			}
+	// 		}
 
-			(async () => {
-				try {
-					const statusCounts = await projectsService.getProjectStatusCounts(projectSlug);
-					projectStatusCounts = statusCounts;
+	// 		(async () => {
+	// 			try {
+	// 				const statusCounts = await projectsService.getProjectStatusCounts(projectSlug);
+	// 				projectStatusCounts = statusCounts;
 
-					const taskCounts = await taskService.getTaskCounts(projectSlug);
-					totalTaskCount = taskCounts.total;
+	// 				const taskCounts = await taskService.getTaskCounts(projectSlug);
+	// 				totalTaskCount = taskCounts.total;
 
-					sessionStorage.setItem(
-						cacheKey,
-						JSON.stringify({
-							data: { statusCounts, totalTaskCount: taskCounts.total },
-							timestamp: Date.now()
-						})
-					);
-				} catch (error) {
-					console.error('Failed to load project counts:', error);
-					projectStatusCounts = { todo: 0, doing: 0, done: 0 };
-					totalTaskCount = 0;
-				}
-			})();
-		}
-	});
+	// 				sessionStorage.setItem(
+	// 					cacheKey,
+	// 					JSON.stringify({
+	// 						data: { statusCounts, totalTaskCount: taskCounts.total },
+	// 						timestamp: Date.now()
+	// 					})
+	// 				);
+	// 			} catch (error) {
+	// 				console.error('Failed to load project counts:', error);
+	// 				projectStatusCounts = { todo: 0, doing: 0, done: 0 };
+	// 				totalTaskCount = 0;
+	// 			}
+	// 		})();
+	// 	}
+	// });
 
 	// Fetch collaborator data when collaborators change (with caching)
 	$effect(() => {
@@ -244,9 +244,9 @@
 		style="border-color: {borderColor};"
 		onclick={handleNodeClick}
 	>
-		<div class="flex flex-col gap-2 p-3">
+		<div class="flex flex-col gap-1 p-2">
 			<!-- Project Title -->
-			<h3 class="mr-1 text-xl font-semibold text-black">
+			<h3 class="mr-1 text-lg leading-snug font-semibold text-black">
 				{nodeData.title || 'Untitled Project'}
 			</h3>
 
