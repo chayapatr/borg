@@ -22,7 +22,7 @@
 
 			// Publication statuses for papers
 			Draft: 'bg-gray-300 text-black',
-			'In Review': 'bg-yellow-500 text-black',
+			'Under Review': 'bg-yellow-500 text-black',
 			Accepted: 'bg-green-500 text-black',
 			Published: 'bg-blue-400 text-black'
 		};
@@ -54,7 +54,10 @@
 				{#each field.options || [] as option}
 					<button
 						type="button"
-						onclick={(e) => { e.stopPropagation(); value = value === option ? '' : option; }}
+						onclick={(e) => {
+							e.stopPropagation();
+							value = value === option ? '' : option;
+						}}
 						class="inline-flex items-center rounded-full border border-black px-3 py-1 text-xs font-medium transition-colors {value ===
 						option
 							? getStatusColor(option)

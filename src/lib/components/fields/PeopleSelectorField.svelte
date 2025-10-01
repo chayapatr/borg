@@ -34,34 +34,63 @@
 			peopleMap = map;
 		})();
 	});
+
+	// Helper function to get initials from name
+	function getInitials(name: string): string {
+		return name
+			.split(' ')
+			.map((n) => n[0])
+			.join('')
+			.toUpperCase()
+			.slice(0, 2);
+	}
 </script>
 
 <div class="field-container">
-	<label class="mb-1 block text-sm font-medium text-zinc-600">
-		{field.label}
-	</label>
+	{#if mode === 'edit'}
+		<label class="mb-1 block text-sm font-medium text-zinc-600">
+			{field.label}
+		</label>
+	{/if}
 
 	<div class="space-y-2">
-		<div class="flex flex-wrap gap-1">
+		<div class="flex flex-wrap items-center gap-1.5">
 			{#if value && Array.isArray(value) && value.length > 0}
 				{#each value as personId}
 					{@const person = peopleMap.get(personId)}
 					{#if person}
-						<span
-							class="inline-flex items-center gap-1 rounded-full bg-borg-blue px-2 py-1 text-xs text-white"
-						>
-							{person.name}
+						<div class="group relative">
+							<div
+								class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-black"
+								title={person.name || person.email || 'User'}
+							>
+								{#if person.photoUrl}
+									<img
+										src={person.photoUrl}
+										alt={person.name || person.email || 'User'}
+										class="h-full w-full object-cover"
+										referrerpolicy="no-referrer"
+									/>
+								{:else}
+									<div
+										class="flex h-full w-full items-center justify-center bg-borg-green text-xs font-medium text-white"
+									>
+										{getInitials(person.name || person.email || 'U')}
+									</div>
+								{/if}
+							</div>
 							{#if mode === 'edit'}
 								<button
 									onclick={() => {
 										value = value.filter((id) => id !== personId);
 									}}
-									class="hover:text-red-300"
+									class="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600"
+									aria-label="Remove {person.name}"
 								>
 									×
 								</button>
 							{/if}
-						</span>
+						</div>
 					{/if}
 				{/each}
 			{/if}

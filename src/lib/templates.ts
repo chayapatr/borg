@@ -60,13 +60,6 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				label: 'Status',
 				type: 'status',
 				options: ['To Do', 'Doing', 'Done']
-			},
-			{
-				id: 'website',
-				label: 'Website',
-				type: 'link',
-				placeholder: 'https://...',
-				showInDisplay: false
 			}
 		]
 	},
@@ -94,13 +87,6 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				label: 'Status',
 				type: 'status',
 				options: ['To Do', 'Doing', 'Done']
-			},
-			{
-				id: 'website',
-				label: 'Website',
-				type: 'link',
-				placeholder: 'https://...',
-				showInDisplay: false
 			}
 		]
 	},
@@ -127,7 +113,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'publicationStatus',
 				label: 'Publication Status',
 				type: 'status',
-				options: ['Draft', 'In Review', 'Accepted', 'Published']
+				options: ['Draft', 'Under Review', 'Accepted', 'Published']
 			}
 		]
 	},

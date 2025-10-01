@@ -17,7 +17,8 @@
 			// Update custom field visibility
 			const fieldIndex = customFields.findIndex((f) => f.id === fieldId);
 			if (fieldIndex !== -1) {
-				customFields[fieldIndex].showInDisplay = !customFields[fieldIndex].showInDisplay;
+				const currentVisibility = customFields[fieldIndex].showInDisplay ?? true;
+				customFields[fieldIndex].showInDisplay = !currentVisibility;
 				customFields = [...customFields]; // Trigger reactivity
 			}
 		} else {
@@ -25,7 +26,10 @@
 			if (!nodeData.fieldVisibility) {
 				nodeData.fieldVisibility = {};
 			}
-			const currentVisibility = nodeData.fieldVisibility[fieldId] ?? fieldId === 'title';
+			// Get the template field to check its default
+			const templateField = templateFields.find((f) => f.id === fieldId);
+			const currentVisibility =
+				nodeData.fieldVisibility[fieldId] ?? templateField?.showInDisplay ?? true;
 			nodeData.fieldVisibility[fieldId] = !currentVisibility;
 			nodeData = { ...nodeData }; // Trigger reactivity
 		}
@@ -33,9 +37,11 @@
 
 	function getFieldVisibility(field: TemplateField, isCustom: boolean = false): boolean {
 		if (isCustom) {
-			return field.showInDisplay ?? field.id === 'title';
+			// Custom fields: default to true if not explicitly set
+			return field.showInDisplay ?? true;
 		} else {
-			return nodeData.fieldVisibility?.[field.id] ?? field.showInDisplay ?? field.id === 'title';
+			// Template fields: check nodeData first, then field default, then true (except for title which is always true)
+			return nodeData.fieldVisibility?.[field.id] ?? field.showInDisplay ?? true;
 		}
 	}
 
