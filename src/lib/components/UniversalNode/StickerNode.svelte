@@ -31,6 +31,9 @@
 	let category = $derived(nodeData.category || '');
 	let filename = $derived(nodeData.filename || '');
 
+	// Determine opacity based on status
+	let nodeOpacity = $derived(nodeData.status === 'Done' ? 0.3 : 1);
+
 	// Image loading state
 	let imageLoaded = $state(false);
 	let imageError = $state(false);
@@ -183,7 +186,7 @@
 <div>
 	<div
 		class="sticker-node group relative cursor-grab active:cursor-grabbing"
-		style="width: {width}px; height: {height}px;"
+		style="width: {width}px; height: {height}px; opacity: {nodeOpacity};"
 		oncontextmenu={handleContextMenu}
 	>
 		<!-- Main sticker image -->

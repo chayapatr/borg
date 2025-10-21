@@ -162,6 +162,9 @@
 		return '#3f3f46'; // zinc-700 - default
 	});
 
+	// Determine opacity based on status
+	let nodeOpacity = $derived(nodeData.status === 'Done' ? 0.3 : 1);
+
 	function handleNodeClick() {
 		// Dispatch the edit event
 		const event = new CustomEvent('nodeEdit', {
@@ -256,7 +259,7 @@
 				? nodeData.backgroundColor
 				: template.id === 'note'
 					? '#fef08a'
-					: 'white'};"
+					: 'white'}; opacity: {nodeOpacity};"
 		>
 			<!-- Non-Project Node Header (inside the node box) -->
 			{#if template.id !== 'note' && template.id !== 'project' && template.id !== 'blank'}

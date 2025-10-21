@@ -46,6 +46,9 @@
 		return '#10b981'; // emerald-600 - default for image nodes
 	});
 
+	// Determine opacity based on status
+	let nodeOpacity = $derived(nodeData.status === 'Done' ? 0.3 : 1);
+
 	function handleNodeClick() {
 		// Image nodes don't open edit panel on click - only via edit button
 		return;
@@ -290,7 +293,7 @@
 <div class="group relative">
 	<div
 		class="image-node relative cursor-grab active:cursor-grabbing"
-		style="width: {width}px; height: {height}px;"
+		style="width: {width}px; height: {height}px; opacity: {nodeOpacity};"
 		onclick={handleNodeClick}
 		ondragover={handleDragOver}
 		ondragleave={handleDragLeave}

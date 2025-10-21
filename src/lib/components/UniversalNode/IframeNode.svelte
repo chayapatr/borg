@@ -26,6 +26,9 @@
 	let resizeHandle = $state<string | null>(null);
 	let justResized = $state(false);
 
+	// Determine opacity based on status
+	let nodeOpacity = $derived(nodeData.status === 'Done' ? 0.3 : 1);
+
 	function handleNodeClick() {
 		// Iframe nodes don't open edit panel on click - only via edit button
 		return;
@@ -170,7 +173,7 @@
 <div class="group relative">
 	<div
 		class="iframe-node relative cursor-grab rounded-lg active:cursor-grabbing"
-		style="width: {width}px; height: {height}px;"
+		style="width: {width}px; height: {height}px; opacity: {nodeOpacity};"
 		onclick={handleNodeClick}
 	>
 		{#if nodeData.url && iframeSrc}

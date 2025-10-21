@@ -55,6 +55,9 @@
 	// Get note style setting with default (Post-It)
 	let noteStyle = $derived(nodeData.style || 'Post-It');
 
+	// Determine opacity based on status
+	let nodeOpacity = $derived(nodeData.status === 'Done' ? 0.3 : 1);
+
 	// Get background style based on selection and note style
 	let backgroundStyle = $derived.by(() => {
 		// Text Only style has no background
@@ -300,7 +303,7 @@
 		'Text Only'
 			? ''
 			: 'border border-black'}"
-		style="{backgroundStyle}; width: {width}px; height: {height}px;"
+		style="{backgroundStyle}; width: {width}px; height: {height}px; opacity: {nodeOpacity};"
 		onclick={handleNodeClick}
 	>
 		<!-- Post-it note content -->
