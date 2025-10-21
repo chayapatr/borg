@@ -80,6 +80,12 @@
 	// Sticker panel state
 	let showStickerPanel = $state(false);
 
+	// Selection state
+	let selectedNodes = $state<Node[]>([]);
+	let selectedNodesWithStatus = $derived(
+		selectedNodes.filter((node) => node.data?.nodeData?.status !== undefined)
+	);
+
 	// Search functionality
 	let searchQuery = $state('');
 	let matchingNodeIds = $state<string[]>([]);
@@ -167,6 +173,37 @@
 		if (matchingNodeIds.length === 0) return;
 		currentMatchIndex = (currentMatchIndex - 1 + matchingNodeIds.length) % matchingNodeIds.length;
 		navigateToCurrentMatch();
+	}
+
+	// Handle selection changes
+	function handleSelectionChange(event: any) {
+		if (event?.nodes) {
+			selectedNodes = event.nodes;
+		}
+	}
+
+	// Convert all selected nodes to Done status
+	async function convertSelectedToDone() {
+		if (selectedNodesWithStatus.length === 0) return;
+
+		for (const node of selectedNodesWithStatus) {
+			const updatedNodeData = {
+				...node.data.nodeData,
+				status: 'Done'
+			};
+
+			await nodesService.updateNode(node.id, {
+				data: {
+					...node.data,
+					nodeData: updatedNodeData
+				}
+			});
+		}
+
+		// Trigger project update if there's a handler
+		if (onProjectUpdate) {
+			onProjectUpdate();
+		}
 	}
 
 	function updateWorkingNodes() {
@@ -762,11 +799,16 @@
 				onnodedragstop={handleNodeDragStop}
 				oninit={initializeSvelteFlowHelpers}
 				onmoveend={handleViewportChange}
+				onselectionchange={handleSelectionChange}
 				nodesDraggable={true}
 				nodesConnectable={true}
 				elevateNodesOnSelect={true}
 				minZoom={0.3}
 				deleteKey={['Delete', 'Backspace']}
+				panOnDrag={false}
+				panOnScroll={true}
+				zoomOnScroll={false}
+				zoomOnPinch={true}
 			>
 				<Background />
 				<Controls />

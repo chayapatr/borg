@@ -99,6 +99,12 @@
 	// Flag to prevent redundant auto-saves after explicit saves
 	let skipNextAutoSave = $state(false);
 
+	// Selection state
+	let selectedNodes = $state<Node[]>([]);
+	let selectedNodesWithStatus = $derived(
+		selectedNodes.filter((node) => node.data?.nodeData?.status !== undefined)
+	);
+
 	// Project sync optimization
 	let lastProjectSyncTime = 0;
 	let lastKnownProjectData: any = null;
@@ -133,6 +139,39 @@
 	function previousMatch() {
 		goToPreviousMatch(searchState, navigateToCurrentMatch);
 		currentMatchIndex = searchState.currentMatchIndex;
+	}
+
+	// Handle selection changes
+	function handleSelectionChange(event: any) {
+		if (event?.nodes) {
+			selectedNodes = event.nodes;
+		}
+	}
+
+	// Convert all selected nodes to Done status
+	async function convertSelectedToDone() {
+		if (selectedNodesWithStatus.length === 0) return;
+
+		for (const node of selectedNodesWithStatus) {
+			const updatedNodeData = {
+				...node.data.nodeData,
+				status: 'Done'
+			};
+
+			await nodesService.updateNode(node.id, {
+				data: {
+					...node.data,
+					nodeData: updatedNodeData
+				}
+			});
+		}
+
+		// Trigger project update if there's a handler
+		if (onProjectUpdate) {
+			onProjectUpdate();
+		}
+
+		skipNextAutoSave = true;
 	}
 
 	// Helper function to get viewport center position
@@ -1053,6 +1092,18 @@
 			onShowStickers={handleShowStickers}
 		/>
 
+		<!-- Convert to Done Button -->
+		{#if selectedNodesWithStatus.length > 0}
+			<div class="absolute bottom-0 left-1/2 z-30 -translate-x-1/2 -translate-y-1/2">
+				<button
+					onclick={convertSelectedToDone}
+					class="rounded-lg border-2 border-green-600 bg-green-600 px-4 py-2 text-base font-semibold text-white shadow-lg transition-all hover:bg-green-700 hover:shadow-xl"
+				>
+					Convert to Done! 🌟 ({selectedNodesWithStatus.length})
+				</button>
+			</div>
+		{/if}
+
 		<!-- Search Box -->
 		<div class="absolute top-4 right-4 z-20 flex items-center gap-2">
 			<input
@@ -1127,11 +1178,16 @@
 				onnodedragstart={handleNodeDragStart}
 				onnodedragstop={handleNodeDragStop}
 				onmoveend={handleViewportChange}
+				onselectionchange={handleSelectionChange}
 				nodesDraggable={true}
 				nodesConnectable={true}
 				elevateNodesOnSelect={true}
 				minZoom={0.3}
 				deleteKey={['Delete', 'Backspace']}
+				panOnDrag={false}
+				panOnScroll={true}
+				zoomOnScroll={false}
+				zoomOnPinch={true}
 			>
 				<Background />
 				<Controls />
