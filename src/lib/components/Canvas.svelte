@@ -148,14 +148,14 @@
 		}
 	}
 
-	// Convert all selected nodes to Done status
-	async function convertSelectedToDone() {
+	// Convert all selected nodes to a specific status
+	async function convertSelectedToStatus(status: 'To Do' | 'Doing' | 'Done') {
 		if (selectedNodesWithStatus.length === 0) return;
 
 		for (const node of selectedNodesWithStatus) {
 			const updatedNodeData = {
 				...node.data.nodeData,
-				status: 'Done'
+				status: status
 			};
 
 			await nodesService.updateNode(node.id, {
@@ -1092,15 +1092,32 @@
 			onShowStickers={handleShowStickers}
 		/>
 
-		<!-- Convert to Done Button -->
+		<!-- Status Conversion Buttons -->
 		{#if selectedNodesWithStatus.length > 0}
-			<div class="absolute bottom-0 left-1/2 z-30 -translate-x-1/2 -translate-y-1/2">
-				<button
-					onclick={convertSelectedToDone}
-					class="rounded-lg border-2 border-green-600 bg-green-600 px-4 py-2 text-base font-semibold text-white shadow-lg transition-all hover:bg-green-700 hover:shadow-xl"
-				>
-					Convert to Done! 🌟 ({selectedNodesWithStatus.length})
-				</button>
+			<div class="absolute bottom-8 left-1/2 z-30 -translate-x-1/2">
+				<div class="flex gap-3">
+					<button
+						onclick={() => convertSelectedToStatus('To Do')}
+						class="flex items-center gap-2 rounded-lg border border-black bg-purple-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-purple-400 hover:shadow-xl"
+					>
+						<span>📚</span>
+						<span>Todo</span>
+					</button>
+					<button
+						onclick={() => convertSelectedToStatus('Doing')}
+						class="flex items-center gap-2 rounded-lg border border-black bg-sky-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-sky-400 hover:shadow-xl"
+					>
+						<span>🏃</span>
+						<span>Doing</span>
+					</button>
+					<button
+						onclick={() => convertSelectedToStatus('Done')}
+						class="flex items-center gap-2 rounded-lg border border-black bg-green-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-green-400 hover:shadow-xl"
+					>
+						<span>🌟</span>
+						<span>Done!</span>
+					</button>
+				</div>
 			</div>
 		{/if}
 
