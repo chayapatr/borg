@@ -8,6 +8,10 @@
 	border-radius: 8px; /* Round the corners */
 }
 
+.svelte-flow__pane.selection {
+	cursor: default;
+}
+
 /* Dim non-matching nodes during search */
 .svelte-flow__node.search-dimmed > div {
 	opacity: 0.3 !important;

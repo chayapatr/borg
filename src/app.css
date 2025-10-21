@@ -21,4 +21,5 @@
 
 body {
 	font-family: 'Google Sans Code', 'Roboto Mono', 'Courier', monospace;
+	cursor: default;
 }
