@@ -62,5 +62,10 @@ service cloud.firestore {
     match /timeline/{eventId} {
       allow read, write, create, delete: if isApprovedUser();
     }
+
+    // Wiki collection
+    match /wiki/{wikiId} {
+      allow read, write, create, delete: if isApprovedUser();
+    }
   }
 }

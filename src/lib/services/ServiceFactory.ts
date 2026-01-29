@@ -5,7 +5,8 @@ import type {
 	ITimelineService,
 	INodesService,
 	IStickerService,
-	IUserService
+	IUserService,
+	IWikiService
 } from './interfaces';
 import { ProjectsService } from './local/ProjectsService';
 import { TaskService } from './local/TaskService';
@@ -20,6 +21,8 @@ import { FirebaseNodesService } from './firebase/FirebaseNodesService';
 import { FirebasePeopleService } from './firebase/FirebasePeopleService';
 import { FirebaseStickerService } from './firebase/FirebaseStickerService';
 import { FirebaseUserService } from './firebase/FirebaseUserService';
+import { FirebaseWikiService } from './firebase/FirebaseWikiService';
+import { WikiService } from './local/WikiService';
 import type { Node, Edge } from '@xyflow/svelte';
 
 export class ServiceFactory {
@@ -100,5 +103,13 @@ export class ServiceFactory {
 
 	static getCurrentMode(): 'local' | 'firebase' {
 		return this.getServiceMode();
+	}
+
+	static createWikiService(): IWikiService {
+		const mode = this.getServiceMode();
+		if (mode === 'firebase') {
+			return new FirebaseWikiService();
+		}
+		return new WikiService();
 	}
 }

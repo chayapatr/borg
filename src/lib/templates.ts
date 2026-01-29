@@ -321,6 +321,29 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				required: false
 			}
 		]
+	},
+
+	wiki: {
+		id: 'wiki',
+		name: 'Wiki',
+		color: '#3b82f6',
+		fields: [
+			{
+				id: 'title',
+				label: 'Wiki Title',
+				type: 'text',
+				placeholder: 'Enter wiki page title...',
+				required: true
+			},
+			{
+				id: 'wikiId',
+				label: 'Wiki ID',
+				type: 'text',
+				placeholder: 'Wiki document ID...',
+				required: false,
+				showInDisplay: false
+			}
+		]
 	}
 };
 
