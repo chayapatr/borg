@@ -11,6 +11,10 @@
 	import WikiBlock from '$lib/components/wiki/WikiBlock.svelte';
 	import WikiTaskBlock from '$lib/components/wiki/WikiTaskBlock.svelte';
 	import WikiTaskSidebar from '$lib/components/wiki/WikiTaskSidebar.svelte';
+	import WikiPageBlock from '$lib/components/wiki/WikiPageBlock.svelte';
+	import WikiProjectBlock from '$lib/components/wiki/WikiProjectBlock.svelte';
+	import WikiPageSidebar from '$lib/components/wiki/WikiPageSidebar.svelte';
+	import WikiProjectSidebar from '$lib/components/wiki/WikiProjectSidebar.svelte';
 
 	// Block types
 	interface TextBlock {
@@ -23,7 +27,17 @@
 		taskId: string;
 	}
 
-	type Block = TextBlock | TaskBlock;
+	interface PageBlock {
+		type: 'page';
+		pageId: string;
+	}
+
+	interface ProjectBlock {
+		type: 'project';
+		projectSlug: string;
+	}
+
+	type Block = TextBlock | TaskBlock | PageBlock | ProjectBlock;
 
 	const wikiId = $derived($page.params.id);
 
@@ -45,8 +59,12 @@
 
 	// Sidebar state
 	let showTaskSidebar = $state(false);
+	let showPageSidebar = $state(false);
+	let showProjectSidebar = $state(false);
 	let editingTask = $state<Task | null>(null);
 	let pendingTaskBlockIndex = $state<number | null>(null);
+	let pendingPageBlockIndex = $state<number | null>(null);
+	let pendingProjectBlockIndex = $state<number | null>(null);
 
 	// Block refs for focus management
 	let blockRefs: (WikiBlock | null)[] = $state([]);
@@ -54,7 +72,8 @@
 	// Autosave timer
 	let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-	// Parse content to blocks (handles both text and task references)
+	// Parse content to blocks (handles text and task references)
+	// Note: page and project links are now inline within text blocks
 	function contentToBlocks(content: string): Block[] {
 		if (!content) return [{ type: 'text', content: '' }];
 
@@ -69,9 +88,12 @@
 			const taskMatch = trimmed.match(/^\[\[task:([^\]]+)\]\]$/);
 			if (taskMatch) {
 				result.push({ type: 'task', taskId: taskMatch[1] });
-			} else {
-				result.push({ type: 'text', content: trimmed });
+				continue;
 			}
+
+			// Page and project links are now inline - don't parse them as separate blocks
+			// They stay within the text content as [[page:id]] or [[project:slug]]
+			result.push({ type: 'text', content: trimmed });
 		}
 
 		return result.length > 0 ? result : [{ type: 'text', content: '' }];
@@ -84,6 +106,13 @@
 				if (block.type === 'task') {
 					return `[[task:${block.taskId}]]`;
 				}
+				// Page and project blocks shouldn't exist anymore, but handle them just in case
+				if (block.type === 'page') {
+					return `[[page:${block.pageId}]]`;
+				}
+				if (block.type === 'project') {
+					return `[[project:${block.projectSlug}]]`;
+				}
 				return block.content;
 			})
 			.filter((s) => s.trim() !== '')
@@ -95,11 +124,31 @@
 		return tasksMap.get(taskId);
 	}
 
+	// Watch for wikiId changes and reload
+	$effect(() => {
+		// This effect runs whenever wikiId changes
+		// Only load if services are initialized (after onMount)
+		if (wikiId && wikiService && taskService) {
+			loadEntry();
+			loadTasks();
+		}
+	});
+
 	onMount(() => {
 		wikiService = ServiceFactory.createWikiService();
 		taskService = ServiceFactory.createTaskService();
+
+		// Initial load
 		loadEntry();
 		loadTasks();
+
+		// Setup navigation helpers for inline links
+		(window as any).__navigateToPage = (pageId: string) => {
+			window.open(`/wiki/${pageId}`, '_blank');
+		};
+		(window as any).__navigateToProject = (projectSlug: string) => {
+			window.open(`/project/${projectSlug}`, '_blank');
+		};
 
 		return () => {
 			if (subscriptionCleanup) {
@@ -111,6 +160,9 @@
 			if (autosaveTimer) {
 				clearTimeout(autosaveTimer);
 			}
+			// Cleanup navigation helpers
+			delete (window as any).__navigateToPage;
+			delete (window as any).__navigateToProject;
 		};
 	});
 
@@ -335,6 +387,72 @@
 		handleTaskSidebarClose();
 	}
 
+	// Page link handlers - now uses callback pattern
+	function handleLinkPage(callback: (pageId: string) => void) {
+		// Store the callback for when a page is selected
+		(window as any).__pageLinkCallback = callback;
+		showPageSidebar = true;
+	}
+
+	function handlePageSidebarClose() {
+		showPageSidebar = false;
+		delete (window as any).__pageLinkCallback;
+	}
+
+	function handlePageSelect(pageId: string) {
+		const callback = (window as any).__pageLinkCallback;
+		if (callback) {
+			callback(pageId);
+		}
+		handlePageSidebarClose();
+	}
+
+	function handlePageBlockClick(pageId: string) {
+		goto(`/wiki/${pageId}`);
+	}
+
+	// Project link handlers - now uses callback pattern
+	function handleLinkProject(callback: (projectSlug: string) => void) {
+		// Store the callback for when a project is selected
+		(window as any).__projectLinkCallback = callback;
+		showProjectSidebar = true;
+	}
+
+	function handleProjectSidebarClose() {
+		showProjectSidebar = false;
+		delete (window as any).__projectLinkCallback;
+	}
+
+	function handleProjectSelect(projectSlug: string) {
+		const callback = (window as any).__projectLinkCallback;
+		if (callback) {
+			callback(projectSlug);
+		}
+		handleProjectSidebarClose();
+	}
+
+	function handleProjectBlockClick(projectSlug: string) {
+		goto(`/project/${projectSlug}`);
+	}
+
+	function handleDeletePageBlock(index: number) {
+		blocks = [...blocks.slice(0, index), ...blocks.slice(index + 1)];
+		if (blocks.length === 0) {
+			blocks = [{ type: 'text', content: '' }];
+		}
+		hasChanges = true;
+		scheduleAutosave();
+	}
+
+	function handleDeleteProjectBlock(index: number) {
+		blocks = [...blocks.slice(0, index), ...blocks.slice(index + 1)];
+		if (blocks.length === 0) {
+			blocks = [{ type: 'text', content: '' }];
+		}
+		hasChanges = true;
+		scheduleAutosave();
+	}
+
 	function scheduleAutosave() {
 		if (autosaveTimer) {
 			clearTimeout(autosaveTimer);
@@ -378,7 +496,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="flex h-screen w-full flex-col bg-borg-white">
+<div class="flex h-screen w-full flex-col bg-white">
 	<!-- Header - full width navbar -->
 	<div
 		class="flex h-16 shrink-0 items-center justify-between border-b border-black bg-borg-white px-6"
@@ -408,8 +526,8 @@
 
 	<!-- Content area with sidebar -->
 	<div class="flex min-h-0 flex-1">
-		<!-- Main content - fixed width to leave room for sidebar -->
-		<div class="flex flex-1 flex-col" style="max-width: calc(100% - 320px);">
+		<!-- Main content - full width, ends where sidebar starts -->
+		<div class="flex flex-1 flex-col overflow-hidden">
 			<!-- Content -->
 			{#if loading}
 			<div class="flex flex-1 items-center justify-center">
@@ -419,7 +537,7 @@
 			</div>
 		{:else}
 			<div class="flex min-h-0 flex-1 flex-col overflow-auto">
-				<div class="w-full max-w-3xl px-8 py-10 pl-16">
+				<div class="w-full px-8 py-10 pl-24 pr-12">
 					<!-- Title input -->
 					<div class="mb-2">
 						<input
@@ -463,7 +581,7 @@
 								class="group/divider relative flex h-5 w-full items-center justify-center"
 							>
 								<div class="absolute left-0 right-0 h-px bg-transparent transition-colors group-hover/divider:bg-zinc-300"></div>
-								<div class="relative z-10 flex h-4 w-4 items-center justify-center rounded bg-borg-white text-transparent transition-all group-hover/divider:bg-zinc-200 group-hover/divider:text-zinc-500">
+								<div class="relative z-10 flex h-4 w-4 items-center justify-center rounded bg-white text-transparent transition-all group-hover/divider:bg-zinc-200 group-hover/divider:text-zinc-500">
 									<Plus class="h-2.5 w-2.5" />
 								</div>
 							</button>
@@ -485,6 +603,8 @@
 											onEnter={() => handleBlockEnter(index)}
 											onDelete={() => handleBlockDelete(index)}
 											onCreateTask={() => handleCreateTask(index)}
+											onLinkPage={handleLinkPage}
+											onLinkProject={handleLinkProject}
 										/>
 									{:else if block.type === 'task'}
 										{@const task = getTask(block.taskId)}
@@ -496,10 +616,22 @@
 											/>
 										{:else}
 											<!-- Task not found, show placeholder -->
-											<div class="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+											<div class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-600">
 												Task not found (ID: {block.taskId})
 											</div>
 										{/if}
+									{:else if block.type === 'page'}
+										<WikiPageBlock
+											pageId={block.pageId}
+											onSelect={() => handlePageBlockClick(block.pageId)}
+											onDelete={() => handleDeletePageBlock(index)}
+										/>
+									{:else if block.type === 'project'}
+										<WikiProjectBlock
+											projectSlug={block.projectSlug}
+											onSelect={() => handleProjectBlockClick(block.projectSlug)}
+											onDelete={() => handleDeleteProjectBlock(index)}
+										/>
 									{/if}
 								</div>
 							</div>
@@ -511,7 +643,7 @@
 							class="group/divider relative flex h-5 w-full items-center justify-center"
 						>
 							<div class="absolute left-0 right-0 h-px bg-transparent transition-colors group-hover/divider:bg-zinc-300"></div>
-							<div class="relative z-10 flex h-4 w-4 items-center justify-center rounded bg-borg-white text-transparent transition-all group-hover/divider:bg-zinc-200 group-hover/divider:text-zinc-500">
+							<div class="relative z-10 flex h-4 w-4 items-center justify-center rounded bg-white text-transparent transition-all group-hover/divider:bg-zinc-200 group-hover/divider:text-zinc-500">
 								<Plus class="h-2.5 w-2.5" />
 							</div>
 						</button>
@@ -521,7 +653,7 @@
 		{/if}
 		</div>
 
-		<!-- Task Sidebar - in the same flex container, under navbar -->
+		<!-- Sidebars - in the same flex container, under navbar -->
 		{#if showTaskSidebar}
 			<WikiTaskSidebar
 				wikiId={wikiId}
@@ -530,6 +662,17 @@
 				onClose={handleTaskSidebarClose}
 				onSave={handleTaskSave}
 				onDelete={handleTaskDelete}
+			/>
+		{:else if showPageSidebar}
+			<WikiPageSidebar
+				currentWikiId={wikiId}
+				onClose={handlePageSidebarClose}
+				onSelect={handlePageSelect}
+			/>
+		{:else if showProjectSidebar}
+			<WikiProjectSidebar
+				onClose={handleProjectSidebarClose}
+				onSelect={handleProjectSelect}
 			/>
 		{/if}
 	</div>

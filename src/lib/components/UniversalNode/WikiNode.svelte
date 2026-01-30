@@ -56,7 +56,9 @@
 	});
 
 	// Display title: use synced wiki title if available, otherwise use node title
-	let displayTitle = $derived(nodeData.wikiId && wikiTitle ? wikiTitle : nodeData.title || 'Untitled Wiki');
+	let displayTitle = $derived(
+		nodeData.wikiId && wikiTitle ? wikiTitle : nodeData.title || 'Untitled Wiki'
+	);
 
 	function handleEdit(e: MouseEvent) {
 		e.stopPropagation();
@@ -133,7 +135,7 @@
 		<!-- Wiki icon and title -->
 		<div class="flex items-center gap-2">
 			<FileText class="h-4 w-4 text-blue-500" />
-			<span class="text-sm font-medium text-gray-800 truncate">
+			<span class="truncate text-sm font-medium text-gray-800">
 				{displayTitle}
 			</span>
 		</div>
@@ -144,9 +146,9 @@
 			onclick={handleOpenWiki}
 		>
 			{#if nodeData.wikiId}
-				Open Wiki
+				Open Wiki [↗]
 			{:else}
-				Create Wiki
+				Create Wiki [↗]
 			{/if}
 		</button>
 

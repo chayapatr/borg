@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { marked } from 'marked';
 	import {
 		Heading1,
@@ -10,8 +11,11 @@
 		Code,
 		Minus,
 		Type,
-		CheckSquare
+		CheckSquare,
+		FileText,
+		Folder
 	} from '@lucide/svelte';
+	import { ServiceFactory } from '$lib/services/ServiceFactory';
 
 	interface Props {
 		content: string;
@@ -20,6 +24,8 @@
 		onDelete: () => void;
 		onFocus?: () => void;
 		onCreateTask?: () => void;
+		onLinkPage?: (callback: (pageId: string) => void) => void;
+		onLinkProject?: (callback: (projectSlug: string) => void) => void;
 	}
 
 	interface CommandItem {
@@ -28,6 +34,7 @@
 		icon: typeof Type;
 		prefix: string;
 		action?: string;
+		inlineOnly?: boolean;
 	}
 
 	const commands: CommandItem[] = [
@@ -40,10 +47,12 @@
 		{ label: 'Quote', description: 'Blockquote', icon: Quote, prefix: '> ' },
 		{ label: 'Code', description: 'Code block', icon: Code, prefix: '```\n' },
 		{ label: 'Divider', description: 'Horizontal rule', icon: Minus, prefix: '---' },
-		{ label: 'Task', description: 'Create a task', icon: CheckSquare, prefix: '', action: 'task' }
+		{ label: 'Task', description: 'Create a task', icon: CheckSquare, prefix: '', action: 'task' },
+		{ label: 'Page', description: 'Link to a wiki page', icon: FileText, prefix: '', action: 'page', inlineOnly: true },
+		{ label: 'Project', description: 'Link to a project', icon: Folder, prefix: '', action: 'project', inlineOnly: true }
 	];
 
-	let { content, onUpdate, onEnter, onDelete, onFocus, onCreateTask }: Props = $props();
+	let { content, onUpdate, onEnter, onDelete, onFocus, onCreateTask, onLinkPage, onLinkProject }: Props = $props();
 
 	let editing = $state(false);
 	let editContent = $state(content);
@@ -53,6 +62,8 @@
 	let showCommandMenu = $state(false);
 	let commandFilter = $state('');
 	let selectedCommandIndex = $state(0);
+	let commandTriggerPosition = $state(0); // Position where / was typed
+	let isInlineCommand = $state(false); // Whether command is mid-text
 
 	// Configure marked
 	marked.setOptions({
@@ -60,15 +71,63 @@
 		gfm: true
 	});
 
-	let renderedContent = $derived(marked(content) as string);
+	// Custom renderer to handle inline page/project links
+	function renderContent(text: string): string {
+		// First, protect our wiki links from markdown processing by replacing them temporarily
+		const linkPlaceholders = new Map<string, string>();
+		let placeholderIndex = 0;
 
-	let filteredCommands = $derived(
-		commands.filter(
+		// Replace [[page:...]] with placeholders using a format that won't be interpreted as markdown
+		text = text.replace(/\[\[page:([^\]]+)\]\]/g, (match, pageId) => {
+			const placeholder = `WIKIPAGELINK${placeholderIndex}ENDLINK`;
+			linkPlaceholders.set(placeholder, pageId);
+			placeholderIndex++;
+			return placeholder;
+		});
+
+		// Replace [[project:...]] with placeholders
+		text = text.replace(/\[\[project:([^\]]+)\]\]/g, (match, slug) => {
+			const placeholder = `WIKIPROJECTLINK${placeholderIndex}ENDLINK`;
+			linkPlaceholders.set(placeholder, slug);
+			placeholderIndex++;
+			return placeholder;
+		});
+
+		// Process markdown
+		let html = marked(text) as string;
+
+		// Now replace placeholders with actual HTML
+		linkPlaceholders.forEach((value, placeholder) => {
+			if (placeholder.startsWith('WIKIPAGELINK')) {
+				const pageId = value;
+				html = html.replace(
+					placeholder,
+					`<span class="wiki-inline-link wiki-page-link" data-page-id="${pageId}"><svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14,2 14,8 20,8"></polyline></svg><span class="link-text" data-page-id="${pageId}">Loading...</span></span>`
+				);
+			} else if (placeholder.startsWith('WIKIPROJECTLINK')) {
+				const slug = value;
+				html = html.replace(
+					placeholder,
+					`<span class="wiki-inline-link wiki-project-link" data-project-slug="${slug}"><svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg><span class="link-text" data-project-slug="${slug}">Loading...</span></span>`
+				);
+			}
+		});
+
+		return html;
+	}
+
+	let renderedContent = $derived(renderContent(content));
+
+	let filteredCommands = $derived.by(() => {
+		const filtered = commands.filter(
 			(cmd) =>
 				cmd.label.toLowerCase().includes(commandFilter.toLowerCase()) ||
 				cmd.description.toLowerCase().includes(commandFilter.toLowerCase())
-		)
-	);
+		);
+		// If in inline mode, show ALL commands (removed the filter for testing)
+		// User can use page/project inline, or other formatting commands at start of line
+		return filtered;
+	});
 
 	function startEditing() {
 		editing = true;
@@ -134,23 +193,107 @@
 		editContent = target.value;
 		adjustTextareaHeight();
 
-		// Check for command trigger
-		if (editContent === '/') {
+		// Check for command trigger at cursor position
+		const cursorPos = target.selectionStart;
+		const textBeforeCursor = editContent.slice(0, cursorPos);
+
+		// Find the last '/' before cursor that's not part of a URL or escaped
+		const slashMatch = textBeforeCursor.match(/(?:^|\s)\/([a-zA-Z]*)$/);
+
+		if (slashMatch) {
+			// Found a slash trigger
+			const slashPos = cursorPos - slashMatch[0].length + slashMatch[0].indexOf('/');
+			const charBeforeSlash = editContent[slashPos - 1];
+			const isAtStart = slashPos === 0 || charBeforeSlash === undefined || /\s/.test(charBeforeSlash);
+
 			showCommandMenu = true;
-			commandFilter = '';
-			selectedCommandIndex = 0;
-		} else if (editContent.startsWith('/') && showCommandMenu) {
-			commandFilter = editContent.slice(1);
+			commandFilter = slashMatch[1];
+			commandTriggerPosition = slashPos;
+			// Consider it inline if there's any content before the slash (even if whitespace-separated)
+			isInlineCommand = slashPos > 0;
 			selectedCommandIndex = 0;
 		} else {
 			showCommandMenu = false;
+			commandFilter = '';
+			isInlineCommand = false;
 		}
 	}
 
 	function selectCommand(cmd: CommandItem) {
+		if (!textareaRef) return;
+
+		const cursorPos = textareaRef.selectionStart;
+		const commandStartPos = commandTriggerPosition;
+		const commandEndPos = cursorPos;
+
 		closeCommandMenu();
 
-		// Handle special actions
+		// Handle inline link actions (page/project)
+		if (cmd.action === 'page') {
+			// Capture current content and position before sidebar opens
+			const currentContent = editContent;
+
+			onLinkPage?.((pageId: string) => {
+				// Insert [[page:pageId]] at cursor position using captured values
+				const before = currentContent.slice(0, commandStartPos);
+				const after = currentContent.slice(commandEndPos);
+				const inlineLink = `[[page:${pageId}]]`;
+				const newContent = before + inlineLink + after;
+
+				// Update content
+				editContent = newContent;
+				onUpdate(newContent);
+
+				// Re-enter editing mode and restore focus
+				requestAnimationFrame(() => {
+					editing = true;
+					requestAnimationFrame(() => {
+						if (textareaRef) {
+							textareaRef.focus();
+							const newCursorPos = commandStartPos + inlineLink.length;
+							textareaRef.selectionStart = newCursorPos;
+							textareaRef.selectionEnd = newCursorPos;
+							adjustTextareaHeight();
+						}
+					});
+				});
+			});
+			return;
+		}
+
+		if (cmd.action === 'project') {
+			// Capture current content and position before sidebar opens
+			const currentContent = editContent;
+
+			onLinkProject?.((projectSlug: string) => {
+				// Insert [[project:projectSlug]] at cursor position using captured values
+				const before = currentContent.slice(0, commandStartPos);
+				const after = currentContent.slice(commandEndPos);
+				const inlineLink = `[[project:${projectSlug}]]`;
+				const newContent = before + inlineLink + after;
+
+				// Update content
+				editContent = newContent;
+				onUpdate(newContent);
+
+				// Re-enter editing mode and restore focus
+				requestAnimationFrame(() => {
+					editing = true;
+					requestAnimationFrame(() => {
+						if (textareaRef) {
+							textareaRef.focus();
+							const newCursorPos = commandStartPos + inlineLink.length;
+							textareaRef.selectionStart = newCursorPos;
+							textareaRef.selectionEnd = newCursorPos;
+							adjustTextareaHeight();
+						}
+					});
+				});
+			});
+			return;
+		}
+
+		// Handle task action (still creates a new block)
 		if (cmd.action === 'task') {
 			editing = false;
 			editContent = '';
@@ -158,19 +301,30 @@
 			return;
 		}
 
-		editContent = cmd.prefix;
+		// Handle formatting commands
+		if (isInlineCommand) {
+			// Don't apply block-level formatting in inline mode
+			return;
+		}
+
+		// Replace the command trigger with the prefix
+		const before = editContent.slice(0, commandStartPos);
+		const after = editContent.slice(commandEndPos);
+		editContent = before + cmd.prefix + after;
 
 		requestAnimationFrame(() => {
 			if (textareaRef) {
 				textareaRef.focus();
 				// For code blocks, put cursor before the closing backticks
 				if (cmd.prefix === '```\n') {
-					editContent = '```\n\n```';
-					textareaRef.selectionStart = 4;
-					textareaRef.selectionEnd = 4;
+					editContent = before + '```\n\n```' + after;
+					const newPos = commandStartPos + 4;
+					textareaRef.selectionStart = newPos;
+					textareaRef.selectionEnd = newPos;
 				} else {
-					textareaRef.selectionStart = editContent.length;
-					textareaRef.selectionEnd = editContent.length;
+					const newPos = commandStartPos + cmd.prefix.length;
+					textareaRef.selectionStart = newPos;
+					textareaRef.selectionEnd = newPos;
 				}
 				adjustTextareaHeight();
 			}
@@ -193,6 +347,80 @@
 	export function focus() {
 		startEditing();
 	}
+
+	// Handle clicks on inline links in preview mode
+	function handlePreviewClick(e: MouseEvent) {
+		const target = e.target as HTMLElement;
+		const linkElement = target.closest('.wiki-inline-link');
+
+		if (linkElement) {
+			e.preventDefault();
+			e.stopPropagation();
+
+			const pageId = linkElement.getAttribute('data-page-id');
+			const projectSlug = linkElement.getAttribute('data-project-slug');
+
+			if (pageId) {
+				// Navigate to page
+				(window as any).__navigateToPage?.(pageId);
+			} else if (projectSlug) {
+				// Navigate to project
+				(window as any).__navigateToProject?.(projectSlug);
+			}
+			return true;
+		}
+		return false;
+	}
+
+	// Populate link titles after rendering
+	onMount(() => {
+		const wikiService = ServiceFactory.createWikiService();
+		const projectsService = ServiceFactory.createProjectsService();
+
+		const interval = setInterval(async () => {
+			// Find all page links and populate titles
+			const pageLinks = document.querySelectorAll('.wiki-page-link .link-text[data-page-id]');
+			for (const linkText of Array.from(pageLinks)) {
+				const pageId = linkText.getAttribute('data-page-id');
+				if (pageId && linkText.textContent === 'Loading...') {
+					try {
+						const result = wikiService.getEntry(pageId);
+						const page = result instanceof Promise ? await result : result;
+						if (page) {
+							linkText.textContent = page.title || 'Untitled';
+						} else {
+							linkText.textContent = 'Unknown Page';
+						}
+					} catch {
+						linkText.textContent = 'Unknown Page';
+					}
+				}
+			}
+
+			// Find all project links and populate titles
+			const projectLinks = document.querySelectorAll('.wiki-project-link .link-text[data-project-slug]');
+			for (const linkText of Array.from(projectLinks)) {
+				const projectSlug = linkText.getAttribute('data-project-slug');
+				if (projectSlug && linkText.textContent === 'Loading...') {
+					try {
+						// Get all projects and find by slug
+						const result = projectsService.getAllProjects();
+						const projects = result instanceof Promise ? await result : result;
+						const project = projects.find((p) => p.slug === projectSlug);
+						if (project) {
+							linkText.textContent = project.title;
+						} else {
+							linkText.textContent = 'Unknown Project';
+						}
+					} catch {
+						linkText.textContent = 'Unknown Project';
+					}
+				}
+			}
+		}, 100);
+
+		return () => clearInterval(interval);
+	});
 </script>
 
 <div class="wiki-block group relative">
@@ -206,6 +434,7 @@
 				onkeydown={handleKeydown}
 				placeholder="Type '/' for commands..."
 				class="w-full resize-none bg-transparent p-2 text-base leading-relaxed text-black outline-none"
+				style="max-width: 60ch;"
 				rows="1"
 			></textarea>
 
@@ -247,8 +476,14 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			onclick={startEditing}
-			class="prose min-h-[1.75rem] cursor-text rounded p-2 transition-colors hover:bg-borg-beige/30"
+			onclick={(e) => {
+				const handled = handlePreviewClick(e);
+				// Only start editing if we didn't click a link
+				if (!handled) {
+					startEditing();
+				}
+			}}
+			class="wiki-content min-h-[1.75rem] cursor-text rounded p-2 transition-colors hover:bg-borg-beige/30"
 		>
 			{#if content}
 				{@html renderedContent}
@@ -261,21 +496,22 @@
 
 <style>
 	/* Scoped markdown preview styling for blocks */
-	.wiki-block :global(.prose) {
+	.wiki-block :global(.wiki-content) {
 		font-size: 1rem;
 		line-height: 1.6;
 		color: #000;
+		max-width: 60ch;
 	}
 
-	.wiki-block :global(.prose > *:first-child) {
+	.wiki-block :global(.wiki-content > *:first-child) {
 		margin-top: 0;
 	}
 
-	.wiki-block :global(.prose > *:last-child) {
+	.wiki-block :global(.wiki-content > *:last-child) {
 		margin-bottom: 0;
 	}
 
-	.wiki-block :global(.prose h1) {
+	.wiki-block :global(.wiki-content h1) {
 		font-size: 1.75rem;
 		font-weight: 700;
 		margin-top: 0;
@@ -283,7 +519,7 @@
 		color: #000;
 	}
 
-	.wiki-block :global(.prose h2) {
+	.wiki-block :global(.wiki-content h2) {
 		font-size: 1.375rem;
 		font-weight: 600;
 		margin-top: 0;
@@ -291,7 +527,7 @@
 		color: #000;
 	}
 
-	.wiki-block :global(.prose h3) {
+	.wiki-block :global(.wiki-content h3) {
 		font-size: 1.125rem;
 		font-weight: 600;
 		margin-top: 0;
@@ -299,31 +535,31 @@
 		color: #000;
 	}
 
-	.wiki-block :global(.prose p) {
+	.wiki-block :global(.wiki-content p) {
 		margin-top: 0;
 		margin-bottom: 0;
 	}
 
-	.wiki-block :global(.prose ul),
-	.wiki-block :global(.prose ol) {
+	.wiki-block :global(.wiki-content ul),
+	.wiki-block :global(.wiki-content ol) {
 		margin-top: 0;
 		margin-bottom: 0;
 		padding-left: 1.5rem;
 	}
 
-	.wiki-block :global(.prose li) {
+	.wiki-block :global(.wiki-content li) {
 		margin-bottom: 0.25rem;
 	}
 
-	.wiki-block :global(.prose ul) {
+	.wiki-block :global(.wiki-content ul) {
 		list-style-type: disc;
 	}
 
-	.wiki-block :global(.prose ol) {
+	.wiki-block :global(.wiki-content ol) {
 		list-style-type: decimal;
 	}
 
-	.wiki-block :global(.prose code) {
+	.wiki-block :global(.wiki-content code) {
 		background-color: #d7d3d0;
 		padding: 0.125rem 0.375rem;
 		border-radius: 0.25rem;
@@ -332,7 +568,7 @@
 		color: #000;
 	}
 
-	.wiki-block :global(.prose pre) {
+	.wiki-block :global(.wiki-content pre) {
 		background-color: #1a1a1a;
 		color: #f3f3f1;
 		padding: 1rem;
@@ -343,13 +579,13 @@
 		border: 1px solid #000;
 	}
 
-	.wiki-block :global(.prose pre code) {
+	.wiki-block :global(.wiki-content pre code) {
 		background-color: transparent;
 		padding: 0;
 		color: #f3f3f1;
 	}
 
-	.wiki-block :global(.prose blockquote) {
+	.wiki-block :global(.wiki-content blockquote) {
 		border-left: 4px solid #000;
 		padding-left: 1rem;
 		margin-left: 0;
@@ -358,47 +594,84 @@
 		color: #444;
 	}
 
-	.wiki-block :global(.prose a) {
+	.wiki-block :global(.wiki-content a) {
 		color: #4d17f5;
 		text-decoration: underline;
 	}
 
-	.wiki-block :global(.prose a:hover) {
+	.wiki-block :global(.wiki-content a:hover) {
 		color: #8220fa;
 	}
 
-	.wiki-block :global(.prose strong) {
+	.wiki-block :global(.wiki-content strong) {
 		font-weight: 700;
 	}
 
-	.wiki-block :global(.prose hr) {
+	.wiki-block :global(.wiki-content hr) {
 		border: 0;
 		border-top: 1px solid #a1a1a1;
 		margin: 0.5rem 0;
 	}
 
-	.wiki-block :global(.prose table) {
+	.wiki-block :global(.wiki-content table) {
 		width: 100%;
 		border-collapse: collapse;
 		margin-bottom: 0;
 	}
 
-	.wiki-block :global(.prose th),
-	.wiki-block :global(.prose td) {
+	.wiki-block :global(.wiki-content th),
+	.wiki-block :global(.wiki-content td) {
 		border: 1px solid #000;
 		padding: 0.5rem 0.75rem;
 		text-align: left;
 	}
 
-	.wiki-block :global(.prose th) {
+	.wiki-block :global(.wiki-content th) {
 		background-color: #edede9;
 		font-weight: 600;
 	}
 
-	.wiki-block :global(.prose img) {
+	.wiki-block :global(.wiki-content img) {
 		max-width: 100%;
 		height: auto;
 		border-radius: 0.5rem;
 		border: 1px solid #000;
+	}
+
+	/* Inline wiki links */
+	.wiki-block :global(.wiki-inline-link) {
+		display: inline-flex !important;
+		align-items: center;
+		gap: 0.25rem;
+		font-weight: 600;
+		text-decoration: underline;
+		text-decoration-color: rgba(0, 0, 0, 0.3);
+		text-underline-offset: 2px;
+		cursor: pointer !important;
+		transition: all 0.15s ease;
+		pointer-events: auto !important;
+	}
+
+	.wiki-block :global(.wiki-inline-link:hover) {
+		text-decoration-color: rgba(0, 0, 0, 1);
+	}
+
+	.wiki-block :global(.wiki-inline-link .inline-icon) {
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+		pointer-events: none;
+	}
+
+	.wiki-block :global(.wiki-page-link) {
+		color: #000;
+	}
+
+	.wiki-block :global(.wiki-project-link) {
+		color: #000;
+	}
+
+	.wiki-block :global(.wiki-inline-link .link-text) {
+		pointer-events: none;
 	}
 </style>

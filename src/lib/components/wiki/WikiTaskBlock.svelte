@@ -40,7 +40,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="group flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-borg-beige/50 {isResolved ? 'opacity-60' : ''}"
+	class="group inline-flex cursor-pointer items-start gap-3 rounded-lg border border-black bg-borg-white p-3 transition-colors hover:bg-borg-beige/30 {isResolved ? 'opacity-60' : ''}"
 	onclick={onEdit}
 >
 	<!-- Checkbox -->
@@ -57,21 +57,21 @@
 
 	<!-- Content -->
 	<div class="min-w-0 flex-1">
-		<div class="text-base {isResolved ? 'line-through text-zinc-500' : 'text-black'}">
+		<div class="text-sm font-medium {isResolved ? 'line-through text-zinc-500' : 'text-black'}">
 			{task.title || 'Untitled task'}
 		</div>
 
 		{#if task.dueDate || assigneeName}
-			<div class="mt-1 flex flex-wrap items-center gap-3 text-sm text-zinc-500">
+			<div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
 				{#if task.dueDate}
 					<span class="flex items-center gap-1 {isOverdue ? 'text-red-600 font-medium' : ''}">
-						<Calendar class="h-3.5 w-3.5" />
+						<Calendar class="h-3 w-3" />
 						{formatDate(task.dueDate)}
 					</span>
 				{/if}
 				{#if assigneeName}
 					<span class="flex items-center gap-1">
-						<User class="h-3.5 w-3.5" />
+						<User class="h-3 w-3" />
 						{assigneeName}
 					</span>
 				{/if}

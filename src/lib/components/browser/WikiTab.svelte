@@ -4,10 +4,7 @@
 	import type { IWikiService } from '../../services/interfaces/IWikiService';
 	import type { WikiEntry } from '../../types/wiki';
 
-	let {
-		wikiService,
-		activeTab
-	} = $props<{
+	let { wikiService, activeTab } = $props<{
 		wikiService: IWikiService;
 		activeTab: string;
 	}>();
@@ -111,12 +108,12 @@
 			<div class="flex items-center gap-4">
 				<!-- Search bar -->
 				<div class="relative">
-					<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+					<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-400" />
 					<input
 						type="text"
 						placeholder="Search wikis..."
 						bind:value={searchQuery}
-						class="w-64 rounded-lg border border-black py-2 pl-10 pr-4 text-sm outline-none focus:ring-1 focus:ring-black"
+						class="w-64 rounded-lg border border-black py-2 pr-4 pl-10 text-sm outline-none focus:ring-1 focus:ring-black"
 					/>
 				</div>
 				<button
@@ -134,7 +131,9 @@
 	<div class="flex-1 overflow-y-auto p-6">
 		{#if loading}
 			<div class="flex h-64 items-center justify-center">
-				<div class="h-8 w-8 animate-spin rounded-full border-2 border-black border-t-transparent"></div>
+				<div
+					class="h-8 w-8 animate-spin rounded-full border-2 border-black border-t-transparent"
+				></div>
 			</div>
 		{:else if wikis.length === 0}
 			<div class="flex h-64 flex-col items-center justify-center text-center">
@@ -162,7 +161,9 @@
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
-						class="box-shadow-black rounded-sm border border-black bg-white p-4 transition-colors hover:bg-borg-beige {isDeleting ? 'opacity-50 pointer-events-none' : ''}"
+						class="box-shadow-black rounded-sm border border-black bg-white p-4 transition-colors hover:bg-borg-beige {isDeleting
+							? 'pointer-events-none opacity-50'
+							: ''}"
 						onclick={() => !isDeleting && handleOpenWiki(wiki.id)}
 					>
 						<div class="mb-4 flex items-start justify-between">
@@ -184,10 +185,12 @@
 									onclick={(e) => !isDeleting && handleDeleteWiki(e, wiki)}
 									aria-label="Delete wiki"
 									disabled={isDeleting}
-									class="rounded p-1 text-zinc-500 transition-colors hover:bg-borg-orange hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+									class="rounded p-1 text-zinc-500 transition-colors hover:bg-borg-orange hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									{#if isDeleting}
-										<div class="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent"></div>
+										<div
+											class="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent"
+										></div>
 									{:else}
 										<Trash2 class="h-4 w-4" />
 									{/if}
@@ -197,13 +200,16 @@
 
 						<h3 class="mb-2 line-clamp-2 text-xl font-semibold">{wiki.title}</h3>
 
-						{#if wiki.content}
+						<!-- {#if wiki.content}
 							<p class="mb-3 line-clamp-2 text-sm text-zinc-600">
 								{wiki.content.slice(0, 100)}{wiki.content.length > 100 ? '...' : ''}
 							</p>
-						{/if}
+						{/if} -->
 
-						<div class="flex justify-end text-xs text-zinc-500">
+						<div class="flex justify-between text-xs text-zinc-500">
+							<!-- <div>
+								{wiki.id}
+							</div> -->
 							<div>
 								Updated {formatDate(wiki.updatedAt)}
 							</div>
