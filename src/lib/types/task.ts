@@ -8,12 +8,24 @@ export interface Task {
 	status?: 'active' | 'resolved'; // Default to 'active' for backward compatibility
 }
 
+// Source type for tasks - can be from a project node or a wiki page
+export type TaskSourceType = 'project' | 'wiki';
+
 export interface TaskWithContext extends Task {
+	// Source information
+	sourceType?: TaskSourceType; // 'project' or 'wiki', defaults to 'project' for backward compat
+
+	// Project source fields (used when sourceType is 'project')
 	projectSlug?: string;
 	projectTitle?: string;
 	nodeId: string;
 	nodeTitle: string;
 	nodeType: string;
+
+	// Wiki source fields (used when sourceType is 'wiki')
+	wikiId?: string;
+	wikiTitle?: string;
+
 	updatedAt?: string;
 }
 

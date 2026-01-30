@@ -4,13 +4,31 @@
 	import { goto } from '$app/navigation';
 	import { ServiceFactory } from '$lib/services/ServiceFactory';
 	import type { IWikiService } from '$lib/services/interfaces/IWikiService';
+	import type { ITaskService } from '$lib/services/interfaces/ITaskService';
 	import type { WikiEntry } from '$lib/types/wiki';
-	import { Save } from '@lucide/svelte';
-	import { marked } from 'marked';
+	import type { Task } from '$lib/types/task';
+	import { Save, Plus } from '@lucide/svelte';
+	import WikiBlock from '$lib/components/wiki/WikiBlock.svelte';
+	import WikiTaskBlock from '$lib/components/wiki/WikiTaskBlock.svelte';
+	import WikiTaskSidebar from '$lib/components/wiki/WikiTaskSidebar.svelte';
+
+	// Block types
+	interface TextBlock {
+		type: 'text';
+		content: string;
+	}
+
+	interface TaskBlock {
+		type: 'task';
+		taskId: string;
+	}
+
+	type Block = TextBlock | TaskBlock;
 
 	const wikiId = $derived($page.params.id);
 
 	let wikiService: IWikiService;
+	let taskService: ITaskService;
 	let entry = $state<WikiEntry | null>(null);
 	let loading = $state(true);
 	let saving = $state(false);
@@ -18,28 +36,77 @@
 
 	// Local state for editing
 	let title = $state('');
-	let content = $state('');
+	let blocks = $state<Block[]>([{ type: 'text', content: '' }]);
 	let hasChanges = $state(false);
+
+	// Tasks state - use Map to keep resolved tasks visible
+	let tasksMap = $state<Map<string, Task>>(new Map());
+	let taskSubscriptionCleanup: (() => void) | null = null;
+
+	// Sidebar state
+	let showTaskSidebar = $state(false);
+	let editingTask = $state<Task | null>(null);
+	let pendingTaskBlockIndex = $state<number | null>(null);
+
+	// Block refs for focus management
+	let blockRefs: (WikiBlock | null)[] = $state([]);
 
 	// Autosave timer
 	let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-	// Configure marked
-	marked.setOptions({
-		breaks: true,
-		gfm: true
-	});
+	// Parse content to blocks (handles both text and task references)
+	function contentToBlocks(content: string): Block[] {
+		if (!content) return [{ type: 'text', content: '' }];
 
-	// Render markdown to HTML
-	let renderedContent = $derived(marked(content) as string);
+		const lines = content.split(/\n\n+/);
+		const result: Block[] = [];
+
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (!trimmed) continue;
+
+			// Check for task reference: [[task:taskId]]
+			const taskMatch = trimmed.match(/^\[\[task:([^\]]+)\]\]$/);
+			if (taskMatch) {
+				result.push({ type: 'task', taskId: taskMatch[1] });
+			} else {
+				result.push({ type: 'text', content: trimmed });
+			}
+		}
+
+		return result.length > 0 ? result : [{ type: 'text', content: '' }];
+	}
+
+	// Convert blocks back to content
+	function blocksToContent(blocks: Block[]): string {
+		return blocks
+			.map((block) => {
+				if (block.type === 'task') {
+					return `[[task:${block.taskId}]]`;
+				}
+				return block.content;
+			})
+			.filter((s) => s.trim() !== '')
+			.join('\n\n');
+	}
+
+	// Get task by ID
+	function getTask(taskId: string): Task | undefined {
+		return tasksMap.get(taskId);
+	}
 
 	onMount(() => {
 		wikiService = ServiceFactory.createWikiService();
+		taskService = ServiceFactory.createTaskService();
 		loadEntry();
+		loadTasks();
 
 		return () => {
 			if (subscriptionCleanup) {
 				subscriptionCleanup();
+			}
+			if (taskSubscriptionCleanup) {
+				taskSubscriptionCleanup();
 			}
 			if (autosaveTimer) {
 				clearTimeout(autosaveTimer);
@@ -62,7 +129,7 @@
 						// Only update local state if there are no pending changes
 						if (!hasChanges) {
 							title = updatedEntry.title;
-							content = updatedEntry.content;
+							blocks = contentToBlocks(updatedEntry.content);
 						}
 					} else {
 						// Entry doesn't exist, redirect to wiki index
@@ -76,11 +143,33 @@
 			entry = result instanceof Promise ? await result : result;
 			if (entry) {
 				title = entry.title;
-				content = entry.content;
+				blocks = contentToBlocks(entry.content);
 			} else {
 				goto('/wiki');
 			}
 			loading = false;
+		}
+	}
+
+	async function loadTasks() {
+		if (!wikiId) return;
+
+		// Subscribe to tasks for this wiki (using wikiId as nodeId)
+		// Include resolved tasks since wiki displays all tasks in blocks
+		if (taskService.subscribeToNodeTasks) {
+			taskSubscriptionCleanup = taskService.subscribeToNodeTasks(
+				wikiId,
+				(updatedTasks) => {
+					// Replace map with fresh data from subscription
+					tasksMap = new Map(updatedTasks.map((t) => [t.id, t]));
+				},
+				undefined, // no projectSlug
+				true // includeResolved
+			);
+		} else {
+			const result = taskService.getNodeTasks(wikiId);
+			const tasksList = result instanceof Promise ? await result : result;
+			tasksMap = new Map(tasksList.map((t) => [t.id, t]));
 		}
 	}
 
@@ -91,11 +180,159 @@
 		scheduleAutosave();
 	}
 
-	function handleContentChange(e: Event) {
-		const target = e.target as HTMLTextAreaElement;
-		content = target.value;
+	function handleBlockUpdate(index: number, content: string) {
+		const block = blocks[index];
+		if (block.type === 'text') {
+			block.content = content;
+			blocks = [...blocks]; // Trigger reactivity
+			hasChanges = true;
+			scheduleAutosave();
+		}
+	}
+
+	function handleBlockEnter(index: number) {
+		// Insert a new text block after the current one
+		blocks = [
+			...blocks.slice(0, index + 1),
+			{ type: 'text', content: '' },
+			...blocks.slice(index + 1)
+		];
 		hasChanges = true;
 		scheduleAutosave();
+
+		// Focus the new block
+		requestAnimationFrame(() => {
+			const newBlockRef = blockRefs[index + 1];
+			if (newBlockRef) {
+				newBlockRef.focus();
+			}
+		});
+	}
+
+	function handleInsertBlock(index: number) {
+		// Insert a new text block at the given index
+		blocks = [
+			...blocks.slice(0, index),
+			{ type: 'text', content: '' },
+			...blocks.slice(index)
+		];
+		hasChanges = true;
+		scheduleAutosave();
+
+		// Focus the new block
+		requestAnimationFrame(() => {
+			const newBlockRef = blockRefs[index];
+			if (newBlockRef) {
+				newBlockRef.focus();
+			}
+		});
+	}
+
+	function handleBlockDelete(index: number) {
+		if (blocks.length <= 1) {
+			// Don't delete the last block, just clear it
+			blocks = [{ type: 'text', content: '' }];
+			return;
+		}
+
+		const block = blocks[index];
+
+		// If it's a task block, also delete the task
+		if (block.type === 'task') {
+			taskService.deleteTask(wikiId, block.taskId);
+		}
+
+		// Remove the block
+		blocks = [...blocks.slice(0, index), ...blocks.slice(index + 1)];
+		hasChanges = true;
+		scheduleAutosave();
+
+		// Focus the previous block (or first if we deleted the first)
+		requestAnimationFrame(() => {
+			const focusIndex = Math.max(0, index - 1);
+			const prevBlock = blocks[focusIndex];
+			if (prevBlock?.type === 'text') {
+				const prevBlockRef = blockRefs[focusIndex];
+				if (prevBlockRef) {
+					prevBlockRef.focus();
+				}
+			}
+		});
+	}
+
+	function handleCreateTask(index: number) {
+		// Store the index where the task block will be inserted
+		pendingTaskBlockIndex = index;
+		editingTask = null;
+		showTaskSidebar = true;
+	}
+
+	function handleEditTask(taskId: string) {
+		const task = getTask(taskId);
+		if (task) {
+			editingTask = task;
+			showTaskSidebar = true;
+		}
+	}
+
+	async function handleResolveTask(taskId: string) {
+		await taskService.resolveTask(wikiId, taskId);
+		// Update task locally to show resolved state immediately
+		const task = tasksMap.get(taskId);
+		if (task) {
+			tasksMap.set(taskId, { ...task, status: 'resolved' });
+			tasksMap = new Map(tasksMap); // Trigger reactivity
+		}
+	}
+
+	function handleTaskSidebarClose() {
+		showTaskSidebar = false;
+		editingTask = null;
+		pendingTaskBlockIndex = null;
+	}
+
+	async function handleTaskSave(task: Task) {
+		// Add/update task in local map
+		tasksMap.set(task.id, task);
+		tasksMap = new Map(tasksMap);
+
+		// If this was a new task, insert a task block
+		if (pendingTaskBlockIndex !== null) {
+			// Replace the empty text block with a task block
+			blocks = [
+				...blocks.slice(0, pendingTaskBlockIndex),
+				{ type: 'task', taskId: task.id },
+				{ type: 'text', content: '' },
+				...blocks.slice(pendingTaskBlockIndex + 1)
+			];
+			hasChanges = true;
+			scheduleAutosave();
+		}
+
+		handleTaskSidebarClose();
+	}
+
+	async function handleTaskDelete() {
+		if (editingTask) {
+			// Remove from local map
+			tasksMap.delete(editingTask.id);
+			tasksMap = new Map(tasksMap);
+
+			// Find and remove the task block
+			const taskBlockIndex = blocks.findIndex(
+				(b) => b.type === 'task' && b.taskId === editingTask!.id
+			);
+			if (taskBlockIndex !== -1) {
+				blocks = [...blocks.slice(0, taskBlockIndex), ...blocks.slice(taskBlockIndex + 1)];
+				if (blocks.length === 0) {
+					blocks = [{ type: 'text', content: '' }];
+				}
+				hasChanges = true;
+				scheduleAutosave();
+			}
+		}
+
+		handleTaskSidebarClose();
 	}
 
 	function scheduleAutosave() {
@@ -113,7 +350,7 @@
 		saving = true;
 		await wikiService.updateEntry(wikiId, {
 			title,
-			content
+			content: blocksToContent(blocks)
 		});
 		hasChanges = false;
 		saving = false;
@@ -142,7 +379,7 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="flex h-screen w-full flex-col bg-borg-white">
-	<!-- Header -->
+	<!-- Header - full width navbar -->
 	<div
 		class="flex h-16 shrink-0 items-center justify-between border-b border-black bg-borg-white px-6"
 	>
@@ -169,214 +406,131 @@
 		</button>
 	</div>
 
-	<!-- Content -->
-	{#if loading}
-		<div class="flex flex-1 items-center justify-center">
-			<div
-				class="h-8 w-8 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent"
-			></div>
-		</div>
-	{:else}
-		<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<!-- Title input -->
-			<div class="shrink-0 border-b border-neutral-400 px-6 py-4">
-				<input
-					type="text"
-					value={title}
-					oninput={handleTitleChange}
-					placeholder="Wiki Title"
-					class="w-full bg-transparent text-3xl font-bold text-black placeholder-zinc-400 outline-none"
-				/>
+	<!-- Content area with sidebar -->
+	<div class="flex min-h-0 flex-1">
+		<!-- Main content - fixed width to leave room for sidebar -->
+		<div class="flex flex-1 flex-col" style="max-width: calc(100% - 320px);">
+			<!-- Content -->
+			{#if loading}
+			<div class="flex flex-1 items-center justify-center">
+				<div
+					class="h-8 w-8 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent"
+				></div>
 			</div>
-
-			<!-- Editor / Preview split -->
-			<div class="flex min-h-0 flex-1">
-				<!-- Editor pane (left) -->
-				<div class="flex w-1/2 flex-col border-r border-neutral-400">
-					<div class="shrink-0 border-b border-neutral-400 bg-borg-beige px-4 py-2">
-						<span class="text-sm font-semibold tracking-wide uppercase">Markdown</span>
+		{:else}
+			<div class="flex min-h-0 flex-1 flex-col overflow-auto">
+				<div class="w-full max-w-3xl px-8 py-10 pl-16">
+					<!-- Title input -->
+					<div class="mb-2">
+						<input
+							type="text"
+							value={title}
+							oninput={handleTitleChange}
+							placeholder="Wiki Title"
+							class="w-full bg-transparent text-4xl font-bold text-black placeholder-zinc-400 outline-none"
+						/>
 					</div>
-					<div class="min-h-0 flex-1 overflow-auto p-6">
-						<textarea
-							value={content}
-							oninput={handleContentChange}
-							placeholder="Write your content using Markdown...
 
-# Heading 1
-## Heading 2
+					<!-- Wiki metadata -->
+					<div class="mb-6 flex items-center gap-2 text-xs text-zinc-400">
+						<span class="font-mono">{wikiId}</span>
+						<span>·</span>
+						<span>
+							{#if entry?.updatedAt}
+								Last edited {new Date(entry.updatedAt).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric',
+									hour: '2-digit',
+									minute: '2-digit'
+								})}
+							{:else if entry?.createdAt}
+								Created {new Date(entry.createdAt).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric'
+								})}
+							{/if}
+						</span>
+					</div>
 
-**Bold** and *italic* text
+					<!-- Blocks -->
+					<div class="flex flex-col">
+						{#each blocks as block, index (index)}
+							<!-- Add block divider -->
+							<button
+								onclick={() => handleInsertBlock(index)}
+								class="group/divider relative flex h-5 w-full items-center justify-center"
+							>
+								<div class="absolute left-0 right-0 h-px bg-transparent transition-colors group-hover/divider:bg-zinc-300"></div>
+								<div class="relative z-10 flex h-4 w-4 items-center justify-center rounded bg-borg-white text-transparent transition-all group-hover/divider:bg-zinc-200 group-hover/divider:text-zinc-500">
+									<Plus class="h-2.5 w-2.5" />
+								</div>
+							</button>
 
-- Bullet list
-- Another item
+							<!-- Block with number -->
+							<div class="relative flex">
+								<!-- Block number (always visible) -->
+								<div class="absolute -left-8 top-2 w-6 text-right text-xs text-zinc-300">
+									{index + 1}
+								</div>
 
-1. Numbered list
-2. Second item
+								<!-- Block content -->
+								<div class="flex-1">
+									{#if block.type === 'text'}
+										<WikiBlock
+											bind:this={blockRefs[index]}
+											content={block.content}
+											onUpdate={(content) => handleBlockUpdate(index, content)}
+											onEnter={() => handleBlockEnter(index)}
+											onDelete={() => handleBlockDelete(index)}
+											onCreateTask={() => handleCreateTask(index)}
+										/>
+									{:else if block.type === 'task'}
+										{@const task = getTask(block.taskId)}
+										{#if task}
+											<WikiTaskBlock
+												{task}
+												onEdit={() => handleEditTask(block.taskId)}
+												onResolve={() => handleResolveTask(block.taskId)}
+											/>
+										{:else}
+											<!-- Task not found, show placeholder -->
+											<div class="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+												Task not found (ID: {block.taskId})
+											</div>
+										{/if}
+									{/if}
+								</div>
+							</div>
+						{/each}
 
-[Link text](url)
-
-`inline code`
-
-```
-code block
-```"
-							class="h-full w-full resize-none bg-transparent text-lg leading-relaxed text-black placeholder-zinc-400 outline-none"
-						></textarea>
+						<!-- Add block divider at the end -->
+						<button
+							onclick={() => handleInsertBlock(blocks.length)}
+							class="group/divider relative flex h-5 w-full items-center justify-center"
+						>
+							<div class="absolute left-0 right-0 h-px bg-transparent transition-colors group-hover/divider:bg-zinc-300"></div>
+							<div class="relative z-10 flex h-4 w-4 items-center justify-center rounded bg-borg-white text-transparent transition-all group-hover/divider:bg-zinc-200 group-hover/divider:text-zinc-500">
+								<Plus class="h-2.5 w-2.5" />
+							</div>
+						</button>
 					</div>
 				</div>
-
-				<!-- Preview pane (right) -->
-				<div class="flex w-1/2 flex-col">
-					<div class="shrink-0 border-b border-neutral-400 bg-borg-beige px-4 py-2">
-						<span class="text-sm font-semibold tracking-wide uppercase">Preview</span>
-					</div>
-					<div class="prose min-h-0 flex-1 overflow-auto p-6">
-						{#if content}
-							{@html renderedContent}
-						{:else}
-							<p class="text-zinc-400 italic">Start writing to see the preview...</p>
-						{/if}
-					</div>
-				</div>
 			</div>
+		{/if}
 		</div>
-	{/if}
+
+		<!-- Task Sidebar - in the same flex container, under navbar -->
+		{#if showTaskSidebar}
+			<WikiTaskSidebar
+				wikiId={wikiId}
+				wikiTitle={title}
+				task={editingTask}
+				onClose={handleTaskSidebarClose}
+				onSave={handleTaskSave}
+				onDelete={handleTaskDelete}
+			/>
+		{/if}
+	</div>
 </div>
-
-<style>
-	/* Markdown preview styling */
-	:global(.prose) {
-		font-size: 1.125rem;
-		line-height: 1.75;
-		color: #000;
-	}
-
-	:global(.prose h1) {
-		font-size: 2.25rem;
-		font-weight: 700;
-		margin-top: 0;
-		margin-bottom: 1rem;
-		border-bottom: 1px solid #a1a1a1;
-		padding-bottom: 0.5rem;
-		color: #000;
-	}
-
-	:global(.prose h2) {
-		font-size: 1.75rem;
-		font-weight: 600;
-		margin-top: 1.5rem;
-		margin-bottom: 0.75rem;
-		color: #000;
-	}
-
-	:global(.prose h3) {
-		font-size: 1.375rem;
-		font-weight: 600;
-		margin-top: 1.25rem;
-		margin-bottom: 0.5rem;
-		color: #000;
-	}
-
-	:global(.prose p) {
-		margin-top: 0;
-		margin-bottom: 1rem;
-	}
-
-	:global(.prose ul),
-	:global(.prose ol) {
-		margin-top: 0;
-		margin-bottom: 1rem;
-		padding-left: 1.5rem;
-	}
-
-	:global(.prose li) {
-		margin-bottom: 0.25rem;
-	}
-
-	:global(.prose ul) {
-		list-style-type: disc;
-	}
-
-	:global(.prose ol) {
-		list-style-type: decimal;
-	}
-
-	:global(.prose code) {
-		background-color: #d7d3d0;
-		padding: 0.125rem 0.5rem;
-		border-radius: 0.25rem;
-		font-size: 1rem;
-		font-family: 'Google Sans Code', 'Roboto Mono', 'Courier', monospace;
-		color: #000;
-	}
-
-	:global(.prose pre) {
-		background-color: #1a1a1a;
-		color: #f3f3f1;
-		padding: 1rem;
-		border-radius: 0.5rem;
-		overflow-x: auto;
-		margin-top: 0;
-		margin-bottom: 1rem;
-		border: 1px solid #000;
-	}
-
-	:global(.prose pre code) {
-		background-color: transparent;
-		padding: 0;
-		color: #f3f3f1;
-	}
-
-	:global(.prose blockquote) {
-		border-left: 4px solid #000;
-		padding-left: 1rem;
-		margin-left: 0;
-		margin-right: 0;
-		font-style: italic;
-		color: #444;
-	}
-
-	:global(.prose a) {
-		color: #4d17f5;
-		text-decoration: underline;
-	}
-
-	:global(.prose a:hover) {
-		color: #8220fa;
-	}
-
-	:global(.prose strong) {
-		font-weight: 700;
-	}
-
-	:global(.prose hr) {
-		border: 0;
-		border-top: 1px solid #a1a1a1;
-		margin: 1.5rem 0;
-	}
-
-	:global(.prose table) {
-		width: 100%;
-		border-collapse: collapse;
-		margin-bottom: 1rem;
-	}
-
-	:global(.prose th),
-	:global(.prose td) {
-		border: 1px solid #000;
-		padding: 0.5rem 0.75rem;
-		text-align: left;
-	}
-
-	:global(.prose th) {
-		background-color: #edede9;
-		font-weight: 600;
-	}
-
-	:global(.prose img) {
-		max-width: 100%;
-		height: auto;
-		border-radius: 0.5rem;
-		border: 1px solid #000;
-	}
-</style>

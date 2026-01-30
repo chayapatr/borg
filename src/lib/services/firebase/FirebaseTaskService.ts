@@ -14,8 +14,8 @@ import {
 	type Unsubscribe 
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import type { Task, TaskWithContext, TaskCounts, PersonTaskCount } from '../../types/task';
-import type { ITaskService } from '../interfaces';
+import type { Task, TaskWithContext, TaskCounts, PersonTaskCount, TaskSourceType } from '../../types/task';
+import type { ITaskService, TaskSourceOptions } from '../interfaces';
 import { get } from 'svelte/store';
 import { authStore } from '../../stores/authStore';
 
@@ -28,12 +28,19 @@ export interface StoredTask {
 	createdAt: string;
 	updatedAt?: string;
 	status?: 'active' | 'resolved';
+	// Source type: 'project' or 'wiki'
+	sourceType: TaskSourceType;
+	// Project source fields
 	projectId: string;
 	projectSlug: string;
 	projectTitle: string;
 	nodeId: string;
 	nodeTitle: string;
 	nodeType: string;
+	// Wiki source fields
+	wikiId?: string;
+	wikiTitle?: string;
+	// Common fields
 	createdBy: string;
 	isOverdue: boolean;
 }
@@ -172,35 +179,77 @@ export class FirebaseTaskService implements ITaskService {
 		}));
 	}
 
-	async addTask(nodeId: string, task: Omit<Task, 'id' | 'createdAt'>, projectSlug?: string): Promise<void> {
+	async addTask(nodeId: string, task: Omit<Task, 'id' | 'createdAt'>, projectSlugOrOptions?: string | TaskSourceOptions): Promise<void> {
+		// Parse options - support both old string format and new options format
+		let options: TaskSourceOptions = {};
+		if (typeof projectSlugOrOptions === 'string') {
+			options = { projectSlug: projectSlugOrOptions };
+		} else if (projectSlugOrOptions) {
+			options = projectSlugOrOptions;
+		}
+
+		const now = new Date();
+		const isOverdue = task.dueDate ? new Date(task.dueDate) < now : false;
+
+		// Handle wiki-based tasks
+		if (options.wikiId) {
+			const storedTask: Omit<StoredTask, 'id'> = {
+				title: task.title,
+				assignee: task.assignee,
+				dueDate: task.dueDate || '',
+				notes: task.notes || '',
+				createdAt: now.toISOString(),
+				status: task.status || 'active',
+				sourceType: 'wiki',
+				// Empty project fields for wiki tasks
+				projectId: '',
+				projectSlug: '',
+				projectTitle: '',
+				nodeId: nodeId, // This will be the wikiId
+				nodeTitle: options.wikiTitle || 'Untitled Wiki',
+				nodeType: 'wiki',
+				// Wiki-specific fields
+				wikiId: options.wikiId,
+				wikiTitle: options.wikiTitle || 'Untitled Wiki',
+				createdBy: get(authStore).user?.uid || 'anonymous',
+				isOverdue
+			};
+
+			const docRef = await addDoc(collection(db, 'tasks'), storedTask);
+			await updateDoc(docRef, { id: docRef.id });
+			return;
+		}
+
+		// Handle project-based tasks (original logic)
+		const projectSlug = options.projectSlug;
 		if (!projectSlug) {
-			throw new Error('Project slug is required for Firebase task creation');
+			throw new Error('Project slug or wiki ID is required for task creation');
 		}
 
 		// We'll need project and node context - this would typically come from the calling component
 		// For now, we'll need to fetch project info
 		const projectQuery = query(collection(db, 'projects'), where('slug', '==', projectSlug));
 		const projectSnapshot = await getDocs(projectQuery);
-		
+
 		if (projectSnapshot.empty) {
 			throw new Error(`Project not found: ${projectSlug}`);
 		}
 
 		const projectData = projectSnapshot.docs[0].data();
 		const project = { id: projectSnapshot.docs[0].id, title: projectData.title || 'Untitled Project', ...projectData };
-		
+
 		// Get node info - use document ID directly instead of querying by field
 		console.log('FirebaseTaskService.addTask: Looking for node:', { projectId: project.id, nodeId });
-		
+
 		let nodeData = null;
 		try {
 			const nodeDocRef = doc(db, 'projects', project.id, 'nodes', nodeId);
 			const nodeSnapshot = await getDoc(nodeDocRef);
-			
-			console.log('FirebaseTaskService.addTask: Node query results:', { 
+
+			console.log('FirebaseTaskService.addTask: Node query results:', {
 				exists: nodeSnapshot.exists()
 			});
-			
+
 			nodeData = nodeSnapshot.exists() ? nodeSnapshot.data() : null;
 		} catch (error) {
 			console.warn('FirebaseTaskService.addTask: Error getting node:', error);
@@ -214,12 +263,9 @@ export class FirebaseTaskService implements ITaskService {
 			rawNodeData: nodeData
 		});
 
-		const now = new Date();
-		const isOverdue = task.dueDate ? new Date(task.dueDate) < now : false;
-
 		const nodeTitle = this.extractNodeTitle(nodeData?.nodeData, nodeData?.templateType);
 		const nodeType = nodeData?.templateType || 'unknown';
-		
+
 		console.log('FirebaseTaskService.addTask: Extracted node info:', {
 			nodeTitle,
 			nodeType,
@@ -234,6 +280,7 @@ export class FirebaseTaskService implements ITaskService {
 			notes: task.notes || '',
 			createdAt: now.toISOString(),
 			status: task.status || 'active',
+			sourceType: 'project',
 			projectId: project.id,
 			projectSlug: projectSlug,
 			projectTitle: project.title,
@@ -409,12 +456,20 @@ export class FirebaseTaskService implements ITaskService {
 	}
 
 	subscribeToNodeTasks(
-		nodeId: string, 
+		nodeId: string,
 		callback: (tasks: Task[]) => void,
-		projectSlug?: string
+		projectSlug?: string,
+		includeResolved?: boolean
 	): Unsubscribe {
 		let q;
-		if (projectSlug) {
+		if (includeResolved) {
+			// For wiki pages, include all tasks regardless of status
+			q = query(
+				collection(db, 'tasks'),
+				where('nodeId', '==', nodeId),
+				orderBy('createdAt', 'desc')
+			);
+		} else if (projectSlug) {
 			q = query(
 				collection(db, 'tasks'),
 				where('projectSlug', '==', projectSlug),
@@ -638,11 +693,14 @@ export class FirebaseTaskService implements ITaskService {
 			createdAt: storedTask.createdAt,
 			updatedAt: storedTask.updatedAt,
 			status: storedTask.status || 'active',
+			sourceType: storedTask.sourceType || 'project',
 			projectSlug: storedTask.projectSlug,
 			projectTitle: storedTask.projectTitle,
 			nodeId: storedTask.nodeId,
 			nodeTitle: storedTask.nodeTitle,
-			nodeType: storedTask.nodeType
+			nodeType: storedTask.nodeType,
+			wikiId: storedTask.wikiId,
+			wikiTitle: storedTask.wikiTitle
 		};
 	}
 }

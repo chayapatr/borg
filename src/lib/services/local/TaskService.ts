@@ -1,8 +1,11 @@
-import type { Task, TaskWithContext, TaskCounts, PersonTaskCount } from '../../types/task';
+import type { Task, TaskWithContext, TaskCounts, PersonTaskCount, TaskSourceType } from '../../types/task';
+import type { TaskSourceOptions } from '../interfaces/ITaskService';
 import { ProjectsService } from './ProjectsService';
 import { PeopleService } from './PeopleService';
 
 interface StoredTask extends Task {
+	// Source type: 'project' or 'wiki'
+	sourceType?: TaskSourceType;
 	// Context fields for efficient querying
 	projectId: string;
 	projectSlug: string;
@@ -10,9 +13,12 @@ interface StoredTask extends Task {
 	nodeId: string;
 	nodeTitle: string;
 	nodeType: string;
+	// Wiki source fields
+	wikiId?: string;
+	wikiTitle?: string;
 	createdBy?: string;
 	updatedAt?: string;
-	
+
 	// Computed fields for efficient filtering
 	isOverdue: boolean;
 }
@@ -174,11 +180,14 @@ export class TaskService {
 			createdAt: storedTask.createdAt,
 			updatedAt: storedTask.updatedAt,
 			status: storedTask.status || 'active',
+			sourceType: storedTask.sourceType || 'project',
 			projectSlug: storedTask.projectSlug,
 			projectTitle: storedTask.projectTitle,
 			nodeId: storedTask.nodeId,
 			nodeTitle: storedTask.nodeTitle,
-			nodeType: storedTask.nodeType
+			nodeType: storedTask.nodeType,
+			wikiId: storedTask.wikiId,
+			wikiTitle: storedTask.wikiTitle
 		};
 	}
 
@@ -305,7 +314,45 @@ export class TaskService {
 	}
 
 	// Add task to node
-	addTask(nodeId: string, task: Omit<Task, 'id' | 'createdAt'>, projectSlug?: string): void {
+	addTask(nodeId: string, task: Omit<Task, 'id' | 'createdAt'>, projectSlugOrOptions?: string | TaskSourceOptions): void {
+		// Parse options - support both old string format and new options format
+		let options: TaskSourceOptions = {};
+		if (typeof projectSlugOrOptions === 'string') {
+			options = { projectSlug: projectSlugOrOptions };
+		} else if (projectSlugOrOptions) {
+			options = projectSlugOrOptions;
+		}
+
+		const newTask: Task = {
+			...task,
+			id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			createdAt: new Date().toISOString(),
+			status: task.status || 'active'
+		};
+
+		// Handle wiki-based tasks
+		if (options.wikiId) {
+			const storedTask: StoredTask = {
+				...newTask,
+				sourceType: 'wiki',
+				projectId: '',
+				projectSlug: '',
+				projectTitle: '',
+				nodeId: nodeId,
+				nodeTitle: options.wikiTitle || 'Untitled Wiki',
+				nodeType: 'wiki',
+				wikiId: options.wikiId,
+				wikiTitle: options.wikiTitle || 'Untitled Wiki',
+				isOverdue: newTask.dueDate ? new Date(newTask.dueDate) < new Date() : false
+			};
+			const allTasks = this.getAllStoredTasks();
+			allTasks.push(storedTask);
+			this.saveStoredTasks(allTasks);
+			return;
+		}
+
+		// Handle project-based tasks (original logic)
+		let projectSlug = options.projectSlug;
 		if (!projectSlug) {
 			// Find the project containing this node
 			const projects = this.projectsService.getAllProjects();
@@ -326,13 +373,6 @@ export class TaskService {
 		if (!projectSlug) {
 			throw new Error(`Could not find project for node: ${nodeId}`);
 		}
-
-		const newTask: Task = {
-			...task,
-			id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-			createdAt: new Date().toISOString(),
-			status: task.status || 'active'
-		};
 
 		const storedTask = this.toStoredTask(newTask, projectSlug, nodeId);
 		const allTasks = this.getAllStoredTasks();
