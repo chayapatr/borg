@@ -72,8 +72,8 @@
 	// Autosave timer
 	let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-	// Parse content to blocks (handles text and task references)
-	// Note: page and project links are now inline within text blocks
+	// Parse content to blocks (just text blocks now)
+	// Note: page, project, and task links are now inline within text blocks
 	function contentToBlocks(content: string): Block[] {
 		if (!content) return [{ type: 'text', content: '' }];
 
@@ -84,15 +84,8 @@
 			const trimmed = line.trim();
 			if (!trimmed) continue;
 
-			// Check for task reference: [[task:taskId]]
-			const taskMatch = trimmed.match(/^\[\[task:([^\]]+)\]\]$/);
-			if (taskMatch) {
-				result.push({ type: 'task', taskId: taskMatch[1] });
-				continue;
-			}
-
-			// Page and project links are now inline - don't parse them as separate blocks
-			// They stay within the text content as [[page:id]] or [[project:slug]]
+			// All content is text blocks - page, project, and task links are inline
+			// They stay within the text content as [[page:id]], [[project:slug]], or [[task:id]]
 			result.push({ type: 'text', content: trimmed });
 		}
 
@@ -150,6 +143,27 @@
 			window.open(`/project/${projectSlug}`, '_blank');
 		};
 
+		// Setup task helpers for inline tasks
+		(window as any).__getTask = (taskId: string) => {
+			return getTask(taskId);
+		};
+		(window as any).__editTask = (taskId: string) => {
+			handleEditTask(taskId);
+		};
+		(window as any).__toggleTask = async (taskId: string) => {
+			const task = getTask(taskId);
+			if (task) {
+				if (task.status === 'resolved') {
+					// Unresolve task
+					await taskService.updateTask(wikiId, taskId, { status: 'active' });
+					tasksMap.set(taskId, { ...task, status: 'active' });
+					tasksMap = new Map(tasksMap);
+				} else {
+					await handleResolveTask(taskId);
+				}
+			}
+		};
+
 		return () => {
 			if (subscriptionCleanup) {
 				subscriptionCleanup();
@@ -163,6 +177,10 @@
 			// Cleanup navigation helpers
 			delete (window as any).__navigateToPage;
 			delete (window as any).__navigateToProject;
+			// Cleanup task helpers
+			delete (window as any).__getTask;
+			delete (window as any).__editTask;
+			delete (window as any).__toggleTask;
 		};
 	});
 
@@ -312,9 +330,10 @@
 		});
 	}
 
-	function handleCreateTask(index: number) {
-		// Store the index where the task block will be inserted
-		pendingTaskBlockIndex = index;
+	function handleCreateTask(callback: (taskId: string) => void) {
+		// Store the callback for when a task is created
+		(window as any).__taskCreateCallback = callback;
+		pendingTaskBlockIndex = null; // No longer inserting blocks
 		editingTask = null;
 		showTaskSidebar = true;
 	}
@@ -341,6 +360,7 @@
 		showTaskSidebar = false;
 		editingTask = null;
 		pendingTaskBlockIndex = null;
+		delete (window as any).__taskCreateCallback;
 	}
 
 	async function handleTaskSave(task: Task) {
@@ -348,7 +368,13 @@
 		tasksMap.set(task.id, task);
 		tasksMap = new Map(tasksMap);
 
-		// If this was a new task, insert a task block
+		// If this was a new task created inline, call the callback
+		const callback = (window as any).__taskCreateCallback;
+		if (callback) {
+			callback(task.id);
+		}
+
+		// If this was a new task from old block-based system, insert a task block
 		if (pendingTaskBlockIndex !== null) {
 			// Replace the empty text block with a task block
 			blocks = [
@@ -602,7 +628,7 @@
 											onUpdate={(content) => handleBlockUpdate(index, content)}
 											onEnter={() => handleBlockEnter(index)}
 											onDelete={() => handleBlockDelete(index)}
-											onCreateTask={() => handleCreateTask(index)}
+											onCreateTask={handleCreateTask}
 											onLinkPage={handleLinkPage}
 											onLinkProject={handleLinkProject}
 										/>

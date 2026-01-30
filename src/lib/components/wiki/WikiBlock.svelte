@@ -23,7 +23,7 @@
 		onEnter: () => void;
 		onDelete: () => void;
 		onFocus?: () => void;
-		onCreateTask?: () => void;
+		onCreateTask?: (callback: (taskId: string) => void) => void;
 		onLinkPage?: (callback: (pageId: string) => void) => void;
 		onLinkProject?: (callback: (projectSlug: string) => void) => void;
 	}
@@ -47,7 +47,7 @@
 		{ label: 'Quote', description: 'Blockquote', icon: Quote, prefix: '> ' },
 		{ label: 'Code', description: 'Code block', icon: Code, prefix: '```\n' },
 		{ label: 'Divider', description: 'Horizontal rule', icon: Minus, prefix: '---' },
-		{ label: 'Task', description: 'Create a task', icon: CheckSquare, prefix: '', action: 'task' },
+		{ label: 'Task', description: 'Create a task', icon: CheckSquare, prefix: '', action: 'task', inlineOnly: true },
 		{ label: 'Page', description: 'Link to a wiki page', icon: FileText, prefix: '', action: 'page', inlineOnly: true },
 		{ label: 'Project', description: 'Link to a project', icon: Folder, prefix: '', action: 'project', inlineOnly: true }
 	];
@@ -71,11 +71,19 @@
 		gfm: true
 	});
 
-	// Custom renderer to handle inline page/project links
+	// Custom renderer to handle inline page/project links and tasks
 	function renderContent(text: string): string {
 		// First, protect our wiki links from markdown processing by replacing them temporarily
 		const linkPlaceholders = new Map<string, string>();
 		let placeholderIndex = 0;
+
+		// Replace [[task:...]] with placeholders
+		text = text.replace(/\[\[task:([^\]]+)\]\]/g, (match, taskId) => {
+			const placeholder = `WIKITASKLINK${placeholderIndex}ENDLINK`;
+			linkPlaceholders.set(placeholder, taskId);
+			placeholderIndex++;
+			return placeholder;
+		});
 
 		// Replace [[page:...]] with placeholders using a format that won't be interpreted as markdown
 		text = text.replace(/\[\[page:([^\]]+)\]\]/g, (match, pageId) => {
@@ -98,7 +106,13 @@
 
 		// Now replace placeholders with actual HTML
 		linkPlaceholders.forEach((value, placeholder) => {
-			if (placeholder.startsWith('WIKIPAGELINK')) {
+			if (placeholder.startsWith('WIKITASKLINK')) {
+				const taskId = value;
+				html = html.replace(
+					placeholder,
+					`<span class="wiki-inline-task" data-task-id="${taskId}"><input type="checkbox" class="task-checkbox" data-task-id="${taskId}" /><span class="task-title" data-task-id="${taskId}">Loading...</span><span class="task-assignee" data-task-id="${taskId}"></span></span>`
+				);
+			} else if (placeholder.startsWith('WIKIPAGELINK')) {
 				const pageId = value;
 				html = html.replace(
 					placeholder,
@@ -293,11 +307,36 @@
 			return;
 		}
 
-		// Handle task action (still creates a new block)
+		// Handle task action (now inline)
 		if (cmd.action === 'task') {
-			editing = false;
-			editContent = '';
-			onCreateTask?.();
+			// Capture current content and position before sidebar opens
+			const currentContent = editContent;
+
+			onCreateTask?.((taskId: string) => {
+				// Insert [[task:taskId]] at cursor position using captured values
+				const before = currentContent.slice(0, commandStartPos);
+				const after = currentContent.slice(commandEndPos);
+				const inlineLink = `[[task:${taskId}]]`;
+				const newContent = before + inlineLink + after;
+
+				// Update content
+				editContent = newContent;
+				onUpdate(newContent);
+
+				// Re-enter editing mode and restore focus
+				requestAnimationFrame(() => {
+					editing = true;
+					requestAnimationFrame(() => {
+						if (textareaRef) {
+							textareaRef.focus();
+							const newCursorPos = commandStartPos + inlineLink.length;
+							textareaRef.selectionStart = newCursorPos;
+							textareaRef.selectionEnd = newCursorPos;
+							adjustTextareaHeight();
+						}
+					});
+				});
+			});
 			return;
 		}
 
@@ -348,11 +387,35 @@
 		startEditing();
 	}
 
-	// Handle clicks on inline links in preview mode
+	// Handle clicks on inline links and tasks in preview mode
 	function handlePreviewClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
-		const linkElement = target.closest('.wiki-inline-link');
 
+		// Check for task checkbox click (input element itself)
+		if (target.classList.contains('task-checkbox')) {
+			e.preventDefault();
+			e.stopPropagation();
+			const taskId = target.getAttribute('data-task-id');
+			if (taskId) {
+				(window as any).__toggleTask?.(taskId);
+			}
+			return true;
+		}
+
+		// Check for task title click
+		const taskElement = target.closest('.wiki-inline-task');
+		if (taskElement && !target.closest('.task-checkbox')) {
+			e.preventDefault();
+			e.stopPropagation();
+			const taskId = taskElement.getAttribute('data-task-id');
+			if (taskId) {
+				(window as any).__editTask?.(taskId);
+			}
+			return true;
+		}
+
+		// Check for page/project link click
+		const linkElement = target.closest('.wiki-inline-link');
 		if (linkElement) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -372,12 +435,58 @@
 		return false;
 	}
 
-	// Populate link titles after rendering
+	// Populate link titles and task info after rendering
 	onMount(() => {
 		const wikiService = ServiceFactory.createWikiService();
 		const projectsService = ServiceFactory.createProjectsService();
+		const taskService = ServiceFactory.createTaskService();
+		const peopleService = ServiceFactory.createPeopleService();
 
 		const interval = setInterval(async () => {
+			// Find all inline tasks and populate info
+			const taskElements = document.querySelectorAll('.wiki-inline-task[data-task-id]');
+			for (const taskEl of Array.from(taskElements)) {
+				const taskId = taskEl.getAttribute('data-task-id');
+				const titleEl = taskEl.querySelector('.task-title[data-task-id]');
+				const assigneeEl = taskEl.querySelector('.task-assignee[data-task-id]');
+				const checkboxEl = taskEl.querySelector('.task-checkbox[data-task-id]') as HTMLInputElement;
+
+				if (taskId) {
+					try {
+						// Get the task - need to find which wiki/project it belongs to
+						// For now, use window global to access parent's getTask function
+						const task = (window as any).__getTask?.(taskId);
+						if (task) {
+							// Always update checkbox state (not just on first load)
+							if (checkboxEl) {
+								checkboxEl.checked = task.status === 'resolved';
+							}
+
+							// Only update title and assignee on first load
+							if (titleEl && titleEl.textContent === 'Loading...') {
+								titleEl.textContent = task.title || 'Untitled task';
+
+								// Load assignee name if exists
+								if (task.assignee && assigneeEl) {
+									const result = peopleService.getPerson(task.assignee);
+									const person = result instanceof Promise ? await result : result;
+									if (person?.name) {
+										const firstName = person.name.split(' ')[0];
+										assigneeEl.textContent = `(${firstName})`;
+									}
+								}
+							}
+						} else if (titleEl && titleEl.textContent === 'Loading...') {
+							titleEl.textContent = 'Unknown task';
+						}
+					} catch {
+						if (titleEl && titleEl.textContent === 'Loading...') {
+							titleEl.textContent = 'Unknown task';
+						}
+					}
+				}
+			}
+
 			// Find all page links and populate titles
 			const pageLinks = document.querySelectorAll('.wiki-page-link .link-text[data-page-id]');
 			for (const linkText of Array.from(pageLinks)) {
@@ -636,6 +745,47 @@
 		height: auto;
 		border-radius: 0.5rem;
 		border: 1px solid #000;
+	}
+
+	/* Inline tasks */
+	.wiki-block :global(.wiki-inline-task) {
+		display: inline-flex !important;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.125rem 0;
+		cursor: pointer;
+	}
+
+	.wiki-block :global(.wiki-inline-task .task-checkbox) {
+		cursor: pointer;
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+	}
+
+	.wiki-block :global(.wiki-inline-task .task-title) {
+		font-weight: 500;
+		color: #000;
+	}
+
+	.wiki-block :global(.wiki-inline-task .task-assignee) {
+		font-size: 0.875rem;
+		color: #71717a;
+		font-weight: 400;
+	}
+
+	.wiki-block :global(.wiki-inline-task:hover .task-title) {
+		text-decoration: underline;
+	}
+
+	/* Completed task styling */
+	.wiki-block :global(.wiki-inline-task .task-checkbox:checked ~ .task-title) {
+		text-decoration: line-through;
+		color: #a1a1aa;
+	}
+
+	.wiki-block :global(.wiki-inline-task .task-checkbox:checked ~ .task-assignee) {
+		color: #d4d4d8;
 	}
 
 	/* Inline wiki links */
