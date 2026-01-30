@@ -142,7 +142,7 @@
 
 		<!-- Open wiki button -->
 		<button
-			class="mt-2 w-full rounded bg-borg-beige px-2 py-1 text-xs font-medium text-black transition-colors hover:bg-borg-brown"
+			class="mt-2 w-full rounded-lg bg-borg-brown/80 p-2 text-xs font-medium transition-colors hover:bg-borg-brown/60 focus:outline-none focus:ring-2 focus:ring-borg-blue"
 			onclick={handleOpenWiki}
 		>
 			{#if nodeData.wikiId}
