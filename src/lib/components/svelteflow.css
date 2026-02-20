@@ -1,5 +1,6 @@
 .svelte-flow {
 	--xy-background-color: #edede9;
+	overscroll-behavior-x: none;
 }
 
 /* Thicker outline for search-highlighted nodes */

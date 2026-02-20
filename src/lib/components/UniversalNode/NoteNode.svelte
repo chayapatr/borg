@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import { Trash2, Pencil, Bold, Lock, Unlock } from '@lucide/svelte';
+	import { Trash2, Pencil, Bold, Lock, Unlock, CheckCheck } from '@lucide/svelte';
 
 	let {
 		data,
@@ -57,6 +57,23 @@
 
 	// Determine opacity based on status
 	let nodeOpacity = $derived(nodeData.status === 'Done' ? 0.3 : 1);
+
+	function toggleDone(event: MouseEvent) {
+		event.stopPropagation();
+
+		const newStatus = nodeData.status === 'Done' ? undefined : 'Done';
+		const updatedNodeData = { ...nodeData, status: newStatus };
+
+		data.nodeData = updatedNodeData;
+
+		const updateEvent = new CustomEvent('nodeUpdate', {
+			detail: {
+				nodeId: id,
+				data: { nodeData: updatedNodeData }
+			}
+		});
+		document.dispatchEvent(updateEvent);
+	}
 
 	// Get background style based on selection and note style
 	let backgroundStyle = $derived.by(() => {
@@ -303,7 +320,7 @@
 		'Text Only'
 			? ''
 			: 'border border-black'}"
-		style="{backgroundStyle}; width: {width}px; height: {height}px; opacity: {nodeOpacity};"
+		style="{backgroundStyle}; width: {width}px; height: {height}px; opacity: {nodeOpacity}; transition: opacity 0.2s;"
 		onclick={handleNodeClick}
 	>
 		<!-- Post-it note content -->
@@ -348,6 +365,14 @@
 		<!-- Settings and Delete buttons for note nodes -->
 		<div class="absolute top-1 right-1 flex gap-1">
 			<div class="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+				<button
+					onclick={toggleDone}
+					aria-label={nodeData.status === 'Done' ? 'Mark as active' : 'Mark as done'}
+					class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-green-600 {nodeData.status === 'Done' ? 'text-green-600' : ''}"
+					title={nodeData.status === 'Done' ? 'Mark as active' : 'Mark as done'}
+				>
+					<CheckCheck class="h-3 w-3" />
+				</button>
 				<button
 					onclick={toggleFontWeight}
 					aria-label="Toggle font weight"

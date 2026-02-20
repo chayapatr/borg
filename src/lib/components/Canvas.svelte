@@ -148,6 +148,19 @@
 		}
 	}
 
+	// Delete all selected nodes
+	async function deleteSelectedNodes() {
+		if (selectedNodes.length === 0) return;
+		if (!confirm(`Delete ${selectedNodes.length} selected node${selectedNodes.length > 1 ? 's' : ''}?`)) return;
+
+		for (const node of selectedNodes) {
+			nodesService.deleteNode(node.id);
+		}
+
+		selectedNodes = [];
+		skipNextAutoSave = true;
+	}
+
 	// Convert all selected nodes to a specific status
 	async function convertSelectedToStatus(status: 'To Do' | 'Doing' | 'Done') {
 		if (selectedNodesWithStatus.length === 0) return;
@@ -1092,30 +1105,39 @@
 			onShowStickers={handleShowStickers}
 		/>
 
-		<!-- Status Conversion Buttons -->
-		{#if selectedNodesWithStatus.length > 0}
+		<!-- Bulk Action Buttons -->
+		{#if selectedNodes.length > 0}
 			<div class="absolute bottom-8 left-1/2 z-30 -translate-x-1/2">
 				<div class="flex gap-3">
+					{#if selectedNodesWithStatus.length > 0}
+						<button
+							onclick={() => convertSelectedToStatus('To Do')}
+							class="flex items-center gap-2 rounded-lg border border-black bg-purple-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-purple-400 hover:shadow-xl"
+						>
+							<span>📚</span>
+							<span>Todo</span>
+						</button>
+						<button
+							onclick={() => convertSelectedToStatus('Doing')}
+							class="flex items-center gap-2 rounded-lg border border-black bg-sky-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-sky-400 hover:shadow-xl"
+						>
+							<span>🏃</span>
+							<span>Doing</span>
+						</button>
+						<button
+							onclick={() => convertSelectedToStatus('Done')}
+							class="flex items-center gap-2 rounded-lg border border-black bg-green-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-green-400 hover:shadow-xl"
+						>
+							<span>🌟</span>
+							<span>Done!</span>
+						</button>
+					{/if}
 					<button
-						onclick={() => convertSelectedToStatus('To Do')}
-						class="flex items-center gap-2 rounded-lg border border-black bg-purple-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-purple-400 hover:shadow-xl"
+						onclick={deleteSelectedNodes}
+						class="flex items-center gap-2 rounded-lg border border-black bg-red-400 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-red-500 hover:shadow-xl"
 					>
-						<span>📚</span>
-						<span>Todo</span>
-					</button>
-					<button
-						onclick={() => convertSelectedToStatus('Doing')}
-						class="flex items-center gap-2 rounded-lg border border-black bg-sky-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-sky-400 hover:shadow-xl"
-					>
-						<span>🏃</span>
-						<span>Doing</span>
-					</button>
-					<button
-						onclick={() => convertSelectedToStatus('Done')}
-						class="flex items-center gap-2 rounded-lg border border-black bg-green-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-green-400 hover:shadow-xl"
-					>
-						<span>🌟</span>
-						<span>Done!</span>
+						<span>🗑️</span>
+						<span>({selectedNodes.length})</span>
 					</button>
 				</div>
 			</div>
