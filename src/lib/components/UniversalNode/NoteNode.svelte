@@ -61,8 +61,12 @@
 	function toggleDone(event: MouseEvent) {
 		event.stopPropagation();
 
-		const newStatus = nodeData.status === 'Done' ? undefined : 'Done';
-		const updatedNodeData = { ...nodeData, status: newStatus };
+		const updatedNodeData = { ...nodeData } as any;
+		if (nodeData.status === 'Done') {
+			delete updatedNodeData.status;
+		} else {
+			updatedNodeData.status = 'Done';
+		}
 
 		data.nodeData = updatedNodeData;
 
@@ -312,9 +316,9 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<div>
+<div class="group relative">
 	<div
-		class="group relative cursor-pointer rounded-lg p-1 {isResizing || isEditingNote
+		class="relative cursor-pointer rounded-lg p-1 {isResizing || isEditingNote
 			? ''
 			: 'transition-all duration-200'} {isEditingNote ? 'border-2 shadow-lg' : ''} {noteStyle ===
 		'Text Only'
@@ -366,14 +370,6 @@
 		<div class="absolute top-1 right-1 flex gap-1">
 			<div class="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
 				<button
-					onclick={toggleDone}
-					aria-label={nodeData.status === 'Done' ? 'Mark as active' : 'Mark as done'}
-					class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-green-600 {nodeData.status === 'Done' ? 'text-green-600' : ''}"
-					title={nodeData.status === 'Done' ? 'Mark as active' : 'Mark as done'}
-				>
-					<CheckCheck class="h-3 w-3" />
-				</button>
-				<button
 					onclick={toggleFontWeight}
 					aria-label="Toggle font weight"
 					class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-gray-800 {fontWeight ===
@@ -391,10 +387,7 @@
 					<Pencil class="h-3 w-3" />
 				</button>
 				<button
-					onclick={(event) => {
-						event.stopPropagation();
-						handleDelete(event);
-					}}
+					onclick={(event) => { event.stopPropagation(); handleDelete(event); }}
 					aria-label="Delete note"
 					class="rounded p-1 text-gray-600 hover:bg-white/50 hover:text-red-600"
 				>

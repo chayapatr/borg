@@ -102,7 +102,15 @@
 	// Selection state
 	let selectedNodes = $state<Node[]>([]);
 	let selectedNodesWithStatus = $derived(
-		selectedNodes.filter((node) => node.data?.nodeData?.status !== undefined)
+		selectedNodes.filter(
+			(node) => node.data?.nodeData?.status !== undefined && node.data?.templateType !== 'note'
+		)
+	);
+	let selectedNoteNodes = $derived(
+		selectedNodes.filter((node) => node.data?.templateType === 'note')
+	);
+	let allSelectedNotesDone = $derived(
+		selectedNoteNodes.length > 0 && selectedNoteNodes.every((n) => n.data?.nodeData?.status === 'Done')
 	);
 
 	// Project sync optimization
@@ -158,6 +166,24 @@
 		}
 
 		selectedNodes = [];
+		skipNextAutoSave = true;
+	}
+
+	// Toggle Done status for all selected note nodes
+	async function toggleSelectedNotesDone() {
+		if (selectedNoteNodes.length === 0) return;
+
+		for (const node of selectedNoteNodes) {
+			const nodeData = { ...(node.data.nodeData || {}) } as any;
+			if (allSelectedNotesDone) {
+				delete nodeData.status;
+			} else {
+				nodeData.status = 'Done';
+			}
+			await nodesService.updateNode(node.id, {
+				data: { ...node.data, nodeData }
+			});
+		}
 		skipNextAutoSave = true;
 	}
 
@@ -1130,6 +1156,15 @@
 						>
 							<span>🌟</span>
 							<span>Done!</span>
+						</button>
+					{/if}
+					{#if selectedNoteNodes.length > 0}
+						<button
+							onclick={toggleSelectedNotesDone}
+							class="flex items-center gap-2 rounded-lg border border-black px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:shadow-xl {allSelectedNotesDone ? 'bg-green-400 hover:bg-green-300' : 'bg-green-200 hover:bg-green-300'}"
+						>
+							<span>✓</span>
+							<span>{allSelectedNotesDone ? 'Undone' : 'Done'}</span>
 						</button>
 					{/if}
 					<button
