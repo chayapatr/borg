@@ -1,9 +1,9 @@
 <script lang="ts">
 	import {
-		TimelineService,
 		timelineTemplates,
+		getTimelineTemplate,
 		type TimelineEvent
-	} from '../../services/local/TimelineService';
+	} from '../../types/timeline';
 	import FieldRenderer from '../fields/FieldRenderer.svelte';
 
 	interface Props {
@@ -15,7 +15,6 @@
 
 	let { onAdd, onClose, editingEvent = undefined, onUpdate = undefined } = $props<Props>();
 
-	let timelineService = new TimelineService();
 	let selectedTemplateType = $state(editingEvent?.templateType || 'event');
 	let isLoading = $state(false);
 
@@ -31,10 +30,10 @@
 	);
 
 	// Get all available templates
-	const templates = timelineService.getAllTemplates();
+	const templates = Object.values(timelineTemplates);
 
 	// Get current template and its fields
-	const currentTemplate = $derived(timelineService.getTemplate(selectedTemplateType));
+	const currentTemplate = $derived(getTimelineTemplate(selectedTemplateType));
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();

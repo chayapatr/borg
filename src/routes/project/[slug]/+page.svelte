@@ -16,7 +16,6 @@
 	let taskService: ITaskService;
 	let project = $state<any>(null);
 	let loading = $state(true);
-	let statusCounts = $state({ todo: 0, doing: 0, done: 0 });
 	let showTaskSidebar = $state(false);
 	let projectTasks = $state<TaskWithContext[]>([]);
 	let taskSubscriptionCleanup: (() => void) | null = null;
@@ -62,7 +61,6 @@
 			return;
 		}
 
-		await updateStatusCounts();
 		await loadProjectTasks();
 		loading = false;
 	}
@@ -92,12 +90,6 @@
 		}
 	}
 
-	async function updateStatusCounts() {
-		if (projectSlug && projectsService) {
-			statusCounts = await projectsService.getProjectStatusCounts(projectSlug);
-		}
-	}
-
 	// Refresh project data periodically to show updated node count and status counts
 	$effect(() => {
 		if (projectSlug && projectsService && !loading) {
@@ -120,13 +112,11 @@
 
 	// Handle project update from Canvas component
 	async function handleProjectUpdate() {
-		// Refresh project data and status counts
 		if (projectSlug && projectsService) {
 			const updatedProject = await projectsService.getProject(projectSlug);
 			if (updatedProject) {
 				project = updatedProject;
 			}
-			await updateStatusCounts();
 		}
 	}
 </script>
@@ -165,31 +155,7 @@
 				</div>
 			</div>
 			<div class="flex items-center gap-4">
-				<!-- Status Counts -->
-				<div class="flex items-center gap-3">
-					<div class="flex items-center gap-1">
-						<span class="text-xs text-black">To Do</span>
-						<span class="rounded-full border border-black bg-purple-400 px-2 py-1 text-xs"
-							>{statusCounts.todo}</span
-						>
-					</div>
-					<div class="flex items-center gap-1">
-						<span class="text-xs text-black">Doing</span>
-						<span class="rounded-full border border-black bg-blue-400 px-2 py-1 text-xs"
-							>{statusCounts.doing}</span
-						>
-					</div>
-					<div class="flex items-center gap-1">
-						<span class="text-xs text-black">Done</span>
-						<span class="rounded-full border border-black bg-green-400 px-2 py-1 text-xs"
-							>{statusCounts.done}</span
-						>
-					</div>
-				</div>
-
-				<div class="h-4 w-px bg-black"></div>
-
-				<button
+	<button
 					onclick={() => {
 						showTaskSidebar = !showTaskSidebar;
 						if (showTaskSidebar) {
@@ -232,7 +198,6 @@
 					onClose={() => (showTaskSidebar = false)}
 					onTasksUpdated={async () => {
 						await loadProjectTasks();
-						await updateStatusCounts();
 					}}
 				/>
 			{/if}

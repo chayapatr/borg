@@ -1,4 +1,4 @@
-import type { Person, GlobalPerson } from '../local/PeopleService';
+import type { Person, GlobalPerson } from '../../types/people';
 
 export interface IPeopleService {
 	getProjectPeople(projectSlug: string): Promise<Person[]> | Person[];

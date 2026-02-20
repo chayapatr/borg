@@ -102,15 +102,10 @@
 	// Selection state
 	let selectedNodes = $state<Node[]>([]);
 	let selectedNodesWithStatus = $derived(
-		selectedNodes.filter(
-			(node) => node.data?.nodeData?.status !== undefined && node.data?.templateType !== 'note'
-		)
+		selectedNodes.filter((node) => node.data?.templateType !== 'sticker' && node.data?.templateType !== 'image' && node.data?.templateType !== 'iframe')
 	);
-	let selectedNoteNodes = $derived(
-		selectedNodes.filter((node) => node.data?.templateType === 'note')
-	);
-	let allSelectedNotesDone = $derived(
-		selectedNoteNodes.length > 0 && selectedNoteNodes.every((n) => n.data?.nodeData?.status === 'Done')
+	let allSelectedDone = $derived(
+		selectedNodesWithStatus.length > 0 && selectedNodesWithStatus.every((n) => n.data?.nodeData?.status === 'Done')
 	);
 
 	// Project sync optimization
@@ -169,13 +164,13 @@
 		skipNextAutoSave = true;
 	}
 
-	// Toggle Done status for all selected note nodes
-	async function toggleSelectedNotesDone() {
-		if (selectedNoteNodes.length === 0) return;
+	// Toggle Done status for all selected nodes
+	async function toggleSelectedDone() {
+		if (selectedNodesWithStatus.length === 0) return;
 
-		for (const node of selectedNoteNodes) {
+		for (const node of selectedNodesWithStatus) {
 			const nodeData = { ...(node.data.nodeData || {}) } as any;
-			if (allSelectedNotesDone) {
+			if (allSelectedDone) {
 				delete nodeData.status;
 			} else {
 				nodeData.status = 'Done';
@@ -184,32 +179,8 @@
 				data: { ...node.data, nodeData }
 			});
 		}
-		skipNextAutoSave = true;
-	}
 
-	// Convert all selected nodes to a specific status
-	async function convertSelectedToStatus(status: 'To Do' | 'Doing' | 'Done') {
-		if (selectedNodesWithStatus.length === 0) return;
-
-		for (const node of selectedNodesWithStatus) {
-			const updatedNodeData = {
-				...node.data.nodeData,
-				status: status
-			};
-
-			await nodesService.updateNode(node.id, {
-				data: {
-					...node.data,
-					nodeData: updatedNodeData
-				}
-			});
-		}
-
-		// Trigger project update if there's a handler
-		if (onProjectUpdate) {
-			onProjectUpdate();
-		}
-
+		if (onProjectUpdate) onProjectUpdate();
 		skipNextAutoSave = true;
 	}
 
@@ -1137,34 +1108,11 @@
 				<div class="flex gap-3">
 					{#if selectedNodesWithStatus.length > 0}
 						<button
-							onclick={() => convertSelectedToStatus('To Do')}
-							class="flex items-center gap-2 rounded-lg border border-black bg-purple-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-purple-400 hover:shadow-xl"
-						>
-							<span>📚</span>
-							<span>Todo</span>
-						</button>
-						<button
-							onclick={() => convertSelectedToStatus('Doing')}
-							class="flex items-center gap-2 rounded-lg border border-black bg-sky-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-sky-400 hover:shadow-xl"
-						>
-							<span>🏃</span>
-							<span>Doing</span>
-						</button>
-						<button
-							onclick={() => convertSelectedToStatus('Done')}
-							class="flex items-center gap-2 rounded-lg border border-black bg-green-300 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-green-400 hover:shadow-xl"
+							onclick={toggleSelectedDone}
+							class="flex items-center gap-2 rounded-lg border border-black px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:shadow-xl {allSelectedDone ? 'bg-green-400 hover:bg-green-300' : 'bg-green-200 hover:bg-green-300'}"
 						>
 							<span>🌟</span>
-							<span>Done!</span>
-						</button>
-					{/if}
-					{#if selectedNoteNodes.length > 0}
-						<button
-							onclick={toggleSelectedNotesDone}
-							class="flex items-center gap-2 rounded-lg border border-black px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:shadow-xl {allSelectedNotesDone ? 'bg-green-400 hover:bg-green-300' : 'bg-green-200 hover:bg-green-300'}"
-						>
-							<span>✓</span>
-							<span>{allSelectedNotesDone ? 'Undone' : 'Done'}</span>
+							<span>{allSelectedDone ? 'Undone' : 'Done'}</span>
 						</button>
 					{/if}
 					<button

@@ -59,7 +59,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'status',
 				label: 'Status',
 				type: 'status',
-				options: ['To Do', 'Doing', 'Done']
+				options: ['Done']
 			}
 		]
 	},
@@ -86,7 +86,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'status',
 				label: 'Status',
 				type: 'status',
-				options: ['To Do', 'Doing', 'Done']
+				options: ['Done']
 			}
 		]
 	},
@@ -107,7 +107,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'status',
 				label: 'Status',
 				type: 'status',
-				options: ['To Do', 'Doing', 'Done']
+				options: ['Done']
 			},
 			{
 				id: 'publicationStatus',
@@ -134,7 +134,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'status',
 				label: 'Status',
 				type: 'status',
-				options: ['To Do', 'Doing', 'Done']
+				options: ['Done']
 			}
 		]
 	},
@@ -154,7 +154,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'status',
 				label: 'Status',
 				type: 'status',
-				options: ['To Do', 'Doing', 'Done']
+				options: ['Done']
 			},
 			{
 				id: 'notes',
@@ -187,7 +187,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'status',
 				label: 'Status',
 				type: 'status',
-				options: ['To Do', 'Doing', 'Done']
+				options: ['Done']
 			}
 		]
 	},
@@ -244,7 +244,7 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 				id: 'status',
 				label: 'Status',
 				type: 'status',
-				options: ['To Do', 'Doing', 'Done']
+				options: ['Done']
 			}
 		]
 	},

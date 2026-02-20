@@ -14,7 +14,7 @@ import {
 	type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import type { Project } from '../local/ProjectsService';
+import type { Project } from '../../types/project';
 import type { IProjectsService } from '../interfaces';
 import { authStore } from '../../stores/authStore';
 import { get } from 'svelte/store';

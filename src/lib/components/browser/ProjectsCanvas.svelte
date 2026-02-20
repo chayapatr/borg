@@ -20,7 +20,7 @@
 	import StickerPanel from '../stickers/StickerPanel.svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import type { INodesService } from '../../services/interfaces';
-	import type { Project } from '../../services/local/ProjectsService';
+	import type { Project } from '$lib/types/project';
 	import { getTemplate } from '../../templates';
 	import { authStore } from '../../stores/authStore';
 	import {
@@ -228,7 +228,7 @@
 					templateType: 'project',
 					nodeData: {
 						title: project.title,
-						status: project.status || 'To Do',
+						status: project.status || undefined,
 						collaborators: project.collaborators || [],
 						website: project.website || '',
 						projectId: project.id,

@@ -1,4 +1,4 @@
-import type { TimelineEvent, TimelineTemplate } from '../local/TimelineService';
+import type { TimelineEvent, TimelineTemplate } from '../../types/timeline';
 
 export interface ITimelineService {
 	getAllEvents(): Promise<TimelineEvent[]> | TimelineEvent[];

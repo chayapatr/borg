@@ -8,12 +8,6 @@ import type {
 	IUserService,
 	IWikiService
 } from './interfaces';
-import { ProjectsService } from './local/ProjectsService';
-import { TaskService } from './local/TaskService';
-import { PeopleService } from './local/PeopleService';
-import { TimelineService } from './local/TimelineService';
-import { NodesService } from './local/NodesService';
-import { UserService } from './local/UserService';
 import { FirebaseProjectsService } from './firebase/FirebaseProjectsService';
 import { FirebaseTaskService } from './firebase/FirebaseTaskService';
 import { FirebaseTimelineService } from './firebase/FirebaseTimelineService';
@@ -22,44 +16,23 @@ import { FirebasePeopleService } from './firebase/FirebasePeopleService';
 import { FirebaseStickerService } from './firebase/FirebaseStickerService';
 import { FirebaseUserService } from './firebase/FirebaseUserService';
 import { FirebaseWikiService } from './firebase/FirebaseWikiService';
-import { WikiService } from './local/WikiService';
 import type { Node, Edge } from '@xyflow/svelte';
 
 export class ServiceFactory {
-	private static getServiceMode(): 'local' | 'firebase' {
-		return import.meta.env.VITE_SERVICE_MODE === 'firebase' ? 'firebase' : 'local';
-	}
-
 	static createProjectsService(): IProjectsService {
-		const mode = this.getServiceMode();
-		if (mode === 'firebase') {
-			return new FirebaseProjectsService();
-		}
-		return new ProjectsService();
+		return new FirebaseProjectsService();
 	}
 
 	static createTaskService(): ITaskService {
-		const mode = this.getServiceMode();
-		if (mode === 'firebase') {
-			return new FirebaseTaskService();
-		}
-		return new TaskService();
+		return new FirebaseTaskService();
 	}
 
 	static createPeopleService(): IPeopleService {
-		const mode = this.getServiceMode();
-		if (mode === 'firebase') {
-			return new FirebasePeopleService();
-		}
-		return new PeopleService();
+		return new FirebasePeopleService();
 	}
 
 	static createTimelineService(projectId?: string): ITimelineService {
-		const mode = this.getServiceMode();
-		if (mode === 'firebase') {
-			return new FirebaseTimelineService(projectId);
-		}
-		return new TimelineService();
+		return new FirebaseTimelineService(projectId);
 	}
 
 	static createNodesService(
@@ -70,46 +43,25 @@ export class ServiceFactory {
 		getEdges: () => Edge[],
 		projectSlug?: string
 	): INodesService {
-		const mode = this.getServiceMode();
-		if (mode === 'firebase') {
-			return new FirebaseNodesService(
-				projectId,
-				setNodes,
-				getNodes,
-				setEdges,
-				getEdges,
-				projectSlug
-			);
-		}
-		return new NodesService(setNodes, getNodes, setEdges, getEdges, projectSlug);
-	}
-
-	static isUsingFirebase(): boolean {
-		return this.getServiceMode() === 'firebase';
+		return new FirebaseNodesService(
+			projectId,
+			setNodes,
+			getNodes,
+			setEdges,
+			getEdges,
+			projectSlug
+		);
 	}
 
 	static createStickerService(): IStickerService {
-		// Stickers always use Firebase Storage for images, regardless of service mode
 		return new FirebaseStickerService();
 	}
 
 	static createUserService(): IUserService {
-		const mode = this.getServiceMode();
-		if (mode === 'firebase') {
-			return new FirebaseUserService();
-		}
-		return new UserService();
-	}
-
-	static getCurrentMode(): 'local' | 'firebase' {
-		return this.getServiceMode();
+		return new FirebaseUserService();
 	}
 
 	static createWikiService(): IWikiService {
-		const mode = this.getServiceMode();
-		if (mode === 'firebase') {
-			return new FirebaseWikiService();
-		}
-		return new WikiService();
+		return new FirebaseWikiService();
 	}
 }

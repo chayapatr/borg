@@ -15,9 +15,6 @@
 
 	function getStatusColor(status: string): string {
 		const statusColors: Record<string, string> = {
-			// Universal statuses (To Do/Doing/Done)
-			'To Do': 'bg-purple-400 text-black',
-			Doing: 'bg-sky-400 text-black',
 			Done: 'bg-green-400 text-black',
 
 			// Publication statuses for papers

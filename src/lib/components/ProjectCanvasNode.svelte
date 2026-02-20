@@ -3,7 +3,7 @@
 	import { CircleDashed, PencilRuler, CheckCircle, Shield } from '@lucide/svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
 	import type { ITaskService, IProjectsService, IPeopleService } from '../services/interfaces';
-	import type { Person } from '../services/local/PeopleService';
+	import type { Person } from '$lib/types/people';
 
 	let { data, id } = $props<{ data: any; id: string }>();
 

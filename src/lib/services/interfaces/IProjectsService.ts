@@ -1,4 +1,4 @@
-import type { Project } from '../local/ProjectsService';
+import type { Project } from '../../types/project';
 
 export interface IProjectsService {
 	getAllProjects(): Promise<Project[]> | Project[];

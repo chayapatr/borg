@@ -8,8 +8,6 @@
 		StickyNote,
 		Link,
 		Square,
-		CircleDashed,
-		PencilRuler,
 		CheckCircle,
 		Lock,
 		Unlock
@@ -28,8 +26,6 @@
 	// Determine border color based on status
 	let borderColor = $derived.by(() => {
 		const status = nodeData.status;
-		if (status === 'To Do') return '#9333ea'; // purple-600
-		if (status === 'Doing') return '#0284c7'; // sky-600
 		if (status === 'Done') return '#16a34a'; // green-600
 		return '#3f3f46'; // zinc-700 - default
 	});
@@ -75,11 +71,7 @@
 
 		// Get color based on status
 		let color;
-		if (status === 'To Do')
-			color = '#9333ea'; // purple-600
-		else if (status === 'Doing')
-			color = '#0284c7'; // sky-600
-		else if (status === 'Done')
+		if (status === 'Done')
 			color = '#16a34a'; // green-600
 		else color = '#374151'; // gray-700 - default
 
@@ -88,36 +80,20 @@
 
 	// Get status styling for project nodes
 	function getStatusStyling(status: string) {
-		switch (status) {
-			case 'To Do':
-				return {
-					icon: CircleDashed,
-					color: '#9333ea',
-					bgColor: 'bg-purple-100',
-					textColor: 'text-purple-800'
-				};
-			case 'Doing':
-				return {
-					icon: PencilRuler,
-					color: '#0284c7',
-					bgColor: 'bg-sky-100',
-					textColor: 'text-sky-800'
-				};
-			case 'Done':
-				return {
-					icon: CheckCircle,
-					color: '#16a34a',
-					bgColor: 'bg-green-100',
-					textColor: 'text-green-800'
-				};
-			default:
-				return {
-					icon: null,
-					color: '#374151',
-					bgColor: 'bg-gray-100',
-					textColor: 'text-gray-800'
-				};
+		if (status === 'Done') {
+			return {
+				icon: CheckCircle,
+				color: '#16a34a',
+				bgColor: 'bg-green-100',
+				textColor: 'text-green-800'
+			};
 		}
+		return {
+			icon: null,
+			color: '#374151',
+			bgColor: 'bg-gray-100',
+			textColor: 'text-gray-800'
+		};
 	}
 
 	function handleDelete(event: MouseEvent) {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Person } from '../../services/local/PeopleService';
+	import type { Person } from '$lib/types/people';
 	import type { IPeopleService } from '../../services/interfaces/IPeopleService';
 	import type { ITaskService } from '../../services/interfaces/ITaskService';
 	import AddPersonModal from './AddPersonModal.svelte';

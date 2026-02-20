@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ITimelineService } from '../../services/interfaces/ITimelineService';
-	import type { TimelineEvent } from '../../services/local/TimelineService';
+	import type { TimelineEvent } from '$lib/types/timeline';
 	import AddTimelineEventModal from './AddTimelineEventModal.svelte';
 	import { CalendarPlus, Calendar, DollarSign, Clock, Fish } from '@lucide/svelte';
 

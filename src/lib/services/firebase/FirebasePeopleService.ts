@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { getAuth } from 'firebase/auth';
-import type { Person, GlobalPerson } from '../local/PeopleService';
+import type { Person, GlobalPerson } from '../../types/people';
 import type { IPeopleService } from '../interfaces/IPeopleService';
 
 export class FirebasePeopleService implements IPeopleService {

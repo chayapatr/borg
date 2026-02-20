@@ -157,8 +157,6 @@
 	// Determine border color based on status
 	let borderColor = $derived.by(() => {
 		const status = nodeData.status;
-		if (status === 'To Do') return '#9333ea'; // purple-600
-		if (status === 'Doing') return '#0284c7'; // sky-600
 		if (status === 'Done') return '#16a34a'; // green-600
 		return '#3f3f46'; // zinc-700 - default
 	});

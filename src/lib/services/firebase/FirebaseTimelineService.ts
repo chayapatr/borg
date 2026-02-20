@@ -11,8 +11,8 @@ import {
 	type Unsubscribe 
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import type { TimelineEvent, TimelineTemplate } from '../local/TimelineService';
-import { getTimelineTemplate, timelineTemplates } from '../local/TimelineService';
+import type { TimelineEvent, TimelineTemplate } from '../../types/timeline';
+import { getTimelineTemplate, timelineTemplates } from '../../types/timeline';
 import type { ITimelineService } from '../interfaces';
 import { get } from 'svelte/store';
 import { authStore } from '../../stores/authStore';
