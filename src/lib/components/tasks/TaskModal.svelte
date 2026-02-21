@@ -84,7 +84,7 @@
 </script>
 
 <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-	<div class="w-full max-w-md rounded-lg border border-black bg-borg-beige p-6">
+	<div class="w-full max-w-md rounded-lg border border-zinc-200 bg-borg-beige p-6">
 		<div class="mb-4 flex items-center justify-between">
 			<h2 class="text-lg font-semibold text-black">{modalTitle}</h2>
 			<button
@@ -105,7 +105,7 @@
 					type="text"
 					bind:value={title}
 					placeholder="Enter task description..."
-					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
+					class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
 					disabled={isLoading}
 					required
 				/>
@@ -118,7 +118,7 @@
 				<select
 					id="assignee"
 					bind:value={assignee}
-					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none"
+					class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none"
 					disabled={isLoading}
 				>
 					<option value="">Unassigned</option>
@@ -134,7 +134,7 @@
 					id="dueDate"
 					type="date"
 					bind:value={dueDate}
-					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none"
+					class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-black focus:ring-2 focus:ring-borg-blue focus:outline-none"
 					disabled={isLoading}
 				/>
 			</div>
@@ -146,7 +146,7 @@
 					bind:value={notes}
 					rows="3"
 					placeholder="Additional notes..."
-					class="w-full rounded-lg border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
+					class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
 					disabled={isLoading}
 				></textarea>
 			</div>

@@ -170,8 +170,8 @@
 {:else if groupByProject}
 	<div class="flex h-full max-h-full gap-8">
 		<!-- Left sidebar: Projects list -->
-		<div class="w-80 flex-shrink-0 overflow-y-auto pr-1 pb-2">
-			<div class="space-y-3">
+		<div class="w-52 flex-shrink-0 overflow-y-auto pb-2">
+			<div class="space-y-1">
 				{#each Object.entries(tasksByProject) as [projectSlug, projectData]}
 					{@const projectTaskCount = Object.values(projectData.nodes).reduce(
 						(sum, nodeData) => sum + nodeData.tasks.length,
@@ -184,24 +184,24 @@
 						onkeydown={(e) => e.key === 'Enter' && selectProject(projectSlug)}
 						role="button"
 						tabindex="0"
-						class="box-shadow-black relative flex w-full cursor-pointer items-center justify-between rounded-md border border-black p-3 text-left transition-colors {isSelected
-							? 'bg-borg-brown'
-							: 'bg-white hover:bg-borg-beige'}"
+						class="group relative flex w-full cursor-pointer items-center rounded-lg border px-3 py-2.5 text-left transition-colors {isSelected
+							? 'border-borg-brown bg-borg-beige'
+							: 'border-zinc-200 bg-white hover:bg-zinc-50'}"
 					>
+						<div class="min-w-0 flex-1 pr-6">
+							<p class="truncate text-sm font-medium text-zinc-800">{projectData.project.title}</p>
+							<p class="text-xs text-zinc-400">{projectTaskCount} tasks</p>
+						</div>
 						<button
 							onclick={(e) => {
 								e.stopPropagation();
 								window.open(`/project/${projectSlug}`, '_blank');
 							}}
-							class="absolute top-2 right-2 flex items-center justify-center rounded border border-black bg-white p-1 transition-colors hover:bg-borg-orange"
+							class="absolute top-2 right-2 rounded p-0.5 text-zinc-300 opacity-0 transition-all group-hover:opacity-100 hover:text-zinc-600"
 							title="Open project"
 						>
-							<ExternalLink class="h-3 w-3 text-black" />
+							<ExternalLink class="h-3.5 w-3.5" />
 						</button>
-						<div class="flex flex-col pr-8">
-							<span class="font-semibold text-black">{projectData.project.title}</span>
-							<span class="text-xs text-zinc-600">{projectTaskCount} tasks</span>
-						</div>
 					</div>
 				{/each}
 			</div>
@@ -223,7 +223,7 @@
 									{nodeData.node.title}
 								</h4>
 								<span
-									class="rounded-md border border-black bg-white px-2 py-1 text-xs font-medium text-black"
+									class="rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-xs text-zinc-500"
 								>
 									{nodeData.node.type}
 								</span>

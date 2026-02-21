@@ -142,7 +142,7 @@
 	});
 </script>
 
-<div class="flex flex-1 flex-col">
+<div class="flex h-full w-full flex-col overflow-hidden">
 	<!-- Header -->
 	<!-- <div class="border-b border-zinc-800 bg-zinc-900 px-6 py-4">
 		<div class="flex items-center justify-between">
@@ -177,93 +177,43 @@
 		</div>
 	</div> -->
 
-	<div class=" flex h-16 flex-col justify-center border-b bg-white px-6">
-		<div class="flex items-center justify-between">
-			<div>
-				<div class="flex items-center gap-3">
-					<CheckSquare class="h-8 w-8" />
-					<h2 class="rounded-md text-3xl font-semibold">Tasks</h2>
-				</div>
-				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
-			</div>
-			<div class="flex items-center gap-4">
-				<div class="flex items-center gap-1">
-					<span class="text-xs text-black">Active</span>
-					<span class="rounded-full bg-borg-orange px-2 py-1 text-xs text-white"
-						>{taskStats.active}</span
-					>
-				</div>
-				<div class="flex items-center gap-1">
-					<span class="text-xs text-black">Resolved</span>
-					<span class="rounded-full bg-green-600 px-2 py-1 text-xs text-white"
-						>{taskStats.resolved}</span
-					>
-				</div>
-				{#if taskStats.overdue > 0}
-					<div class="flex items-center gap-1">
-						<span class="text-xs text-black">Overdue</span>
-						<span class="rounded-full bg-zinc-600 px-2 py-1 text-xs text-white"
-							>{taskStats.overdue}</span
-						>
-					</div>
-				{/if}
-			</div>
-		</div>
-	</div>
-
-	<div class="mt-4 px-6">
+	<!-- Sticky toolbar + tabs in one row -->
+	<div class="flex w-full flex-shrink-0 items-center gap-2 border-b border-borg-brown bg-borg-beige px-4 py-2">
 		<input
 			type="text"
 			placeholder="Search tasks..."
 			bind:value={searchQuery}
-			class="w-full rounded-md border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
+			class="w-44 rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-black placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
 		/>
-	</div>
-
-	<!-- Tab Navigation -->
-	<div class="mt-4 px-6">
-		<div class="flex border-b border-zinc-200">
-			<button
-				onclick={() => (viewTab = 'active')}
-				class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'active'
-					? 'border-b-2 border-borg-orange text-borg-orange'
-					: 'text-zinc-500 hover:text-zinc-700'}"
-			>
-				Active Tasks ({taskStats.active})
-			</button>
-			<button
-				onclick={() => (viewTab = 'resolved')}
-				class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'resolved'
-					? 'border-b-2 border-green-600 text-green-600'
-					: 'text-zinc-500 hover:text-zinc-700'}"
-			>
-				Resolved Tasks ({taskStats.resolved})
-			</button>
+		<div class="flex rounded border border-zinc-300 bg-white p-0.5">
+			<button onclick={() => (viewTab = 'active')} class="rounded px-2.5 py-1 text-sm font-medium transition-colors {viewTab === 'active' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}">Active ({taskStats.active})</button>
+			<button onclick={() => (viewTab = 'resolved')} class="rounded px-2.5 py-1 text-sm font-medium transition-colors {viewTab === 'resolved' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}">Resolved ({taskStats.resolved})</button>
 		</div>
+		{#if taskStats.overdue > 0}
+			<span class="text-xs text-red-500">{taskStats.overdue} overdue</span>
+		{/if}
 	</div>
 
 	<!-- Content -->
-	<div class="flex-1 overflow-auto">
-		<div class="p-6">
-			{#if viewTab === 'active'}
-				<HierarchicalTaskView
-					tasks={filteredActiveTasks}
-					{peopleService}
-					showActions={true}
-					isResolved={false}
-					onResolveTask={handleResolveTask}
-					onDeleteTask={handleDeleteTask}
-				/>
-			{:else}
-				<HierarchicalTaskView
-					tasks={filteredResolvedTasks}
-					{peopleService}
-					showActions={true}
-					isResolved={true}
-					onReactivateTask={handleReactivateTask}
-					onDeleteTask={handleDeleteTask}
-				/>
-			{/if}
-		</div>
+	<div class="min-h-0 flex-1 overflow-hidden p-4">
+		{#if viewTab === 'active'}
+			<HierarchicalTaskView
+				tasks={filteredActiveTasks}
+				{peopleService}
+				showActions={true}
+				isResolved={false}
+				onResolveTask={handleResolveTask}
+				onDeleteTask={handleDeleteTask}
+			/>
+		{:else}
+			<HierarchicalTaskView
+				tasks={filteredResolvedTasks}
+				{peopleService}
+				showActions={true}
+				isResolved={true}
+				onReactivateTask={handleReactivateTask}
+				onDeleteTask={handleDeleteTask}
+			/>
+		{/if}
 	</div>
 </div>

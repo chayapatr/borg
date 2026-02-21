@@ -186,86 +186,44 @@
 	}
 </script>
 
-<div class="flex flex-1 flex-col">
-	<!-- Header -->
-	<div class=" flex h-16 flex-col justify-center border-b bg-white px-6">
-		<div class="flex items-center justify-between">
-			<div>
-				<div class="flex items-center gap-3">
-					<Users class="h-8 w-8" />
-					<h2 class="rounded-md text-3xl font-semibold">People</h2>
-				</div>
-				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
-			</div>
-			<!-- <button
-				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-green px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
-				"
-				onclick={() => (showAddModal = true)}
-			>
-				<Plus class="h-4 w-4" />
-				New Project
-			</button> -->
-		</div>
-	</div>
-
-	<!-- Search -->
-	<div class="p-6">
+<div class="flex h-full w-full flex-col overflow-hidden">
+	<!-- Toolbar -->
+	<div class="flex w-full flex-shrink-0 items-center gap-2 border-b border-borg-brown bg-borg-beige px-4 py-2">
 		<input
 			bind:value={searchQuery}
 			type="text"
 			placeholder="Search people..."
-			class="w-full rounded border border-black bg-white px-3 py-2 text-black placeholder-zinc-500 focus:ring-2 focus:ring-borg-blue focus:outline-none"
+			class="w-56 rounded border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-black placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
 		/>
 	</div>
 
 	<!-- People List -->
-	<div class="flex-1 overflow-y-auto px-6 pb-6">
+	<div class="flex-1 overflow-y-auto px-4 py-4">
 		{#if filteredPeople.length == 0}
 			<div class="flex h-64 flex-col items-center justify-center text-center">
-				<div class="mb-4 flex h-16 w-16 items-center justify-center rounded-lg">
-					<PersonStandingIcon class="h-8 w-8" />
-				</div>
-				<h3 class="mb-2 text-xl font-medium text-black">
-					{searchQuery ? 'No people found' : 'No people yet'}
-				</h3>
+				<PersonStandingIcon class="mb-2 h-6 w-6 text-zinc-300" />
+				<p class="text-sm text-zinc-400">{searchQuery ? 'No people found' : 'No people yet'}</p>
 			</div>
 		{:else}
 			<!-- Members Section -->
 			{#if members.length > 0}
-				<div class="mb-8">
-					<h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-black">
-						<Users class="h-5 w-5 text-borg-violet" />
-						Group Members ({members.length})
-					</h3>
-					<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+				<div class="mb-6">
+					<p class="mb-2 text-xs font-medium text-zinc-400">Members ({members.length})</p>
+					<div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
 						{#each members as person}
-							{@const activeTaskCount = personTasks.get(person.id) || 0}
-							<div class="box-shadow-black rounded-lg border border-zinc-800 bg-white p-4">
-								<div class="mb-4 flex items-start justify-between">
-									<div class="flex items-center gap-3">
-										<div
-											class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-black bg-borg-green"
-										>
-											{#if person.photoUrl}
-												<img
-													src={person.photoUrl}
-													alt={person.name}
-													referrerpolicy="no-referrer"
-													class="h-full w-full object-cover"
-												/>
-											{:else}
-												<span class="text-sm font-medium text-white"
-													>{getInitials(person.name)}</span
-												>
-											{/if}
-										</div>
-										<div>
-											<h3 class="font-medium text-black">{person.name}</h3>
-											{#if person.email}
-												<p class="text-sm text-zinc-600">{person.email}</p>
-											{/if}
-										</div>
-									</div>
+							<div class="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
+								<div class="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100">
+									{#if person.photoUrl}
+										<img src={person.photoUrl} alt={person.name} referrerpolicy="no-referrer" class="h-full w-full object-cover" />
+									{:else}
+										<span class="text-xs font-medium text-zinc-600">{getInitials(person.name)}</span>
+									{/if}
+								</div>
+								<div class="min-w-0">
+									<p class="truncate text-sm font-medium text-zinc-800">{person.name}</p>
+									{#if person.email}
+										<p class="truncate text-xs text-zinc-400">{person.email}</p>
+									{/if}
 								</div>
 							</div>
 						{/each}
@@ -275,40 +233,23 @@
 
 			<!-- Collaborators Section -->
 			{#if collaborators.length > 0}
-				<div class="mb-8">
-					<h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-black">
-						<UserCheck class="h-5 w-5 text-borg-orange" />
-						Collaborators ({collaborators.length})
-					</h3>
-					<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+				<div class="mb-6">
+					<p class="mb-2 text-xs font-medium text-zinc-400">Collaborators ({collaborators.length})</p>
+					<div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
 						{#each collaborators as person}
-							{@const activeTaskCount = personTasks.get(person.id) || 0}
-							<div class="box-shadow-black rounded-lg border border-black bg-white p-4">
-								<div class="mb-4 flex items-start justify-between">
-									<div class="flex items-center gap-3">
-										<div
-											class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-black bg-white"
-										>
-											{#if person.photoUrl}
-												<img
-													src={person.photoUrl}
-													alt={person.name}
-													referrerpolicy="no-referrer"
-													class="h-full w-full object-cover"
-												/>
-											{:else}
-												<span class="text-sm font-medium text-zinc-800"
-													>{getInitials(person.name)}</span
-												>
-											{/if}
-										</div>
-										<div>
-											<h3 class="font-medium text-black">{person.name}</h3>
-											{#if person.email}
-												<p class="text-sm text-zinc-700">{person.email}</p>
-											{/if}
-										</div>
-									</div>
+							<div class="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
+								<div class="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100">
+									{#if person.photoUrl}
+										<img src={person.photoUrl} alt={person.name} referrerpolicy="no-referrer" class="h-full w-full object-cover" />
+									{:else}
+										<span class="text-xs font-medium text-zinc-600">{getInitials(person.name)}</span>
+									{/if}
+								</div>
+								<div class="min-w-0">
+									<p class="truncate text-sm font-medium text-zinc-800">{person.name}</p>
+									{#if person.email}
+										<p class="truncate text-xs text-zinc-400">{person.email}</p>
+									{/if}
 								</div>
 							</div>
 						{/each}
@@ -319,68 +260,45 @@
 
 		<!-- Allow People Section (Members Only) -->
 		{#if $authStore.userType === 'member'}
-		<div class="mt-8 border-t border-zinc-300 pt-6">
-			<div class="mb-4 flex items-center gap-2">
-				<Shield class="h-5 w-5 text-borg-orange" />
-				<h3 class="text-xl font-semibold text-black">Allow People</h3>
-			</div>
+		<div class="mt-6 border-t border-zinc-100 pt-4">
+			<p class="mb-3 text-xs font-medium text-zinc-400">Pending Approvals</p>
 
 			{#if loadingUnapproved}
-				<div class="flex items-center justify-center p-8">
-					<div
-						class="h-6 w-6 animate-spin rounded-full border-2 border-borg-orange border-t-transparent"
-					></div>
-					<span class="ml-2 text-sm text-gray-600">Loading pending approvals...</span>
+				<div class="flex items-center gap-2 p-4 text-sm text-zinc-400">
+					<div class="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-transparent"></div>
+					Loading...
 				</div>
 			{:else if unapprovedUsers.length === 0}
-				<div class="flex h-32 flex-col items-center justify-center text-center">
-					<UserCheck class="mb-4 h-8 w-8" />
-					<h3 class="mb-2 text-lg font-medium text-black">No pending user approvals</h3>
-					<p class="text-sm text-zinc-500">All users have been approved</p>
-				</div>
+				<p class="text-xs text-zinc-400">No pending approvals</p>
 			{:else}
-				<div class="space-y-3">
+				<div class="space-y-2">
 					{#each unapprovedUsers as user}
-						<div
-							class="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 p-4"
-						>
-							<div class="flex items-center gap-3">
-								<div
-									class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-orange-200"
-								>
+						<div class="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+							<div class="flex items-center gap-2">
+								<div class="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-zinc-200">
 									{#if user.photoUrl}
-										<img
-											src={user.photoUrl}
-											alt={user.name || user.email}
-											referrerpolicy="no-referrer"
-											class="h-full w-full object-cover"
-										/>
+										<img src={user.photoUrl} alt={user.name || user.email} referrerpolicy="no-referrer" class="h-full w-full object-cover" />
 									{:else}
-										<span class="text-sm font-medium text-orange-800"
-											>{getInitials(user.name || user.email || 'U')}</span
-										>
+										<span class="text-xs text-zinc-600">{getInitials(user.name || user.email || 'U')}</span>
 									{/if}
 								</div>
 								<div>
-									<h4 class="font-medium text-black">{user.name || 'Unnamed User'}</h4>
-									<p class="text-sm text-gray-600">{user.email}</p>
-									{#if user.createdAt}
-										<p class="text-xs text-gray-500">Requested {formatDate(user.createdAt)}</p>
-									{/if}
+									<p class="text-sm font-medium text-zinc-800">{user.name || 'Unnamed User'}</p>
+									<p class="text-xs text-zinc-400">{user.email}</p>
 								</div>
 							</div>
-							<div class="flex items-center gap-3">
+							<div class="flex items-center gap-2">
 								<select
 									value={approvalUserTypes.get(user.id) || 'member'}
 									onchange={(e) => handleUserTypeChange(user.id, e.currentTarget.value)}
-									class="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+									class="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-700"
 								>
 									<option value="member">Member</option>
 									<option value="collaborator">Collaborator</option>
 								</select>
 								<button
 									onclick={() => approveUser(user.id)}
-									class="flex items-center gap-1 rounded-md border border-green-600 bg-green-600 px-3 py-1 text-sm text-white transition-colors hover:bg-green-700"
+									class="flex items-center gap-1 rounded border border-green-200 bg-green-50 px-2 py-1 text-xs text-green-700 transition-colors hover:bg-green-100"
 								>
 									<UserCheck class="h-3 w-3" />
 									Approve

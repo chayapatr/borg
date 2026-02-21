@@ -51,7 +51,7 @@
 			<select
 				bind:value
 				disabled={readonly}
-				class="w-full rounded border border-black bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
+				class="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
 			>
 				<option value="">Select timezone...</option>
 				{#each field.options || [] as option}
@@ -67,7 +67,7 @@
 					<button
 						type="button"
 						onclick={(e) => { e.stopPropagation(); value = value === option ? '' : option; }}
-						class="inline-flex items-center rounded-full border border-black px-3 py-1 text-xs font-medium transition-colors {value === option
+						class="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium transition-colors {value === option
 							? 'bg-black text-white'
 							: 'bg-white text-black hover:bg-gray-100'}"
 					>

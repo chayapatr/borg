@@ -299,167 +299,86 @@
 	}
 </script>
 
-<div class="flex flex-1 flex-col">
-	<!-- Header -->
-	<div class=" flex h-16 flex-col justify-center border-b bg-white px-6">
-		<div class="flex items-center justify-between">
-			<div>
-				<div class="flex items-center gap-3">
-					<Calendar class="h-8 w-8" />
-					<h2 class="rounded-md text-3xl font-semibold">Timeline</h2>
-				</div>
-			</div>
-			<button
-				class="transition- flex items-center gap-2 rounded-full border border-white bg-borg-violet px-4 py-2 text-white transition-all hover:cursor-pointer hover:bg-black
-				"
-				onclick={() => (showAddModal = true)}
-			>
-				<CalendarPlus class="h-4 w-4" />
-				New Event
-			</button>
+<div class="flex h-full w-full flex-col overflow-hidden">
+	<!-- Sticky single toolbar row -->
+	<div class="flex w-full flex-shrink-0 items-center gap-2 border-b border-borg-brown bg-borg-beige px-4 py-2">
+		<div class="flex rounded border border-zinc-300 bg-white p-0.5">
+			<button onclick={() => (selectedTab = 'upcoming')} class="rounded px-2.5 py-1 text-sm font-medium transition-colors {selectedTab === 'upcoming' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}">Upcoming ({filteredUpcomingEvents.length})</button>
+			<button onclick={() => (selectedTab = 'past')} class="rounded px-2.5 py-1 text-sm font-medium transition-colors {selectedTab === 'past' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}">Past ({filteredPastEvents.length})</button>
 		</div>
-	</div>
-
-	<!-- Sub-tabs for Upcoming/Past -->
-	<div class="border-b bg-white px-6">
-		<div class="flex items-center justify-between">
-			<div class="flex space-x-8">
-				<button
-					class="border-b-2 py-3 text-sm font-medium transition-colors {selectedTab === 'upcoming'
-						? 'border-borg-blue text-borg-blue'
-						: 'border-transparent text-zinc-500 hover:text-zinc-700'}"
-					onclick={() => (selectedTab = 'upcoming')}
-				>
-					Upcoming ({filteredUpcomingEvents.length})
-				</button>
-				<button
-					class="border-b-2 py-3 text-sm font-medium transition-colors {selectedTab === 'past'
-						? 'border-borg-blue text-borg-blue'
-						: 'border-transparent text-zinc-500 hover:text-zinc-700'}"
-					onclick={() => (selectedTab = 'past')}
-				>
-					Past ({filteredPastEvents.length})
-				</button>
-			</div>
-			<!-- Filter by Type -->
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-zinc-500">Filter:</span>
-				<select
-					bind:value={selectedTypeFilter}
-					class="rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-black focus:border-borg-blue focus:outline-none"
-				>
-					<option value="all">All Types</option>
-					{#each availableTypes as type}
-						<option value={type.value}>{type.label}</option>
-					{/each}
-				</select>
-			</div>
-		</div>
+		<div class="flex-1"></div>
+		<select
+			bind:value={selectedTypeFilter}
+			class="rounded border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-600 focus:outline-none"
+		>
+			<option value="all">All Types</option>
+			{#each availableTypes as type}
+				<option value={type.value}>{type.label}</option>
+			{/each}
+		</select>
+		<button
+			onclick={() => (showAddModal = true)}
+			class="flex items-center gap-1.5 rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-600 transition-colors hover:bg-zinc-50"
+		>
+			<CalendarPlus class="h-3.5 w-3.5" />
+			New Event
+		</button>
 	</div>
 
 	<!-- Timeline Events -->
-	<div class="flex-1 overflow-y-auto p-6">
+	<div class="flex-1 overflow-y-auto p-4">
 		{#if selectedTab === 'upcoming'}
 			{@const currentEvents = filteredUpcomingEvents}
 			{#if currentEvents.length === 0}
 				<div class="flex h-64 flex-col items-center justify-center text-center">
 					<Fish class="mb-4 h-8 w-8" />
-
-					<h3 class="mb-2 text-xl font-medium text-black">No upcoming events</h3>
-					<p class="mb-4 text-zinc-500">Add your first conference, deadline, or event</p>
+					<h3 class="mb-2 text-lg font-medium text-black">No upcoming events</h3>
+					<p class="mb-4 text-sm text-zinc-500">Add your first conference, deadline, or event</p>
 				</div>
 			{:else}
-				<div class="grid grid-cols-1 gap-4">
+				<div class="space-y-2">
 					{#each currentEvents as event}
 						{@const template = getTemplateInfo(event.templateType)}
 						{@const timeLeft = getTimeLeft(event)}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-3 transition-colors hover:bg-zinc-50"
-							role="button"
-							tabindex="0"
+							class="group flex cursor-pointer items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-3 transition-colors hover:bg-borg-beige"
 							onclick={() => handleEditEvent(event)}
-							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									handleEditEvent(event);
-								}
-							}}
 						>
-							<div class="flex items-start justify-between">
-								<div class="flex flex-1 items-start gap-3">
-									<div
-										class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg"
-										style="background-color: {template.color}20; border: 1px solid {template.color}40;"
-									>
-										<svg
-											class="h-5 w-5"
-											style="color: {template.color}"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											{#if template.icon === 'calendar'}
-												<Calendar />
-											{:else if template.icon === 'clock'}
-												<Clock />
-											{:else if template.icon === 'dollar-sign'}
-												<DollarSign />
-											{:else}
-												<Calendar />
-											{/if}
-										</svg>
-									</div>
-									<div class="flex-1">
-										<div class="mb-1 flex items-center gap-2">
-											<h3 class="font-medium text-black">{event.title}</h3>
-											<span
-												class="rounded-full bg-borg-beige px-2 py-[0.15rem] text-[11px] text-zinc-600"
-											>
-												{template.name}
-											</span>
-										</div>
-										<div class="mb-2 flex items-center gap-4 text-xs text-zinc-600">
-											<span class="flex items-center gap-1">
-												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-													/>
-												</svg>
-												{formatDateTime(event)}
-											</span>
-											{#if !timeLeft.isOverdue}
-												<span class="font-mono text-xs font-bold {getTimeLeftColor(timeLeft)}">
-													{timeLeft.displayText}
-												</span>
-											{:else}
-												<span class="text-xs text-zinc-500">Past</span>
-											{/if}
-										</div>
-										{#if event.eventData.description}
-											<p class="line-clamp-2 border-zinc-600 text-xs">
-												{event.eventData.description}
-											</p>
-										{/if}
-									</div>
-								</div>
+							<!-- Colored icon box -->
+							<div
+								class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded"
+								style="background-color: {template.color}18; border: 1px solid {template.color}40;"
+							>
+								<svg class="h-4 w-4" style="color: {template.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									{#if template.icon === 'clock'}
+										<Clock />
+									{:else if template.icon === 'dollar-sign'}
+										<DollarSign />
+									{:else}
+										<Calendar />
+									{/if}
+								</svg>
+							</div>
+							<!-- Content -->
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-sm font-medium text-zinc-800">{event.title}</p>
+								<p class="text-xs text-zinc-400">{formatDateTime(event)}</p>
+							</div>
+							<!-- Right: type + countdown + delete -->
+							<div class="flex flex-shrink-0 items-center gap-2">
+								<span class="text-xs text-zinc-400">{template.name}</span>
+								{#if !timeLeft.isOverdue}
+									<span class="rounded px-1.5 py-0.5 text-xs font-medium {getTimeLeftColor(timeLeft)} bg-zinc-50">{timeLeft.displayText}</span>
+								{/if}
 								<button
-									onclick={(e) => {
-										e.stopPropagation();
-										handleDeleteEvent(event.id);
-									}}
-									class="ml-2 text-zinc-500 transition-colors hover:text-red-400"
+									onclick={(e) => { e.stopPropagation(); handleDeleteEvent(event.id); }}
+									class="rounded p-1 text-zinc-300 transition-colors hover:text-red-400"
 									aria-label="Delete event"
 								>
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-										/>
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 									</svg>
 								</button>
 							</div>
@@ -472,96 +391,44 @@
 			{#if currentEvents.length === 0}
 				<div class="flex h-64 flex-col items-center justify-center text-center">
 					<Fish class="mb-4 h-8 w-8" />
-
-					<h3 class="mb-2 text-xl font-medium text-black">No past events</h3>
-					<p class="mb-4 text-zinc-500">Past events will appear here</p>
+					<h3 class="mb-2 text-lg font-medium text-black">No past events</h3>
+					<p class="mb-4 text-sm text-zinc-500">Past events will appear here</p>
 				</div>
 			{:else}
-				<div class="grid grid-cols-1 gap-4">
+				<div class="space-y-2">
 					{#each currentEvents as event}
 						{@const template = getTemplateInfo(event.templateType)}
-						{@const timeLeft = getTimeLeft(event)}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="box-shadow-black cursor-pointer rounded-lg border border-black bg-white p-3 transition-colors hover:bg-zinc-50"
-							role="button"
-							tabindex="0"
+							class="group flex cursor-pointer items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-3 opacity-60 transition-colors hover:bg-borg-beige hover:opacity-100"
 							onclick={() => handleEditEvent(event)}
-							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									handleEditEvent(event);
-								}
-							}}
 						>
-							<div class="flex items-start justify-between">
-								<div class="flex flex-1 items-start gap-3">
-									<div
-										class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg"
-										style="background-color: {template.color}20; border: 1px solid {template.color}40;"
-									>
-										<svg
-											class="h-5 w-5"
-											style="color: {template.color}"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											{#if template.icon === 'calendar'}
-												<Calendar />
-											{:else if template.icon === 'clock'}
-												<Clock />
-											{:else if template.icon === 'dollar-sign'}
-												<DollarSign />
-											{:else}
-												<Calendar />
-											{/if}
-										</svg>
-									</div>
-									<div class="flex-1">
-										<div class="mb-1 flex items-center gap-2">
-											<h3 class="font-medium text-black">{event.title}</h3>
-											<span
-												class="rounded-full bg-borg-beige px-2 py-[0.15rem] text-[11px] text-zinc-600"
-											>
-												{template.name}
-											</span>
-										</div>
-										<div class="mb-2 flex items-center gap-4 text-xs text-zinc-600">
-											<span class="flex items-center gap-1">
-												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-													/>
-												</svg>
-												{formatDateTime(event)}
-											</span>
-											<span class="text-xs text-zinc-500">Past</span>
-										</div>
-										{#if event.eventData.description}
-											<p class="line-clamp-2 border-zinc-600 text-xs">
-												{event.eventData.description}
-											</p>
-										{/if}
-									</div>
-								</div>
+							<!-- Greyed icon box for past events -->
+							<div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded border border-zinc-200 bg-zinc-50">
+								<svg class="h-4 w-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									{#if template.icon === 'clock'}
+										<Clock />
+									{:else if template.icon === 'dollar-sign'}
+										<DollarSign />
+									{:else}
+										<Calendar />
+									{/if}
+								</svg>
+							</div>
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-sm font-medium text-zinc-600">{event.title}</p>
+								<p class="text-xs text-zinc-400">{formatDateTime(event)}</p>
+							</div>
+							<div class="flex flex-shrink-0 items-center gap-2">
+								<span class="text-xs text-zinc-400">{template.name}</span>
 								<button
-									onclick={(e) => {
-										e.stopPropagation();
-										handleDeleteEvent(event.id);
-									}}
-									class="ml-2 text-zinc-500 transition-colors hover:text-red-400"
+									onclick={(e) => { e.stopPropagation(); handleDeleteEvent(event.id); }}
+									class="rounded p-1 text-zinc-300 transition-colors hover:text-red-400"
 									aria-label="Delete event"
 								>
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-										/>
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 									</svg>
 								</button>
 							</div>

@@ -158,7 +158,7 @@
 	let borderColor = $derived.by(() => {
 		const status = nodeData.status;
 		if (status === 'Done') return '#16a34a'; // green-600
-		return '#3f3f46'; // zinc-700 - default
+		return '#d4d4d8'; // zinc-300 - default
 	});
 
 	// Determine opacity based on status

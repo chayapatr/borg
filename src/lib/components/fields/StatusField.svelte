@@ -55,7 +55,7 @@
 							e.stopPropagation();
 							value = value === option ? '' : option;
 						}}
-						class="inline-flex items-center rounded-full border border-black px-3 py-1 text-xs font-medium transition-colors {value ===
+						class="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium transition-colors {value ===
 						option
 							? getStatusColor(option)
 							: 'bg-zinc-100 text-black hover:bg-zinc-300'}"

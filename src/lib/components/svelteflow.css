@@ -18,7 +18,13 @@
 	opacity: 0.3 !important;
 }
 
-/* .svelte-flow__connection-path {
-	stroke: #ff0000;
-	stroke-width: 400px;
-} */
+/* Edge paths */
+.svelte-flow__edge-path {
+	stroke: #a1a1aa !important;
+	stroke-width: 1px !important;
+}
+
+.svelte-flow__connection-path {
+	stroke: #a1a1aa;
+	stroke-width: 1px;
+}

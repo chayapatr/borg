@@ -51,21 +51,20 @@
 	]);
 </script>
 
-<div class="mt-4 border-t border-zinc-700 pt-4">
-	<div class="mb-3 flex items-center justify-between">
-		<h4 class="text-sm font-medium text-black">Field Visibility</h4>
-		<span class="text-xs text-zinc-500">Control which fields show in display mode</span>
+<div class="mt-4 border-t border-zinc-100 pt-3">
+	<div class="mb-2 flex items-center justify-between">
+		<h4 class="text-xs font-medium text-zinc-600">Field Visibility</h4>
 	</div>
 
 	{#if allFields.length > 0}
-		<div class="space-y-2">
+		<div class="space-y-1">
 			{#each allFields as field}
 				{@const isVisible = getFieldVisibility(field, field.isCustom)}
 				<div
-					class="flex items-center justify-between rounded border border-black bg-white px-3 py-2"
+					class="flex items-center justify-between rounded border border-zinc-100 bg-white px-2 py-1"
 				>
 					<div class="flex items-center gap-2">
-						<span class="text-sm text-black">{field.label}</span>
+						<span class="text-xs text-zinc-700">{field.label}</span>
 						{#if field.isCustom}
 							<span class="rounded bg-borg-brown px-1 text-xs text-black">custom</span>
 						{/if}

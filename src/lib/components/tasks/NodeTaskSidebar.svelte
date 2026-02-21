@@ -64,9 +64,9 @@
 	});
 </script>
 
-<div class="flex h-[calc(100vh-64px)] w-80 flex-col border-l border-black bg-white">
+<div class="flex h-[calc(100vh-64px)] w-80 flex-col border-l border-zinc-200 bg-white">
 	<!-- Sidebar Header -->
-	<div class="border-b border-black p-4">
+	<div class="border-b border-zinc-200 p-4">
 		<div class="flex items-center justify-between">
 			<div>
 				<h3 class="font-semibold text-black">Node Tasks</h3>
@@ -90,7 +90,7 @@
 					});
 					document.dispatchEvent(customEvent);
 				}}
-				class="flex items-center gap-1 rounded-lg border border-black bg-borg-beige px-3 py-1.5 text-xs text-black transition-colors hover:bg-black hover:text-white"
+				class="flex items-center gap-1 rounded-lg border border-zinc-200 bg-borg-beige px-3 py-1.5 text-xs text-black transition-colors hover:bg-black hover:text-white"
 			>
 				<Plus class="h-3 w-3" />
 				Add Task
@@ -116,7 +116,7 @@
 						});
 						document.dispatchEvent(customEvent);
 					}}
-					class="rounded-lg border border-black bg-borg-beige px-4 py-2 text-sm text-black transition-colors hover:bg-black hover:text-white"
+					class="rounded-lg border border-zinc-200 bg-borg-beige px-4 py-2 text-sm text-black transition-colors hover:bg-black hover:text-white"
 				>
 					Add Task
 				</button>

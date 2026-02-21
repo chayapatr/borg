@@ -82,7 +82,7 @@
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 	onclick={handleBackdropClick}
 >
-	<div class="box-shadow-black w-96 rounded-lg border border-black bg-borg-beige p-6 shadow-xl">
+	<div class="box-shadow-black w-96 rounded-lg border border-zinc-200 bg-borg-beige p-6 shadow-xl">
 		<h2 class="mb-4 text-lg font-semibold text-black">Create New Node</h2>
 
 		<div class="grid grid-cols-2 gap-3">
@@ -91,7 +91,7 @@
 				<button
 					onclick={() => handleCreateNode(template.id)}
 					disabled={isCreating}
-					class="flex items-center space-x-3 rounded-lg border border-black bg-white p-4 text-left transition-all hover:bg-borg-brown focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex items-center space-x-3 rounded-lg border border-zinc-200 bg-white p-4 text-left transition-all hover:bg-borg-brown focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<IconComponent class="h-5 w-5 flex-shrink-0 text-black" />
 					<span class="font-medium text-black">{template.name}</span>
@@ -101,12 +101,12 @@
 
 		<div class="mt-6 flex items-center justify-between">
 			<div class="text-xs text-zinc-600">
-				Press <kbd class="rounded border border-black bg-zinc-100 px-2 py-1 text-black">Escape</kbd>
+				Press <kbd class="rounded border border-zinc-200 bg-zinc-100 px-2 py-1 text-black">Escape</kbd>
 				to cancel
 			</div>
 			<button
 				onclick={onClose}
-				class="rounded border border-black bg-borg-brown px-4 py-2 text-black transition-colors hover:bg-zinc-300"
+				class="rounded border border-zinc-200 bg-borg-brown px-4 py-2 text-black transition-colors hover:bg-zinc-300"
 			>
 				Cancel
 			</button>

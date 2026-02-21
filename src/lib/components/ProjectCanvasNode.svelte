@@ -219,7 +219,7 @@
 		if (status === 'To Do') return '#9333ea'; // purple-600
 		if (status === 'Doing') return '#0284c7'; // sky-600
 		if (status === 'Done') return '#16a34a'; // green-600
-		return '#3f3f46'; // zinc-700 - default
+		return '#d4d4d8'; // zinc-300 - default
 	});
 
 	function handleNodeClick() {

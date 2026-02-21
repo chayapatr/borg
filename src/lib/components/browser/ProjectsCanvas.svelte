@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Network, Grid, Search } from '@lucide/svelte';
 	import {
 		SvelteFlow,
 		SvelteFlowProvider,
@@ -32,11 +33,12 @@
 	import '@xyflow/svelte/dist/style.css';
 	import '../svelteflow.css';
 
-	let { projects, onProjectClick, onCreateProject, onProjectUpdate } = $props<{
+	let { projects, onProjectClick, onCreateProject, onProjectUpdate, viewMode = $bindable<'list' | 'canvas'>('canvas') } = $props<{
 		projects: Project[];
 		onProjectClick: (slug: string) => void;
 		onCreateProject?: () => void;
 		onProjectUpdate?: () => void;
+		viewMode?: 'list' | 'canvas';
 	}>();
 
 	const nodeTypes = {
@@ -364,7 +366,7 @@
 			source: connection.source,
 			target: connection.target,
 			type: 'default',
-			style: 'stroke: #71717a; stroke-width: 2px;'
+			style: 'stroke: #d4d4d8; stroke-width: 1px;'
 		};
 
 		nodesService.addEdge(edge);
@@ -723,66 +725,69 @@
 				{onCreateProject}
 			/>
 
-			<!-- Search Box -->
-			<div class="absolute top-4 right-4 z-20 flex items-center gap-2">
-				<input
-					type="text"
-					bind:value={searchQuery}
-					oninput={updateMatchingNodes}
-					onkeydown={(e) => {
-						if (e.key === 'Enter') {
-							e.preventDefault();
-							e.shiftKey ? previousMatch() : nextMatch();
-						}
-					}}
-					placeholder="Search nodes..."
-					class="w-64 rounded-md border border-black bg-white px-3 py-2 text-sm text-black placeholder-zinc-400 focus:border-borg-blue focus:ring-1 focus:ring-borg-blue focus:outline-none"
-				/>
-				{#if matchingNodeIds.length > 0}
-					<div class="flex items-center gap-1 rounded-md border border-black bg-white px-2 py-1">
-						<span class="text-xs text-black">
-							{currentMatchIndex + 1} / {matchingNodeIds.length}
-						</span>
+			<!-- Search Box + View Toggle -->
+			<div class="absolute top-4 right-4 z-20 flex flex-col items-end gap-2">
+				<!-- View toggle -->
+				<div class="flex w-52 rounded border border-zinc-200 bg-white p-0.5 shadow-sm">
+					<button
+						onclick={() => (viewMode = 'canvas')}
+						class="flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-sm transition-colors {viewMode === 'canvas' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:text-zinc-700'}"
+					>
+						<Network class="h-3.5 w-3.5" />
+						Canvas
+					</button>
+					<button
+						onclick={() => (viewMode = 'list')}
+						class="flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-sm transition-colors {viewMode === 'list' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:text-zinc-700'}"
+					>
+						<Grid class="h-3.5 w-3.5" />
+						List
+					</button>
+				</div>
+				<!-- Search -->
+				<div class="flex items-center gap-1.5">
+					<div class="relative">
+						<Search class="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+						<input
+							type="text"
+							bind:value={searchQuery}
+							oninput={updateMatchingNodes}
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									e.shiftKey ? previousMatch() : nextMatch();
+								}
+							}}
+							placeholder="Search nodes..."
+							class="w-52 rounded border border-zinc-200 bg-white py-1.5 pr-3 pl-8 text-sm text-black placeholder-zinc-400 shadow-sm focus:border-zinc-400 focus:outline-none"
+						/>
 					</div>
-					<button
-						onclick={previousMatch}
-						class="rounded-md border border-black bg-white p-2 text-black hover:bg-zinc-100"
-						title="Previous (Shift+Enter)"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="16"
-							height="16"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
+					{#if matchingNodeIds.length > 0}
+						<div class="flex items-center gap-1 rounded border border-zinc-200 bg-white px-2 py-1.5 shadow-sm">
+							<span class="text-xs text-zinc-600">
+								{currentMatchIndex + 1} / {matchingNodeIds.length}
+							</span>
+						</div>
+						<button
+							onclick={previousMatch}
+							class="rounded border border-zinc-200 bg-white p-1.5 text-zinc-600 shadow-sm hover:bg-zinc-50"
+							title="Previous (Shift+Enter)"
 						>
-							<polyline points="15 18 9 12 15 6"></polyline>
-						</svg>
-					</button>
-					<button
-						onclick={nextMatch}
-						class="rounded-md border border-black bg-white p-2 text-black hover:bg-zinc-100"
-						title="Next (Enter)"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="16"
-							height="16"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="15 18 9 12 15 6"></polyline>
+							</svg>
+						</button>
+						<button
+							onclick={nextMatch}
+							class="rounded border border-zinc-200 bg-white p-1.5 text-zinc-600 shadow-sm hover:bg-zinc-50"
+							title="Next (Enter)"
 						>
-							<polyline points="9 18 15 12 9 6"></polyline>
-						</svg>
-					</button>
-				{/if}
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="9 18 15 12 9 6"></polyline>
+							</svg>
+						</button>
+					{/if}
+				</div>
 			</div>
 
 			<!-- fitView -->
@@ -792,6 +797,7 @@
 				bind:nodes={workingNodes}
 				bind:edges={canvasEdges}
 				{nodeTypes}
+				defaultEdgeOptions={{ style: 'stroke: #d4d4d8; stroke-width: 1px;' }}
 				onconnect={handleConnect}
 				onbeforedelete={handleBeforeDelete}
 				ondelete={handleDelete}

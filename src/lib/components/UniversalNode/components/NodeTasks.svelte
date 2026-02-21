@@ -46,7 +46,7 @@
 				event.stopPropagation();
 				onAddTaskClick();
 			}}
-			class="absolute -right-2 -bottom-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-black bg-black text-white transition-colors hover:bg-borg-orange hover:text-black"
+			class="absolute -right-2 -bottom-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-zinc-200 bg-black text-white transition-colors hover:bg-borg-orange hover:text-black"
 			title="Add Task"
 		>
 			<ListTodo class="h-3 w-3" />

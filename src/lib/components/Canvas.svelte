@@ -23,7 +23,7 @@
 	import Toolbar from './Toolbar.svelte';
 	import StickerPanel from './stickers/StickerPanel.svelte';
 	import Cursor from './Cursor.svelte';
-	import type { Task } from '../types/task';
+	import type { Task, TaskWithContext } from '../types/task';
 	import { authStore } from '../stores/authStore';
 	import {
 		updateMatchingNodes as updateMatches,
@@ -31,13 +31,15 @@
 		nextMatch as goToNextMatch,
 		previousMatch as goToPreviousMatch
 	} from '../utils/canvasSearch';
+	import { ChevronRight, ChevronLeft } from '@lucide/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import './svelteflow.css';
 
-	let { projectSlug, onProjectUpdate, onPanelOpen } = $props<{
+	let { projectSlug, onProjectUpdate, onPanelOpen, projectTasks = [] } = $props<{
 		projectSlug?: string;
 		onProjectUpdate?: () => void;
 		onPanelOpen?: () => void;
+		projectTasks?: TaskWithContext[];
 	}>();
 
 	const nodeTypes = {
@@ -95,6 +97,10 @@
 
 	// Sticker panel state
 	let showStickerPanel = $state(false);
+
+	// Right sidebar toggle state
+	let showRightSidebar = $state(true);
+	let sidebarTab = $state<'nodes' | 'tasks'>('nodes');
 
 	// Flag to prevent redundant auto-saves after explicit saves
 	let skipNextAutoSave = $state(false);
@@ -742,7 +748,7 @@
 			source: connection.source!,
 			target: connection.target!,
 			type: 'default',
-			style: 'stroke: #71717a; stroke-width: 2px;'
+			style: 'stroke: #d4d4d8; stroke-width: 1px;'
 		};
 		nodesService.addEdge(edge);
 	}
@@ -1083,6 +1089,47 @@
 			}
 		}
 	}
+
+// Get display label for a node in the node list
+function getNodeLabel(node: Node): string {
+	const nd = node.data?.nodeData;
+	const type = node.data?.templateType;
+	return nd?.title || nd?.name || (nd?.content as string)?.slice?.(0, 40) || type || 'Untitled';
+}
+
+// Focus a node in the viewport and open its inspector
+function focusNode(node: Node) {
+	fitView({ nodes: [node], duration: 400, padding: 0.5 });
+	editNodeId = node.id;
+	editNodeData = node.data?.nodeData || {};
+	editTemplateType = (node.data?.templateType as string) || 'blank';
+	showEditPanel = true;
+	showNodeTaskSidebar = false;
+	showStickerPanel = false;
+}
+
+// Filtered node list (exclude stickers/images/iframes for the list)
+let listedNodes = $derived(
+	nodes.filter(
+		(n) =>
+			n.data?.templateType !== 'sticker' &&
+			n.data?.templateType !== 'image' &&
+			n.data?.templateType !== 'iframe'
+	)
+);
+
+// Active tasks grouped by node for sidebar
+let activeTasks = $derived(projectTasks.filter((t) => (t.status || 'active') === 'active'));
+let tasksByNode = $derived(
+	activeTasks.reduce(
+		(acc, task) => {
+			if (!acc[task.nodeId]) acc[task.nodeId] = { nodeTitle: task.nodeTitle, tasks: [] };
+			acc[task.nodeId].tasks.push(task);
+			return acc;
+		},
+		{} as Record<string, { nodeTitle: string; tasks: typeof activeTasks }>
+	)
+);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1090,7 +1137,7 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 <!-- Canvas and Sidebar Container -->
-<div class="flex h-full w-full bg-zinc-950">
+<div class="flex h-full w-full">
 	<!-- Canvas -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1105,95 +1152,32 @@
 		<!-- Bulk Action Buttons -->
 		{#if selectedNodes.length > 0}
 			<div class="absolute bottom-8 left-1/2 z-30 -translate-x-1/2">
-				<div class="flex gap-3">
+				<div class="flex gap-2 rounded-lg border border-zinc-200 bg-white p-1.5">
 					{#if selectedNodesWithStatus.length > 0}
 						<button
 							onclick={toggleSelectedDone}
-							class="flex items-center gap-2 rounded-lg border border-black px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:shadow-xl {allSelectedDone ? 'bg-green-400 hover:bg-green-300' : 'bg-green-200 hover:bg-green-300'}"
+							class="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium transition-colors hover:cursor-pointer {allSelectedDone ? 'border-green-300 bg-green-100 text-green-800 hover:bg-green-200' : 'border-green-300 bg-green-100 text-green-800 hover:bg-green-200'}"
 						>
-							<span>🌟</span>
-							<span>{allSelectedDone ? 'Undone' : 'Done'}</span>
+							{allSelectedDone ? 'Mark Undone' : 'Mark Done'}
 						</button>
 					{/if}
 					<button
 						onclick={deleteSelectedNodes}
-						class="flex items-center gap-2 rounded-lg border border-black bg-red-400 px-5 py-2 text-base font-medium text-black shadow-lg transition-all hover:cursor-pointer hover:bg-red-500 hover:shadow-xl"
+						class="flex items-center gap-1.5 rounded border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:cursor-pointer hover:bg-red-100"
 					>
-						<span>🗑️</span>
-						<span>({selectedNodes.length})</span>
+						Delete ({selectedNodes.length})
 					</button>
 				</div>
 			</div>
 		{/if}
 
-		<!-- Search Box -->
-		<div class="absolute top-4 right-4 z-20 flex items-center gap-2">
-			<input
-				type="text"
-				bind:value={searchQuery}
-				oninput={updateMatchingNodes}
-				onkeydown={(e) => {
-					if (e.key === 'Enter') {
-						e.shiftKey ? previousMatch() : nextMatch();
-					}
-				}}
-				placeholder="Search nodes..."
-				class="w-64 rounded-md border border-black bg-white px-3 py-2 text-sm text-black placeholder-zinc-400 focus:border-borg-blue focus:ring-1 focus:ring-borg-blue focus:outline-none"
-			/>
-			{#if matchingNodeIds.length > 0}
-				<div class="flex items-center gap-1 rounded-md border border-black bg-white px-2 py-1">
-					<span class="text-xs text-black">
-						{currentMatchIndex + 1} / {matchingNodeIds.length}
-					</span>
-				</div>
-				<button
-					onclick={previousMatch}
-					class="rounded-md border border-black bg-white p-2 text-black hover:bg-zinc-100"
-					title="Previous (Shift+Enter)"
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<polyline points="15 18 9 12 15 6"></polyline>
-					</svg>
-				</button>
-				<button
-					onclick={nextMatch}
-					class="rounded-md border border-black bg-white p-2 text-black hover:bg-zinc-100"
-					title="Next (Enter)"
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<polyline points="9 18 15 12 9 6"></polyline>
-					</svg>
-				</button>
-			{/if}
-		</div>
-
 		<div class="h-full w-full">
-			<!-- fitView -->
 			<SvelteFlow
 				class="bg-black"
 				bind:nodes
 				bind:edges
 				{nodeTypes}
+			defaultEdgeOptions={{ style: 'stroke: #d4d4d8; stroke-width: 1px;' }}
 				onconnect={handleConnect}
 				onbeforedelete={handleBeforeDelete}
 				ondelete={handleDelete}
@@ -1213,45 +1197,173 @@
 			>
 				<Background />
 				<Controls />
-				<MiniMap class="border border-black" />
+				<MiniMap class="border border-zinc-200" />
 			</SvelteFlow>
 		</div>
+
+		<!-- Node Task Sidebar (overlay on canvas) -->
+		{#if showNodeTaskSidebar}
+			<div class="absolute inset-y-0 right-0 z-40 flex">
+				<NodeTaskSidebar
+					nodeId={taskSidebarNodeId}
+					nodeTitle={taskSidebarNodeTitle}
+					{projectSlug}
+					tasks={taskSidebarTasks}
+					onClose={() => {
+						if (taskSubscriptionCleanup) {
+							taskSubscriptionCleanup();
+							taskSubscriptionCleanup = null;
+						}
+						showNodeTaskSidebar = false;
+					}}
+					onTasksUpdated={handleTasksUpdated}
+				/>
+			</div>
+		{/if}
+
+		<!-- Sticker Panel (overlay on canvas) -->
+		{#if showStickerPanel}
+			<div class="absolute inset-y-0 right-0 z-40 flex">
+				<StickerPanel bind:isOpen={showStickerPanel} onClose={() => (showStickerPanel = false)} />
+			</div>
+		{/if}
 	</div>
 
-	<!-- Edit Sidebar -->
-	{#if showEditPanel}
-		<EditPanel
-			nodeId={editNodeId}
-			nodeData={editNodeData}
-			templateType={editTemplateType}
-			bind:isOpen={showEditPanel}
-			onSave={handleEditPanelSave}
-			onDelete={handleEditPanelDelete}
-		/>
-	{/if}
+	<!-- Right Sidebar -->
+	{#if showRightSidebar}
+		<div class="flex h-full min-h-0 w-64 flex-shrink-0 flex-col overflow-hidden border-l border-zinc-200 bg-white">
+			<!-- Top: Tabs + Search -->
+			<div class="flex flex-col gap-2 border-b border-zinc-200 p-2">
+				<!-- Tabs -->
+				<div class="flex rounded border border-zinc-200 p-0.5 text-xs">
+					<button
+						onclick={() => { sidebarTab = 'nodes'; showEditPanel = false; }}
+						class="flex-1 rounded py-1 font-medium transition-colors {sidebarTab === 'nodes' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-400 hover:text-zinc-600'}"
+					>Nodes</button>
+					<button
+						onclick={() => { sidebarTab = 'tasks'; showEditPanel = false; }}
+						class="flex-1 rounded py-1 font-medium transition-colors {sidebarTab === 'tasks' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-400 hover:text-zinc-600'}"
+					>Tasks{#if activeTasks.length > 0} ({activeTasks.length}){/if}</button>
+				</div>
+				<!-- Search (nodes tab only) -->
+				{#if sidebarTab === 'nodes'}
+					<div class="flex items-center gap-1">
+						<input
+							type="text"
+							bind:value={searchQuery}
+							oninput={updateMatchingNodes}
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.shiftKey ? previousMatch() : nextMatch();
+								}
+							}}
+							placeholder="Search nodes..."
+							class="min-w-0 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-black placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+						/>
+						{#if matchingNodeIds.length > 0}
+							<span class="shrink-0 text-xs text-zinc-500">{currentMatchIndex + 1}/{matchingNodeIds.length}</span>
+							<button onclick={previousMatch} class="rounded p-1 text-zinc-500 hover:bg-zinc-100" title="Previous (Shift+Enter)">
+								<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+							</button>
+							<button onclick={nextMatch} class="rounded p-1 text-zinc-500 hover:bg-zinc-100" title="Next (Enter)">
+								<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+							</button>
+						{/if}
+					</div>
+				{/if}
+			</div>
 
-	<!-- Node Task Sidebar -->
-	{#if showNodeTaskSidebar}
-		<NodeTaskSidebar
-			nodeId={taskSidebarNodeId}
-			nodeTitle={taskSidebarNodeTitle}
-			{projectSlug}
-			tasks={taskSidebarTasks}
-			onClose={() => {
-				// Clean up subscription when closing
-				if (taskSubscriptionCleanup) {
-					taskSubscriptionCleanup();
-					taskSubscriptionCleanup = null;
-				}
-				showNodeTaskSidebar = false;
-			}}
-			onTasksUpdated={handleTasksUpdated}
-		/>
-	{/if}
+			<!-- Content -->
+			{#if sidebarTab === 'tasks'}
+				<!-- Task list -->
+				<div class="flex-1 overflow-y-auto">
+					{#if activeTasks.length === 0}
+						<p class="p-4 text-center text-xs text-zinc-400">No active tasks</p>
+					{:else}
+						<div class="space-y-3 p-2">
+							{#each Object.entries(tasksByNode) as [, nodeGroup]}
+								<div>
+									<p class="mb-1 px-1 text-xs font-medium text-zinc-500">{nodeGroup.nodeTitle}</p>
+									{#each nodeGroup.tasks as task}
+										<div class="flex items-start gap-2 rounded px-1 py-1.5 text-xs hover:bg-zinc-50">
+											<button
+												onclick={async () => {
+													const result = taskService.resolveTask(task.nodeId, task.id, task.projectSlug);
+													if (result instanceof Promise) await result;
+												}}
+												class="mt-0.5 h-3 w-3 shrink-0 rounded-sm border border-zinc-300 hover:border-green-500 hover:bg-green-50"
+												aria-label="Mark task as complete"
+											></button>
+											<span class="text-zinc-700">{task.title}</span>
+										</div>
+									{/each}
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{:else if showEditPanel && editNodeId}
+				<!-- Back to node list -->
+				<button
+					onclick={() => (showEditPanel = false)}
+					class="flex w-full items-center gap-1 border-b border-zinc-100 px-3 py-2 text-xs text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+					All nodes
+				</button>
+				<!-- Node inspector -->
+				<EditPanel
+					nodeId={editNodeId}
+					nodeData={editNodeData}
+					templateType={editTemplateType}
+					onSave={handleEditPanelSave}
+					onDelete={handleEditPanelDelete}
+				/>
+			{:else}
+				<!-- Node list -->
+				<div class="flex-1 overflow-y-auto">
+					{#if listedNodes.length === 0}
+						<p class="p-4 text-center text-xs text-zinc-400">No nodes yet</p>
+					{:else}
+						{#each listedNodes as node (node.id)}
+							{@const label = getNodeLabel(node)}
+							{#if label}
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div
+									onclick={() => focusNode(node)}
+									class="flex cursor-pointer items-center gap-2 border-b border-zinc-100 px-3 py-2 text-xs hover:bg-zinc-50"
+								>
+									<span class="truncate text-zinc-700">{label}</span>
+									<span class="ml-auto shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-400" style="font-size:10px">{node.data?.templateType}</span>
+								</div>
+							{/if}
+						{/each}
+					{/if}
+				</div>
+			{/if}
 
-	<!-- Sticker Panel -->
-	{#if showStickerPanel}
-		<StickerPanel bind:isOpen={showStickerPanel} onClose={() => (showStickerPanel = false)} />
+			<!-- Collapse button inside sidebar bottom -->
+			<div class="border-t border-zinc-100 p-2">
+				<button
+					onclick={() => (showRightSidebar = false)}
+					class="flex w-full items-center justify-center gap-1 rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
+					title="Hide panel"
+				>
+					<ChevronRight class="h-3 w-3" />
+					<span>Hide</span>
+				</button>
+			</div>
+		</div>
+	{:else}
+		<!-- Small show-panel button on the right edge when sidebar is hidden -->
+		<button
+			onclick={() => (showRightSidebar = true)}
+			class="absolute right-0 top-1/2 z-50 -translate-y-1/2 rounded-l border border-r-0 border-zinc-200 bg-white px-0.5 py-2 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
+			title="Show panel"
+		>
+			<ChevronLeft class="h-3 w-3" />
+		</button>
 	{/if}
 </div>
 

@@ -94,7 +94,7 @@
 			type="url"
 			bind:value
 			placeholder="Enter URL..."
-			class="w-full rounded border border-black bg-white px-3 py-2 text-black placeholder-zinc-400 focus:border-borg-blue focus:outline-none"
+			class="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-black placeholder-zinc-400 focus:border-borg-blue focus:outline-none"
 		/>
 	{/if}
 </div>

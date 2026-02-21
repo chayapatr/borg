@@ -6,9 +6,8 @@
 	import { ServiceFactory } from '$lib/services/ServiceFactory';
 	import type { IProjectsService, ITaskService } from '$lib/services/interfaces';
 	import { goto } from '$app/navigation';
-	import { ChevronLeft, CheckSquare } from '@lucide/svelte';
+	import { ChevronLeft } from '@lucide/svelte';
 	import type { TaskWithContext } from '$lib/types/task';
-	import TaskSidebar from '$lib/components/tasks/TaskSidebar.svelte';
 	import { authStore } from '$lib/stores/authStore';
 
 	const projectSlug = $derived($page.params.slug);
@@ -16,12 +15,10 @@
 	let taskService: ITaskService;
 	let project = $state<any>(null);
 	let loading = $state(true);
-	let showTaskSidebar = $state(false);
 	let projectTasks = $state<TaskWithContext[]>([]);
 	let taskSubscriptionCleanup: (() => void) | null = null;
 
 	onMount(async () => {
-		// Wait for auth to load if still loading
 		if ($authStore.loading) {
 			const unsubscribe = authStore.subscribe((auth) => {
 				if (!auth.loading) {
@@ -40,7 +37,6 @@
 		await loadProject();
 	}
 
-	// Cleanup on component destroy
 	$effect(() => {
 		return () => {
 			if (taskSubscriptionCleanup) {
@@ -56,7 +52,6 @@
 		project = projectResult;
 
 		if (!project) {
-			// Project not found, redirect to home
 			goto('/');
 			return;
 		}
@@ -67,50 +62,24 @@
 
 	async function loadProjectTasks() {
 		if (projectSlug && taskService) {
-			// Clean up previous subscription if any
 			if (taskSubscriptionCleanup) {
 				taskSubscriptionCleanup();
 				taskSubscriptionCleanup = null;
 			}
 
-			// Try to use real-time subscription if available
 			if ((taskService as any).subscribeToProjectTasks) {
-				console.log('Setting up real-time project task subscription');
 				taskSubscriptionCleanup = (taskService as any).subscribeToProjectTasks(
 					projectSlug,
 					(updatedTasks: TaskWithContext[]) => {
-						console.log('Real-time project tasks update:', updatedTasks.length, 'tasks');
 						projectTasks = [...updatedTasks];
 					}
 				);
 			} else {
-				// Fallback to regular loading
 				projectTasks = await taskService.getProjectTasks(projectSlug);
 			}
 		}
 	}
 
-	// Refresh project data periodically to show updated node count and status counts
-	$effect(() => {
-		if (projectSlug && projectsService && !loading) {
-			// const interval = setInterval(async () => {
-			// 	const updatedProject = await projectsService.getProject(projectSlug);
-			// 	if (updatedProject) {
-			// 		project = updatedProject;
-			// 	}
-			// 	await updateStatusCounts();
-			// 	await loadProjectTasks();
-			// }, 2000);
-			// return () => clearInterval(interval);
-		}
-	});
-
-	// Handle back to browser
-	function handleBackToBrowser() {
-		goto('/');
-	}
-
-	// Handle project update from Canvas component
 	async function handleProjectUpdate() {
 		if (projectSlug && projectsService) {
 			const updatedProject = await projectsService.getProject(projectSlug);
@@ -128,79 +97,29 @@
 {#if loading}
 	<div class="flex h-screen w-full items-center justify-center bg-borg-beige">
 		<div class="text-center">
-			<div
-				class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"
-			></div>
+			<div class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
 			<p class="text-black">Loading project...</p>
 		</div>
 	</div>
 {:else if project}
-	<div class="flex h-screen w-full flex-col">
-		<!-- Project Header -->
-		<div class="flex h-16 items-center justify-between border-b border-zinc-800 bg-borg-brown px-6">
-			<div class="flex items-center gap-4">
-				<button
-					onclick={handleBackToBrowser}
-					class="flex items-center gap-2 text-black transition-colors hover:text-borg-violet"
-				>
-					<ChevronLeft class="h-4 w-4" />
-					Back to Projects
-				</button>
-				<div class="h-6 w-px bg-zinc-700"></div>
-				<div>
-					<h1 class="text-lg font-semibold text-black">{project.title}</h1>
-					<!-- {#if project.description}
-						<p class="text-sm text-zinc-400">{project.description}</p>
-					{/if} -->
-				</div>
-			</div>
-			<div class="flex items-center gap-4">
-	<button
-					onclick={() => {
-						showTaskSidebar = !showTaskSidebar;
-						if (showTaskSidebar) {
-							// Close Canvas panels when opening task sidebar
-							document.dispatchEvent(new CustomEvent('closeCanvasPanels'));
-						}
-					}}
-					class="flex items-center gap-2 rounded-lg bg-black px-3 py-2 text-sm text-white transition-colors hover:bg-borg-orange"
-				>
-					<CheckSquare class="h-4 w-4" />
-					Tasks ({projectTasks.filter((t) => (t.status || 'active') === 'active').length})
-				</button>
+	<div class="relative h-screen w-full">
+		<!-- Floating back button -->
+		<button
+			onclick={() => goto('/')}
+			class="absolute left-3 top-3 z-50 flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50"
+		>
+			<ChevronLeft class="h-3.5 w-3.5" />
+			Projects
+		</button>
 
-				<!-- <div class="h-4 w-px bg-black"></div> -->
-
-				<!-- <div class="text-sm text-black">
-					<span class="capitalize">{project.status}</span>
-				</div> -->
-			</div>
-		</div>
-
-		<!-- Canvas and Sidebar Container -->
-		<div class="flex flex-1">
-			<!-- Canvas -->
-			<div class="flex-1">
-				<SvelteFlowProvider>
-					<Canvas 
-						{projectSlug} 
-						onProjectUpdate={handleProjectUpdate} 
-						onPanelOpen={() => (showTaskSidebar = false)}
-					/>
-				</SvelteFlowProvider>
-			</div>
-
-			<!-- Task Sidebar -->
-			{#if showTaskSidebar && projectSlug}
-				<TaskSidebar 
-					{projectSlug} 
-					{projectTasks} 
-					onClose={() => (showTaskSidebar = false)}
-					onTasksUpdated={async () => {
-						await loadProjectTasks();
-					}}
-				/>
-			{/if}
-		</div>
+		<!-- Canvas fills full height -->
+		<SvelteFlowProvider>
+			<Canvas
+				{projectSlug}
+				{projectTasks}
+				onProjectUpdate={handleProjectUpdate}
+				onPanelOpen={() => {}}
+			/>
+		</SvelteFlowProvider>
 	</div>
 {/if}

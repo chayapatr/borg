@@ -77,7 +77,7 @@
 
 <div class="absolute top-1/2 left-4 z-20 -translate-y-1/2">
 	<div
-		class="flex flex-col rounded-lg border border-black bg-borg-brown p-2 shadow-lg"
+		class="flex flex-col rounded-lg border border-zinc-200 bg-white p-1.5"
 		onmouseenter={() => (isToolbarHovered = true)}
 		onmouseleave={() => (isToolbarHovered = false)}
 		role="toolbar"
@@ -89,14 +89,14 @@
 			{#each projectsSpecialItems as item}
 				<button
 					onclick={() => handleSpecialItemClick(item.action)}
-					class="group flex h-10 items-center rounded-md transition-all duration-300 ease-in-out hover:bg-white {isToolbarHovered
+					class="group flex h-8 items-center rounded-md transition-all duration-300 ease-in-out hover:bg-zinc-100 {isToolbarHovered
 						? 'w-auto justify-start gap-2 pr-3 pl-2'
-						: 'w-10 justify-center'}"
+						: 'w-8 justify-center'}"
 					aria-label={item.name}
 				>
-					<item.icon class="h-5 w-5 flex-shrink-0 text-gray-700 group-hover:text-gray-900" />
+					<item.icon class="h-4 w-4 flex-shrink-0 text-zinc-500 group-hover:text-zinc-800" />
 					<span
-						class="text-sm whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out group-hover:text-gray-900 {isToolbarHovered
+						class="text-xs whitespace-nowrap text-zinc-600 transition-all duration-300 ease-in-out group-hover:text-zinc-900 {isToolbarHovered
 							? 'max-w-none opacity-100'
 							: 'max-w-0 overflow-hidden opacity-0'}"
 					>
@@ -104,20 +104,20 @@
 					</span>
 				</button>
 			{/each}
-			<div class="my-1 w-full border-t border-gray-300"></div>
+			<div class="my-1 w-full border-t border-zinc-200"></div>
 		{/if}
 
 		{#each view === 'projects' ? projectsToolbarItems : projectToolbarItems as item}
 			<button
 				onclick={() => handleItemClick(item.id)}
-				class="group flex h-10 items-center rounded-md transition-all duration-300 ease-in-out hover:bg-white {isToolbarHovered
+				class="group flex h-8 items-center rounded-md transition-all duration-300 ease-in-out hover:bg-zinc-100 {isToolbarHovered
 					? 'w-auto justify-start gap-2 pr-3 pl-2'
-					: 'w-10 justify-center'}"
+					: 'w-8 justify-center'}"
 				aria-label="Create {item.template.name} node"
 			>
-				<item.icon class="h-5 w-5 flex-shrink-0 text-gray-700 group-hover:text-gray-900" />
+				<item.icon class="h-4 w-4 flex-shrink-0 text-zinc-500 group-hover:text-zinc-800" />
 				<span
-					class="text-sm whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out group-hover:text-gray-900 {isToolbarHovered
+					class="text-xs whitespace-nowrap text-zinc-600 transition-all duration-300 ease-in-out group-hover:text-zinc-900 {isToolbarHovered
 						? 'max-w-none opacity-100'
 						: 'max-w-0 overflow-hidden opacity-0'}"
 				>
@@ -127,18 +127,18 @@
 		{/each}
 
 		<!-- Special items (like stickers) - show in both project and projects view -->
-		<div class="w-full border-t border-gray-300"></div>
+		<div class="my-1 w-full border-t border-zinc-200"></div>
 		{#each specialItems as item}
 			<button
 				onclick={() => handleSpecialItemClick(item.action)}
-				class="group flex h-10 items-center rounded-md transition-all duration-300 ease-in-out hover:bg-white {isToolbarHovered
+				class="group flex h-8 items-center rounded-md transition-all duration-300 ease-in-out hover:bg-zinc-100 {isToolbarHovered
 					? 'w-auto justify-start gap-2 pr-3 pl-2'
-					: 'w-10 justify-center'}"
+					: 'w-8 justify-center'}"
 				aria-label={item.name}
 			>
-				<item.icon class="h-5 w-5 flex-shrink-0 text-gray-700 group-hover:text-gray-900" />
+				<item.icon class="h-4 w-4 flex-shrink-0 text-zinc-500 group-hover:text-zinc-800" />
 				<span
-					class="text-sm whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out group-hover:text-gray-900 {isToolbarHovered
+					class="text-xs whitespace-nowrap text-zinc-600 transition-all duration-300 ease-in-out group-hover:text-zinc-900 {isToolbarHovered
 						? 'max-w-none opacity-100'
 						: 'max-w-0 overflow-hidden opacity-0'}"
 				>

@@ -138,7 +138,7 @@
 					value={dateValue}
 					oninput={(e) => { dateValue = e.target.value; updateTimestamp(); }}
 					disabled={readonly}
-					class="w-full rounded border border-black bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
+					class="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
 				/>
 			</div>
 			<!-- Time with dropdown -->
@@ -150,10 +150,10 @@
 					onfocus={() => showTimeOptions = true}
 					onblur={() => setTimeout(() => showTimeOptions = false, 150)}
 					disabled={readonly}
-					class="w-full rounded border border-black bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
+					class="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
 				/>
 				{#if showTimeOptions && !readonly}
-					<div class="absolute top-full left-0 right-0 z-10 mt-1 max-h-40 overflow-y-auto rounded border border-black bg-white shadow-lg">
+					<div class="absolute top-full left-0 right-0 z-10 mt-1 max-h-40 overflow-y-auto rounded border border-zinc-200 bg-white shadow-lg">
 						{#each timeOptions as time}
 							<button
 								type="button"
@@ -172,7 +172,7 @@
 					value={timezoneValue}
 					oninput={(e) => { timezoneValue = e.target.value; updateTimestamp(); }}
 					disabled={readonly}
-					class="w-full rounded border border-black bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
+					class="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-100"
 				>
 					<option value="-4">ET</option>
 					<option value="-12">AOE</option>

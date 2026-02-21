@@ -61,7 +61,7 @@
 					{#if person}
 						<div class="group relative">
 							<div
-								class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-black"
+								class="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-zinc-200"
 								title={person.name || person.email || 'User'}
 							>
 								{#if person.photoUrl}

@@ -42,9 +42,9 @@
 	});
 </script>
 
-<div class="flex h-[calc(100vh-64px)] w-80 flex-col border-l border-black bg-white">
+<div class="flex h-[calc(100vh-64px)] w-80 flex-col border-l border-zinc-200 bg-white">
 	<!-- Sidebar Header -->
-	<div class="border-b border-black p-4">
+	<div class="border-b border-zinc-200 p-4">
 		<div class="flex items-center justify-between">
 			<h3 class="font-semibold text-black">Project Tasks</h3>
 			<button
@@ -99,7 +99,7 @@
 							<div class="mb-2 flex items-center gap-2">
 								<h4 class="text-sm font-medium text-black">{nodeData.nodeTitle}</h4>
 								<span
-									class="rounded-md border border-black bg-white px-1.5 py-0.5 text-xs font-medium text-black"
+									class="rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-xs font-medium text-black"
 								>
 									{nodeData.nodeType}
 								</span>

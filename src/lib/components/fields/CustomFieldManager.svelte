@@ -71,9 +71,9 @@
 	}
 </script>
 
-<div class="mt-4 border-t border-zinc-700 pt-4">
-	<div class="mb-3 flex items-center justify-between">
-		<h4 class="text-sm font-medium text-black">Custom Fields</h4>
+<div class="mt-3 border-t border-zinc-100 pt-3">
+	<div class="mb-2 flex items-center justify-between">
+		<h4 class="text-xs font-medium text-zinc-600">Custom Fields</h4>
 		<button
 			onclick={() => (showAddField = !showAddField)}
 			class="flex items-center gap-1 text-xs text-zinc-600 transition-colors hover:text-borg-blue"
@@ -84,7 +84,7 @@
 	</div>
 
 	{#if showAddField}
-		<div class="mb-3 rounded-lg border border-black bg-borg-brown p-3">
+		<div class="mb-3 rounded-lg border border-zinc-200 bg-borg-brown p-3">
 			<div class="space-y-3">
 				<div>
 					<label class="mb-1 block text-xs font-medium text-zinc-300"> Field Label </label>
@@ -93,7 +93,7 @@
 						type="text"
 						placeholder="Enter field name..."
 						onkeydown={handleKeyDown}
-						class="w-full rounded border border-black bg-white px-2 py-1 text-sm text-black placeholder-zinc-500 focus:border-borg-blue focus:outline-none"
+						class="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-black placeholder-zinc-500 focus:border-borg-blue focus:outline-none"
 						autofocus
 					/>
 				</div>
@@ -102,7 +102,7 @@
 					<label class="mb-1 block text-xs font-medium text-black"> Field Type </label>
 					<select
 						bind:value={newFieldType}
-						class="w-full rounded border border-black bg-white px-2 py-1 text-sm text-black focus:border-borg-blue focus:outline-none"
+						class="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-sm text-black focus:border-borg-blue focus:outline-none"
 					>
 						{#each fieldTypes as type}
 							<option value={type.value}>{type.label}</option>
@@ -137,7 +137,7 @@
 		<div class="space-y-2">
 			{#each customFields as field}
 				<div
-					class="box-shadow-black flex items-center justify-between rounded border border-black bg-white px-2 py-1"
+					class="box-shadow-black flex items-center justify-between rounded border border-zinc-200 bg-white px-2 py-1"
 				>
 					<span class="text-sm text-black">{field.label}</span>
 					<div class="flex items-center gap-2">

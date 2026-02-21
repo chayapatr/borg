@@ -323,7 +323,7 @@
 			: 'transition-all duration-200'} {isEditingNote ? 'border-2 shadow-lg' : ''} {noteStyle ===
 		'Text Only'
 			? ''
-			: 'border border-black'}"
+			: 'border border-zinc-300'}"
 		style="{backgroundStyle}; width: {width}px; height: {height}px; opacity: {nodeOpacity}; transition: opacity 0.2s;"
 		onclick={handleNodeClick}
 	>

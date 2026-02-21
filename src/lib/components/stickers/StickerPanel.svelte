@@ -73,7 +73,7 @@
 
 {#if isOpen}
 	<div
-		class="flex h-[calc(100vh-64px)] w-80 flex-col overflow-hidden border-l border-black bg-white"
+		class="flex h-[calc(100vh-64px)] w-80 flex-col overflow-hidden border-l border-zinc-200 bg-white"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="sticker-panel-title"
@@ -81,7 +81,7 @@
 		onkeydown={handleKeyDown}
 	>
 		<!-- Header -->
-		<div class="border-b border-black p-4">
+		<div class="border-b border-zinc-200 p-4">
 			<div class="flex items-center justify-between">
 				<div>
 					<h3 class="font-semibold text-black">Stickers</h3>
@@ -126,13 +126,13 @@
 			<!-- Category tabs and content -->
 			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
 				<!-- Category tabs -->
-				<div class="flex flex-shrink-0 overflow-x-auto border-b border-black">
+				<div class="flex flex-shrink-0 overflow-x-auto border-b border-zinc-200">
 					{#each categories as category}
 						<button
 							onclick={() => handleCategoryClick(category.slug)}
 							class="flex-shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition-colors {activeCategory ===
 							category.slug
-								? 'border-black bg-borg-beige text-black'
+								? 'border-zinc-200 bg-borg-beige text-black'
 								: 'border-transparent text-zinc-500 hover:bg-zinc-100 hover:text-black'}"
 						>
 							{category.name}

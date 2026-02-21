@@ -174,15 +174,7 @@
 	}
 </script>
 
-<div class="flex flex-1 flex-col">
-	<!-- Header -->
-	<div class=" flex h-16 flex-col justify-center border-b bg-white px-6">
-		<div class="flex items-center gap-3">
-			<User class="h-8 w-8" />
-			<h2 class="text-3xl font-semibold">Personal</h2>
-		</div>
-	</div>
-
+<div class="flex h-full w-full flex-col overflow-hidden">
 	{#if personalData.loading}
 		<div class="flex h-64 items-center justify-center">
 			<div
@@ -191,130 +183,44 @@
 			<span class="ml-2 text-sm text-gray-600">Loading...</span>
 		</div>
 	{:else}
-		<div class="flex-1 overflow-y-auto">
-			<!-- Personal Profile Card -->
-			<div class="box-shadow-black mx-6 mt-6 mb-6 rounded-lg border border-zinc-800 bg-white p-6">
-				<div class="flex items-center gap-4">
-					{#if profileImageUrl}
-						<div class="h-16 w-16 overflow-hidden rounded-full border border-black">
-							<img
-								src={profileImageUrl}
-								alt="Profile"
-								class="h-full w-full object-cover"
-								referrerpolicy="no-referrer"
-								onerror={handleImageError}
-							/>
-						</div>
-					{/if}
-					<div class="flex-1">
-						<div class="mb-1 flex items-center">
-							{#if isEditingName}
-								<input
-									bind:value={personalData.preferredName}
-									type="text"
-									placeholder={initialData.preferredName || 'Your preferred name'}
-									class="border-b border-gray-300 bg-transparent px-0 text-xl font-semibold text-black focus:border-blue-500 focus:outline-none"
-									onfocus={(e) => e.target.select()}
-								/>
-								<button
-									onclick={() => {
-										isEditingName = false;
-										savePersonalData();
-									}}
-									class="p-1 text-green-600 hover:text-green-700"
-									title="Save"
-								>
-									<Check class="h-4 w-4" />
-								</button>
-								<button
-									onclick={() => {
-										isEditingName = false;
-										personalData.preferredName = initialData.preferredName;
-									}}
-									class="p-1 text-red-600 hover:text-red-700"
-									title="Cancel"
-								>
-									<X class="h-4 w-4" />
-								</button>
-							{:else}
-								<h3 class="text-xl font-semibold text-black">
-									{personalData.preferredName || $authStore.user?.displayName || 'No name set'}
-								</h3>
-								<button
-									onclick={() => (isEditingName = true)}
-									class="p-1 text-gray-500 hover:text-gray-700"
-									title="Edit name"
-								>
-									<Edit class="h-4 w-4" />
-								</button>
-							{/if}
-						</div>
-						<p class="mb-3 text-sm text-zinc-600">{$authStore.user?.email}</p>
-						{#if personalData.saving}
-							<div class="flex items-center gap-2 text-xs text-gray-500">
-								<div
-									class="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-black"
-								></div>
-								Saving...
-							</div>
+		<!-- Sticky profile + tabs -->
+		<div class="w-full flex-shrink-0 border-b border-borg-brown bg-borg-beige">
+			<!-- Profile row -->
+			<div class="flex items-center gap-3 px-4 py-3">
+				{#if profileImageUrl}
+					<div class="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full border border-borg-brown">
+						<img src={profileImageUrl} alt="Profile" class="h-full w-full object-cover" referrerpolicy="no-referrer" onerror={handleImageError} />
+					</div>
+				{:else}
+					<div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-borg-brown bg-white text-sm font-semibold text-zinc-600">
+						{($authStore.user?.displayName || '?')[0]}
+					</div>
+				{/if}
+				<div class="min-w-0 flex-1">
+					<div class="flex items-center gap-1">
+						{#if isEditingName}
+							<input bind:value={personalData.preferredName} type="text" placeholder={initialData.preferredName || 'Your preferred name'} class="border-b border-zinc-500 bg-transparent px-0 text-sm font-medium text-zinc-800 focus:outline-none" onfocus={(e) => e.target.select()} />
+							<button onclick={() => { isEditingName = false; savePersonalData(); }} class="p-0.5 text-green-600"><Check class="h-3.5 w-3.5" /></button>
+							<button onclick={() => { isEditingName = false; personalData.preferredName = initialData.preferredName; }} class="p-0.5 text-red-500"><X class="h-3.5 w-3.5" /></button>
+						{:else}
+							<span class="text-sm font-semibold text-zinc-800">{personalData.preferredName || $authStore.user?.displayName || 'No name set'}</span>
+							<button onclick={() => (isEditingName = true)} class="p-0.5 text-zinc-400 hover:text-zinc-600"><Edit class="h-3 w-3" /></button>
 						{/if}
+						{#if personalData.saving}<div class="h-3 w-3 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600"></div>{/if}
 					</div>
+					<p class="truncate text-xs text-zinc-500">{$authStore.user?.email}</p>
 				</div>
+				</div>
+			<!-- Tabs -->
+			<div class="flex border-t border-borg-brown px-4">
+				<button onclick={() => (viewTab = 'active')} class="px-3 py-2 text-sm font-medium transition-colors {viewTab === 'active' ? 'border-b-2 border-zinc-700 text-zinc-800' : 'text-zinc-400 hover:text-zinc-600'}">Active ({userTasks.length})</button>
+				<button onclick={() => (viewTab = 'resolved')} class="px-3 py-2 text-sm font-medium transition-colors {viewTab === 'resolved' ? 'border-b-2 border-zinc-700 text-zinc-800' : 'text-zinc-400 hover:text-zinc-600'}">Resolved ({resolvedUserTasks.length})</button>
+				<button onclick={() => (viewTab = 'log')} class="px-3 py-2 text-sm font-medium transition-colors {viewTab === 'log' ? 'border-b-2 border-zinc-700 text-zinc-800' : 'text-zinc-400 hover:text-zinc-600'}">Log</button>
 			</div>
+		</div>
 
-			<!-- My Tasks Section -->
-			<div class="mt-8 flex items-center justify-between px-6">
-				<div class="flex items-center gap-3">
-					<CheckSquare class="h-6 w-6" />
-					<h3 class="text-2xl font-semibold text-black">My Tasks</h3>
-				</div>
-				<div class="flex items-center gap-4">
-					<div class="flex items-center gap-1">
-						<span class="text-xs text-black">Active</span>
-						<span class="rounded-full bg-borg-orange px-2 py-1 text-xs text-white">
-							{userTasks.length}
-						</span>
-					</div>
-					<div class="flex items-center gap-1">
-						<span class="text-xs text-black">Resolved</span>
-						<span class="rounded-full bg-green-600 px-2 py-1 text-xs text-white">
-							{resolvedUserTasks.length}
-						</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- Tab Navigation -->
-			<div class="mt-4 px-6">
-				<div class="flex border-b border-zinc-200">
-					<button
-						onclick={() => (viewTab = 'active')}
-						class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'active'
-							? 'border-b-2 border-borg-orange text-borg-orange'
-							: 'text-zinc-500 hover:text-zinc-700'}"
-					>
-						Active Tasks ({userTasks.length})
-					</button>
-					<button
-						onclick={() => (viewTab = 'resolved')}
-						class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'resolved'
-							? 'border-b-2 border-green-600 text-green-600'
-							: 'text-zinc-500 hover:text-zinc-700'}"
-					>
-						Resolved Tasks ({resolvedUserTasks.length})
-					</button>
-					<button
-						onclick={() => (viewTab = 'log')}
-						class="px-4 py-2 text-sm font-medium transition-colors {viewTab === 'log'
-							? 'border-b-2 border-blue-600 text-blue-600'
-							: 'text-zinc-500 hover:text-zinc-700'}"
-					>
-						Log
-					</button>
-				</div>
-			</div>
-
-			<div class="p-6 pt-4">
+		<div class="flex-1 overflow-y-auto">
+			<div class="p-4">
 				{#if viewTab === 'active'}
 					<HierarchicalTaskView 
 						tasks={userTasks} 

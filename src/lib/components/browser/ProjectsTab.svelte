@@ -4,38 +4,33 @@
 	import type { IProjectsService, ITaskService } from '../../services/interfaces';
 	import CreateProjectModal from './CreateProjectModal.svelte';
 	import ProjectsCanvas from './ProjectsCanvas.svelte';
-	import { Plus, FolderOpen, Trash2, Grid, Network } from '@lucide/svelte';
+	import { FolderOpen, Trash2, Search, Network, Grid, Plus } from '@lucide/svelte';
 	import { ServiceFactory } from '../../services/ServiceFactory';
 	import { authStore } from '../../stores/authStore';
 
 	let {
 		projectsService,
 		cachedProjects = [],
-		onCountsUpdate = () => {}
+		onCountsUpdate = () => {},
+		viewMode = $bindable<'list' | 'canvas'>('canvas')
 	} = $props<{
 		projectsService: IProjectsService;
 		cachedProjects?: any[];
 		onCountsUpdate?: () => void;
+		viewMode?: 'list' | 'canvas';
 	}>();
 
 	let projects = $state<any[]>([]);
 	let showCreateModal = $state(false);
+	let searchQuery = $state('');
 	let projectCounts = $state<Record<string, { todo: number; doing: number; done: number }>>({});
 	let projectTaskCounts = $state<Record<string, number>>({});
-	let viewMode = $state<'list' | 'canvas'>($authStore.userType === 'collaborator' ? 'list' : 'canvas');
 	let dataLoaded = $state(false);
 	let updatingCounts = $state(false);
 	let creatingProject = $state(false);
 	let deletingProjects = $state<Set<string>>(new Set());
 
 	let taskService: ITaskService;
-
-	// Force collaborators to use list view only
-	$effect(() => {
-		if ($authStore.userType === 'collaborator') {
-			viewMode = 'list';
-		}
-	});
 
 	onMount(() => {
 		taskService = ServiceFactory.createTaskService();
@@ -142,118 +137,94 @@
 
 <svelte:document on:visibilitychange={handleVisibilityChange} />
 
-<div class="flex flex-1 flex-col">
-	<!-- Header -->
-	<div class=" flex h-16 flex-col justify-center border-b bg-white px-6">
-		<div class="flex items-center justify-between">
-			<div>
-				<div class="flex items-center gap-3">
-					<FolderOpen class="h-8 w-8" />
-					<h2 class="rounded-md text-3xl font-semibold">Projects</h2>
-				</div>
-				<!-- <p class="text-zinc-400 mt-1">Manage your research projects</p> -->
-			</div>
-			<div class="flex items-center gap-4">
-				<!-- View Toggle (hidden for collaborators) -->
-				{#if $authStore.userType !== 'collaborator'}
-					<div
-						class="flex h-10 items-center divide-x divide-black rounded-full border border-black bg-white"
-					>
+<div class="flex h-full w-full flex-col overflow-hidden">
+	<!-- Content Area -->
+	<div class={viewMode === 'canvas' ? 'min-h-0 flex-1' : 'flex-1 overflow-y-auto p-4'}>
+		{#if viewMode === 'list'}
+			<!-- Inline controls: search + toggle + new project -->
+			{#if $authStore.userType !== 'collaborator'}
+				<div class="mb-3 flex items-center gap-2">
+					<div class="relative">
+						<Search class="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+						<input
+							type="text"
+							placeholder="Search projects..."
+							bind:value={searchQuery}
+							class="w-48 rounded border border-zinc-200 bg-white py-1.5 pr-3 pl-8 text-sm text-black placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+						/>
+					</div>
+					<div class="flex w-48 rounded border border-zinc-200 bg-white p-0.5">
 						<button
 							onclick={() => (viewMode = 'canvas')}
-							class="flex h-full items-center gap-2 rounded-full rounded-r-2xl px-3 py-1 text-sm transition-colors {viewMode ===
-							'canvas'
-								? 'bg-borg-brown text-black'
-								: 'text-black hover:bg-borg-beige'}"
+							class="flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-sm transition-colors text-zinc-500 hover:text-zinc-700"
 						>
-							<Network class="h-4 w-4" />
+							<Network class="h-3.5 w-3.5" />
 							Canvas
 						</button>
 						<button
 							onclick={() => (viewMode = 'list')}
-							class="flex h-full items-center gap-2 rounded-full rounded-l-2xl px-3 py-1 text-sm transition-colors {viewMode ===
-							'list'
-								? 'bg-borg-brown text-black'
-								: 'text-black hover:bg-borg-beige'}"
+							class="flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-sm transition-colors bg-zinc-100 text-zinc-800 font-medium"
 						>
-							<Grid class="h-4 w-4" />
+							<Grid class="h-3.5 w-3.5" />
 							List
 						</button>
 					</div>
-				{/if}
-			</div>
-		</div>
-	</div>
+					<div class="flex-1"></div>
+					<button
+						onclick={() => (showCreateModal = true)}
+						class="flex items-center gap-1.5 rounded border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-600 transition-colors hover:bg-zinc-50"
+					>
+						<Plus class="h-3.5 w-3.5" />
+						New Project
+					</button>
+				</div>
+			{/if}
 
-	<!-- Content Area -->
-	<div class={viewMode === 'canvas' ? 'min-h-0 flex-1' : 'flex-1 overflow-y-auto p-6'}>
-		{#if viewMode === 'list'}
 			<!-- List View -->
-			{#if projects.length === 0}
+			{#if projects.filter((p) => p.id !== 'project-canvas').length === 0}
 				<div class="flex h-64 flex-col items-center justify-center text-center">
-					<FolderOpen class="mb-4 h-8  w-8 text-black" />
+					<FolderOpen class="mb-4 h-8 w-8 text-zinc-300" />
 					<h3 class="mb-2 text-lg font-medium text-black">No projects yet</h3>
-					<p class="mb-4 text-zinc-500">Create your first project to get started</p>
+					<p class="mb-4 text-sm text-zinc-500">Create your first project to get started</p>
 				</div>
 			{:else}
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-					{#each projects.filter((p) => p.id !== 'project-canvas') as project}
+				<div class="space-y-1">
+					{#each projects.filter((p) => p.id !== 'project-canvas' && (!searchQuery || p.title?.toLowerCase().includes(searchQuery.toLowerCase()))) as project}
 						{@const isDeleting = deletingProjects.has(project.slug)}
+						{@const counts = projectCounts[project.slug] || { todo: 0, doing: 0, done: 0 }}
+						{@const taskCount = projectTaskCounts[project.slug] || 0}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="box-shadow-black rounded-sm border border-black bg-white p-4 transition-colors hover:bg-borg-beige {isDeleting ? 'opacity-50 pointer-events-none' : ''}"
+							class="group flex cursor-pointer items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 transition-colors hover:bg-borg-beige {isDeleting ? 'pointer-events-none opacity-50' : ''}"
 							onclick={() => !isDeleting && handleOpenProject(project.slug)}
 						>
-							<div class="mb-4 flex items-start justify-between">
-								<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-borg-violet">
-									<FolderOpen class="h-5 w-5 text-white" />
-								</div>
-								<div class="flex items-center gap-2">
-									<button
-										onclick={(e) => !isDeleting && handleDeleteProject(e, project.slug, project.title)}
-										aria-label="Move to recycle bin"
-										disabled={isDeleting}
-										class="rounded p-1 text-zinc-500 transition-colors hover:bg-borg-orange hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-									>
-										{#if isDeleting}
-											<div class="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent"></div>
-										{:else}
-											<Trash2 class="h-4 w-4" />
-										{/if}
-									</button>
-								</div>
+							<div class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded border border-borg-brown bg-borg-beige">
+								<FolderOpen class="h-3.5 w-3.5 text-zinc-600" />
 							</div>
-
-							<h3 class="mb-2 line-clamp-2 text-xl font-semibold">{project.title}</h3>
-
-							<!-- Task Counts -->
-							<div class="mb-3 text-xs text-zinc-600">
-								{#if updatingCounts && !projectCounts[project.slug] && !projectTaskCounts[project.slug]}
-									<div class="animate-pulse">Task: Loading...</div>
-								{:else}
-									{@const taskCount = projectTaskCounts[project.slug] || 0}
-									{@const counts = projectCounts[project.slug] || { todo: 0, doing: 0, done: 0 }}
-									Task: {taskCount} |
-									<span class="inline-flex items-center gap-1">
-										<span class="h-2 w-2 rounded-full border border-black bg-purple-500"></span>
-										{counts.todo}
-									</span>
-									<span class="inline-flex items-center gap-1">
-										<span class="h-2 w-2 rounded-full border border-black bg-sky-500"></span>
-										{counts.doing}
-									</span>
-									<span class="inline-flex items-center gap-1">
-										<span class="h-2 w-2 rounded-full border border-black bg-green-500"></span>
-										{counts.done}
-									</span>
-								{/if}
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-sm font-medium text-zinc-800">{project.title}</p>
+								<p class="text-xs text-zinc-400">
+									{taskCount} tasks ·
+									<span class="inline-flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-purple-400"></span>{counts.todo}</span>
+									<span class="inline-flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-sky-400"></span>{counts.doing}</span>
+									<span class="inline-flex items-center gap-0.5"><span class="h-1.5 w-1.5 rounded-full bg-green-400"></span>{counts.done}</span>
+								</p>
 							</div>
-
-							<div class="flex justify-end text-xs text-zinc-500">
-								<div class="capitalize">
-									{project.status || 'active'} | {formatDate(project.updatedAt)}
-								</div>
+							<div class="flex items-center gap-2">
+								<span class="text-xs capitalize text-zinc-400">{project.status || 'active'}</span>
+								<button
+									onclick={(e) => !isDeleting && handleDeleteProject(e, project.slug, project.title)}
+									aria-label="Delete"
+									disabled={isDeleting}
+									class="rounded p-1 text-zinc-300 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400 disabled:cursor-not-allowed"
+								>
+									{#if isDeleting}
+										<div class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent"></div>
+									{:else}
+										<Trash2 class="h-3.5 w-3.5" />
+									{/if}
+								</button>
 							</div>
 						</div>
 					{/each}
@@ -267,6 +238,7 @@
 					onProjectClick={handleOpenProject}
 					onProjectUpdate={loadProjects}
 					onCreateProject={() => (showCreateModal = true)}
+					bind:viewMode
 				/>
 			</div>
 		{/if}

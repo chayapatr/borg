@@ -27,11 +27,16 @@
 		ITimelineService
 	} from '../services/interfaces';
 
-	import { firebaseAuth } from '../stores/authStore';
+	import { firebaseAuth, authStore } from '../stores/authStore';
 
 	type Tab = 'projects' | 'people' | 'timeline' | 'tasks' | 'personal' | 'wiki' | 'resources';
 
 	let activeTab = $state<Tab>('projects');
+	let viewMode = $state<'list' | 'canvas'>('canvas');
+
+	$effect(() => {
+		if ($authStore.userType === 'collaborator') viewMode = 'list';
+	});
 
 	// Shared services - created once and passed to children
 	let projectsService: IProjectsService;
@@ -108,136 +113,90 @@
 	}
 </script>
 
-<div class="flex h-full min-h-screen w-full bg-borg-white">
-	<!-- Sidebar -->
-	<div
-		class="fixed flex h-screen min-h-screen w-64 flex-col border-r border-zinc-800 bg-borg-brown"
-	>
-		<!-- Header -->
-		<div class="p-6">
-			<img src="BORG.svg" class="w-3/4" alt="" />
-			<!-- <p class="mt-1 text-sm text-zinc-400">MIT Media Lab</p> -->
+<div class="flex h-full min-h-screen w-full flex-col bg-white">
+	<!-- Top Nav -->
+	<div class="fixed top-0 right-0 left-0 z-50 flex h-12 items-center gap-1 border-b border-zinc-200 bg-white px-3">
+		<!-- Logo -->
+		<img src="BORG.svg" class="mr-3 h-5" alt="" />
 
-			<!-- Status Counts -->
-			<!-- <div class="mt-4 space-y-2">
-				<div class="flex items-center justify-between text-sm">
-					<span class="text-zinc-400">To Do</span>
-					<span class="rounded-full bg-purple-500/20 px-2 py-1 text-xs text-purple-400"
-						>{globalCounts.todo}</span
-					>
-				</div>
-				<div class="flex items-center justify-between text-sm">
-					<span class="text-zinc-400">Doing</span>
-					<span class="rounded-full bg-blue-500/20 px-2 py-1 text-xs text-blue-400"
-						>{globalCounts.doing}</span
-					>
-				</div>
-				<div class="flex items-center justify-between text-sm">
-					<span class="text-zinc-400">Done</span>
-					<span class="rounded-full bg-green-500/20 px-2 py-1 text-xs text-green-400"
-						>{globalCounts.done}</span
-					>
-				</div>
-			</div> -->
-		</div>
+		<div class="h-5 border-l border-zinc-200"></div>
 
-		<!-- Navigation Tabs -->
-		<nav class="flex flex-1 flex-col justify-between p-4">
-			<div class="space-y-2 font-semibold">
-				<button
-					onclick={() => setActiveTab('projects')}
-					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
-					'projects'
-						? 'bg-black text-white '
-						: 'hover:bg-borg-orange hover:text-white'}"
-				>
-					<FolderOpen class="h-5 w-5" />
-					Projects
-				</button>
+		<!-- Nav items -->
+		<button
+			onclick={() => setActiveTab('projects')}
+			class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab === 'projects' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
+		>
+			<FolderOpen class="h-4 w-4" />
+			Projects
+		</button>
 
-				<button
-					onclick={() => setActiveTab('people')}
-					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
-					'people'
-						? 'bg-black text-white '
-						: 'hover:bg-borg-orange hover:text-white'}"
-				>
-					<Users class="h-5 w-5" />
-					People
-				</button>
+		<button
+			onclick={() => setActiveTab('people')}
+			class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab === 'people' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
+		>
+			<Users class="h-4 w-4" />
+			People
+		</button>
 
-				<button
-					onclick={() => setActiveTab('timeline')}
-					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
-					'timeline'
-						? 'bg-black text-white '
-						: 'hover:bg-borg-orange hover:text-white'}"
-				>
-					<Calendar class="h-5 w-5" />
-					Timeline
-				</button>
+		<button
+			onclick={() => setActiveTab('timeline')}
+			class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab === 'timeline' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
+		>
+			<Calendar class="h-4 w-4" />
+			Timeline
+		</button>
 
-				<button
-					onclick={() => setActiveTab('tasks')}
-					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
-					'tasks'
-						? 'bg-black text-white '
-						: 'hover:bg-borg-orange hover:text-white'}"
-				>
-					<CheckSquare class="h-5 w-5" />
-					Tasks
-				</button>
+		<button
+			onclick={() => setActiveTab('tasks')}
+			class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab === 'tasks' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
+		>
+			<CheckSquare class="h-4 w-4" />
+			Tasks
+		</button>
 
-				<button
-					onclick={() => setActiveTab('personal')}
-					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
-					'personal'
-						? 'bg-black text-white '
-						: 'hover:bg-borg-orange hover:text-white'}"
-				>
-					<User class="h-5 w-5" />
-					Personal
-				</button>
+		<button
+			onclick={() => setActiveTab('personal')}
+			class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab === 'personal' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
+		>
+			<User class="h-4 w-4" />
+			Personal
+		</button>
 
-				<button
-					onclick={() => setActiveTab('wiki')}
-					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {activeTab ===
-					'wiki'
-						? 'bg-black text-white '
-						: 'hover:bg-borg-orange hover:text-white'}"
-				>
-					<FileText class="h-5 w-5" />
-					Wiki
-				</button>
+		<button
+			onclick={() => setActiveTab('wiki')}
+			class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab === 'wiki' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
+		>
+			<FileText class="h-4 w-4" />
+			Wiki
+		</button>
 
-				<button
-					onclick={() => window.open('https://borg.cyborglab.org/project/lab-resources', '_blank')}
-					class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-borg-orange hover:text-white"
-				>
-					<BookOpen class="h-5 w-5" />
-					<div class="flex items-center gap-1">
-						Resources <ExternalLink strokeWidth={2.5} class="mt-0.5 h-3 w-3" />
-					</div>
-				</button>
-			</div>
-			<button
-				onclick={handleLogout}
-				class="flex w-fit grow-0 items-center gap-1
-        rounded-md border border-black bg-white px-3 py-1.5 font-medium
-        text-black transition-colors hover:bg-borg-beige"
-				title="Log out"
-			>
-				<LogOut class="h-3 w-3" />
-				<span>Log out</span>
-			</button>
-		</nav>
+		<button
+			onclick={() => window.open('https://borg.cyborglab.org/project/lab-resources', '_blank')}
+			class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+		>
+			<BookOpen class="h-4 w-4" />
+			<span class="flex items-center gap-1">Resources <ExternalLink strokeWidth={2.5} class="h-3 w-3" /></span>
+		</button>
+
+		<!-- Spacer -->
+		<div class="flex-1"></div>
+
+		<!-- Logout -->
+		<button
+			onclick={handleLogout}
+			class="flex items-center gap-1.5 rounded-md border border-zinc-200 px-2.5 py-1.5 text-sm text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+			title="Log out"
+		>
+			<LogOut class="h-4 w-4" />
+			<span>Log out</span>
+		</button>
 	</div>
 
 	<!-- Main Content -->
-	<div class="ml-64 flex h-screen flex-1">
+	<div class="flex h-screen w-full flex-col overflow-hidden pt-12">
 		{#if servicesInitialized}
 			{#if activeTab === 'projects'}
-				<ProjectsTab {projectsService} {cachedProjects} onCountsUpdate={updateGlobalCounts} />
+				<ProjectsTab {projectsService} {cachedProjects} onCountsUpdate={updateGlobalCounts} bind:viewMode />
 			{:else if activeTab === 'people'}
 				<PeopleTab {peopleService} {taskService} {activeTab} />
 			{:else if activeTab === 'timeline'}
