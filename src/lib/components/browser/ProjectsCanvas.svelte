@@ -7,6 +7,7 @@
 		Background,
 		Controls,
 		MiniMap,
+		Panel,
 		useSvelteFlow,
 		type Node,
 		type Edge,
@@ -33,7 +34,13 @@
 	import '@xyflow/svelte/dist/style.css';
 	import '../svelteflow.css';
 
-	let { projects, onProjectClick, onCreateProject, onProjectUpdate, viewMode = $bindable<'list' | 'canvas'>('canvas') } = $props<{
+	let {
+		projects,
+		onProjectClick,
+		onCreateProject,
+		onProjectUpdate,
+		viewMode = $bindable<'list' | 'canvas'>('canvas')
+	} = $props<{
 		projects: Project[];
 		onProjectClick: (slug: string) => void;
 		onCreateProject?: () => void;
@@ -72,6 +79,9 @@
 			});
 		}
 	});
+
+	// Minimap toggle state
+	let showMinimap = $state(true);
 
 	// Edit panel state
 	let showEditPanel = $state(false);
@@ -731,14 +741,20 @@
 				<div class="flex w-52 rounded border border-zinc-200 bg-white p-0.5 shadow-sm">
 					<button
 						onclick={() => (viewMode = 'canvas')}
-						class="flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-sm transition-colors {viewMode === 'canvas' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:text-zinc-700'}"
+						class="flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-sm transition-colors {viewMode ===
+						'canvas'
+							? 'bg-zinc-100 font-medium text-zinc-800'
+							: 'text-zinc-500 hover:text-zinc-700'}"
 					>
 						<Network class="h-3.5 w-3.5" />
 						Canvas
 					</button>
 					<button
 						onclick={() => (viewMode = 'list')}
-						class="flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-sm transition-colors {viewMode === 'list' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:text-zinc-700'}"
+						class="flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1 text-sm transition-colors {viewMode ===
+						'list'
+							? 'bg-zinc-100 font-medium text-zinc-800'
+							: 'text-zinc-500 hover:text-zinc-700'}"
 					>
 						<Grid class="h-3.5 w-3.5" />
 						List
@@ -763,7 +779,9 @@
 						/>
 					</div>
 					{#if matchingNodeIds.length > 0}
-						<div class="flex items-center gap-1 rounded border border-zinc-200 bg-white px-2 py-1.5 shadow-sm">
+						<div
+							class="flex items-center gap-1 rounded border border-zinc-200 bg-white px-2 py-1.5 shadow-sm"
+						>
 							<span class="text-xs text-zinc-600">
 								{currentMatchIndex + 1} / {matchingNodeIds.length}
 							</span>
@@ -773,7 +791,17 @@
 							class="rounded border border-zinc-200 bg-white p-1.5 text-zinc-600 shadow-sm hover:bg-zinc-50"
 							title="Previous (Shift+Enter)"
 						>
-							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
 								<polyline points="15 18 9 12 15 6"></polyline>
 							</svg>
 						</button>
@@ -782,7 +810,17 @@
 							class="rounded border border-zinc-200 bg-white p-1.5 text-zinc-600 shadow-sm hover:bg-zinc-50"
 							title="Next (Enter)"
 						>
-							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
 								<polyline points="9 18 15 12 9 6"></polyline>
 							</svg>
 						</button>
@@ -818,7 +856,17 @@
 			>
 				<Background />
 				<Controls />
-				<MiniMap class="border border-black" />
+				<Panel position="bottom-right">
+					<button
+						onclick={() => (showMinimap = !showMinimap)}
+						class="rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
+					>
+						{showMinimap ? 'Hide' : 'Show'} Map
+					</button>
+				</Panel>
+				{#if showMinimap}
+					<MiniMap class="border border-zinc-200" style="margin-bottom: 54px" />
+				{/if}
 			</SvelteFlow>
 		</div>
 

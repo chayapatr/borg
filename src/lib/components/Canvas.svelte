@@ -5,6 +5,7 @@
 		Background,
 		Controls,
 		MiniMap,
+		Panel,
 		useSvelteFlow,
 		type Node,
 		type Edge,
@@ -35,7 +36,12 @@
 	import '@xyflow/svelte/dist/style.css';
 	import './svelteflow.css';
 
-	let { projectSlug, onProjectUpdate, onPanelOpen, projectTasks = [] } = $props<{
+	let {
+		projectSlug,
+		onProjectUpdate,
+		onPanelOpen,
+		projectTasks = []
+	} = $props<{
 		projectSlug?: string;
 		onProjectUpdate?: () => void;
 		onPanelOpen?: () => void;
@@ -71,6 +77,9 @@
 	let createPosition = $state({ x: 0, y: 0 });
 	let saveTimeout: ReturnType<typeof setTimeout>;
 	let hasAttemptedProjectNodeCreation = false;
+
+	// Minimap toggle state
+	let showMinimap = $state(true);
 
 	// Edit panel state
 	let showEditPanel = $state(false);
@@ -108,10 +117,16 @@
 	// Selection state
 	let selectedNodes = $state<Node[]>([]);
 	let selectedNodesWithStatus = $derived(
-		selectedNodes.filter((node) => node.data?.templateType !== 'sticker' && node.data?.templateType !== 'image' && node.data?.templateType !== 'iframe')
+		selectedNodes.filter(
+			(node) =>
+				node.data?.templateType !== 'sticker' &&
+				node.data?.templateType !== 'image' &&
+				node.data?.templateType !== 'iframe'
+		)
 	);
 	let allSelectedDone = $derived(
-		selectedNodesWithStatus.length > 0 && selectedNodesWithStatus.every((n) => n.data?.nodeData?.status === 'Done')
+		selectedNodesWithStatus.length > 0 &&
+			selectedNodesWithStatus.every((n) => n.data?.nodeData?.status === 'Done')
 	);
 
 	// Project sync optimization
@@ -160,7 +175,12 @@
 	// Delete all selected nodes
 	async function deleteSelectedNodes() {
 		if (selectedNodes.length === 0) return;
-		if (!confirm(`Delete ${selectedNodes.length} selected node${selectedNodes.length > 1 ? 's' : ''}?`)) return;
+		if (
+			!confirm(
+				`Delete ${selectedNodes.length} selected node${selectedNodes.length > 1 ? 's' : ''}?`
+			)
+		)
+			return;
 
 		for (const node of selectedNodes) {
 			nodesService.deleteNode(node.id);
@@ -1090,46 +1110,46 @@
 		}
 	}
 
-// Get display label for a node in the node list
-function getNodeLabel(node: Node): string {
-	const nd = node.data?.nodeData;
-	const type = node.data?.templateType;
-	return nd?.title || nd?.name || (nd?.content as string)?.slice?.(0, 40) || type || 'Untitled';
-}
+	// Get display label for a node in the node list
+	function getNodeLabel(node: Node): string {
+		const nd = node.data?.nodeData;
+		const type = node.data?.templateType;
+		return nd?.title || nd?.name || (nd?.content as string)?.slice?.(0, 40) || type || 'Untitled';
+	}
 
-// Focus a node in the viewport and open its inspector
-function focusNode(node: Node) {
-	fitView({ nodes: [node], duration: 400, padding: 0.5 });
-	editNodeId = node.id;
-	editNodeData = node.data?.nodeData || {};
-	editTemplateType = (node.data?.templateType as string) || 'blank';
-	showEditPanel = true;
-	showNodeTaskSidebar = false;
-	showStickerPanel = false;
-}
+	// Focus a node in the viewport and open its inspector
+	function focusNode(node: Node) {
+		fitView({ nodes: [node], duration: 400, padding: 0.5 });
+		editNodeId = node.id;
+		editNodeData = node.data?.nodeData || {};
+		editTemplateType = (node.data?.templateType as string) || 'blank';
+		showEditPanel = true;
+		showNodeTaskSidebar = false;
+		showStickerPanel = false;
+	}
 
-// Filtered node list (exclude stickers/images/iframes for the list)
-let listedNodes = $derived(
-	nodes.filter(
-		(n) =>
-			n.data?.templateType !== 'sticker' &&
-			n.data?.templateType !== 'image' &&
-			n.data?.templateType !== 'iframe'
-	)
-);
+	// Filtered node list (exclude stickers/images/iframes for the list)
+	let listedNodes = $derived(
+		nodes.filter(
+			(n) =>
+				n.data?.templateType !== 'sticker' &&
+				n.data?.templateType !== 'image' &&
+				n.data?.templateType !== 'iframe'
+		)
+	);
 
-// Active tasks grouped by node for sidebar
-let activeTasks = $derived(projectTasks.filter((t) => (t.status || 'active') === 'active'));
-let tasksByNode = $derived(
-	activeTasks.reduce(
-		(acc, task) => {
-			if (!acc[task.nodeId]) acc[task.nodeId] = { nodeTitle: task.nodeTitle, tasks: [] };
-			acc[task.nodeId].tasks.push(task);
-			return acc;
-		},
-		{} as Record<string, { nodeTitle: string; tasks: typeof activeTasks }>
-	)
-);
+	// Active tasks grouped by node for sidebar
+	let activeTasks = $derived(projectTasks.filter((t) => (t.status || 'active') === 'active'));
+	let tasksByNode = $derived(
+		activeTasks.reduce(
+			(acc, task) => {
+				if (!acc[task.nodeId]) acc[task.nodeId] = { nodeTitle: task.nodeTitle, tasks: [] };
+				acc[task.nodeId].tasks.push(task);
+				return acc;
+			},
+			{} as Record<string, { nodeTitle: string; tasks: typeof activeTasks }>
+		)
+	);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1156,7 +1176,9 @@ let tasksByNode = $derived(
 					{#if selectedNodesWithStatus.length > 0}
 						<button
 							onclick={toggleSelectedDone}
-							class="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium transition-colors hover:cursor-pointer {allSelectedDone ? 'border-green-300 bg-green-100 text-green-800 hover:bg-green-200' : 'border-green-300 bg-green-100 text-green-800 hover:bg-green-200'}"
+							class="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium transition-colors hover:cursor-pointer {allSelectedDone
+								? 'border-green-300 bg-green-100 text-green-800 hover:bg-green-200'
+								: 'border-green-300 bg-green-100 text-green-800 hover:bg-green-200'}"
 						>
 							{allSelectedDone ? 'Mark Undone' : 'Mark Done'}
 						</button>
@@ -1177,7 +1199,7 @@ let tasksByNode = $derived(
 				bind:nodes
 				bind:edges
 				{nodeTypes}
-			defaultEdgeOptions={{ style: 'stroke: #d4d4d8; stroke-width: 1px;' }}
+				defaultEdgeOptions={{ style: 'stroke: #d4d4d8; stroke-width: 1px;' }}
 				onconnect={handleConnect}
 				onbeforedelete={handleBeforeDelete}
 				ondelete={handleDelete}
@@ -1197,7 +1219,17 @@ let tasksByNode = $derived(
 			>
 				<Background />
 				<Controls />
-				<MiniMap class="border border-zinc-200" />
+				<Panel position="bottom-right">
+					<button
+						onclick={() => (showMinimap = !showMinimap)}
+						class="rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
+					>
+						{showMinimap ? 'Hide' : 'Show'} Map
+					</button>
+				</Panel>
+				{#if showMinimap}
+					<MiniMap class="border border-zinc-200" style="margin-bottom: 54px" />
+				{/if}
 			</SvelteFlow>
 		</div>
 
@@ -1231,19 +1263,33 @@ let tasksByNode = $derived(
 
 	<!-- Right Sidebar -->
 	{#if showRightSidebar}
-		<div class="flex h-full min-h-0 w-64 flex-shrink-0 flex-col overflow-hidden border-l border-zinc-200 bg-white">
+		<div
+			class="flex h-full min-h-0 w-64 flex-shrink-0 flex-col overflow-hidden border-l border-zinc-200 bg-white"
+		>
 			<!-- Top: Tabs + Search -->
 			<div class="flex flex-col gap-2 border-b border-zinc-200 p-2">
 				<!-- Tabs -->
 				<div class="flex rounded border border-zinc-200 p-0.5 text-xs">
 					<button
-						onclick={() => { sidebarTab = 'nodes'; showEditPanel = false; }}
-						class="flex-1 rounded py-1 font-medium transition-colors {sidebarTab === 'nodes' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-400 hover:text-zinc-600'}"
-					>Nodes</button>
+						onclick={() => {
+							sidebarTab = 'nodes';
+							showEditPanel = false;
+						}}
+						class="flex-1 rounded py-1 font-medium transition-colors {sidebarTab === 'nodes'
+							? 'bg-zinc-100 text-zinc-800'
+							: 'text-zinc-400 hover:text-zinc-600'}">Nodes</button
+					>
 					<button
-						onclick={() => { sidebarTab = 'tasks'; showEditPanel = false; }}
-						class="flex-1 rounded py-1 font-medium transition-colors {sidebarTab === 'tasks' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-400 hover:text-zinc-600'}"
-					>Tasks{#if activeTasks.length > 0} ({activeTasks.length}){/if}</button>
+						onclick={() => {
+							sidebarTab = 'tasks';
+							showEditPanel = false;
+						}}
+						class="flex-1 rounded py-1 font-medium transition-colors {sidebarTab === 'tasks'
+							? 'bg-zinc-100 text-zinc-800'
+							: 'text-zinc-400 hover:text-zinc-600'}"
+						>Tasks{#if activeTasks.length > 0}
+							({activeTasks.length}){/if}</button
+					>
 				</div>
 				<!-- Search (nodes tab only) -->
 				{#if sidebarTab === 'nodes'}
@@ -1261,12 +1307,42 @@ let tasksByNode = $derived(
 							class="min-w-0 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-black placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
 						/>
 						{#if matchingNodeIds.length > 0}
-							<span class="shrink-0 text-xs text-zinc-500">{currentMatchIndex + 1}/{matchingNodeIds.length}</span>
-							<button onclick={previousMatch} class="rounded p-1 text-zinc-500 hover:bg-zinc-100" title="Previous (Shift+Enter)">
-								<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+							<span class="shrink-0 text-xs text-zinc-500"
+								>{currentMatchIndex + 1}/{matchingNodeIds.length}</span
+							>
+							<button
+								onclick={previousMatch}
+								class="rounded p-1 text-zinc-500 hover:bg-zinc-100"
+								title="Previous (Shift+Enter)"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="12"
+									height="12"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg
+								>
 							</button>
-							<button onclick={nextMatch} class="rounded p-1 text-zinc-500 hover:bg-zinc-100" title="Next (Enter)">
-								<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+							<button
+								onclick={nextMatch}
+								class="rounded p-1 text-zinc-500 hover:bg-zinc-100"
+								title="Next (Enter)"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="12"
+									height="12"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg
+								>
 							</button>
 						{/if}
 					</div>
@@ -1285,10 +1361,16 @@ let tasksByNode = $derived(
 								<div>
 									<p class="mb-1 px-1 text-xs font-medium text-zinc-500">{nodeGroup.nodeTitle}</p>
 									{#each nodeGroup.tasks as task}
-										<div class="flex items-start gap-2 rounded px-1 py-1.5 text-xs hover:bg-zinc-50">
+										<div
+											class="flex items-start gap-2 rounded px-1 py-1.5 text-xs hover:bg-zinc-50"
+										>
 											<button
 												onclick={async () => {
-													const result = taskService.resolveTask(task.nodeId, task.id, task.projectSlug);
+													const result = taskService.resolveTask(
+														task.nodeId,
+														task.id,
+														task.projectSlug
+													);
 													if (result instanceof Promise) await result;
 												}}
 												class="mt-0.5 h-3 w-3 shrink-0 rounded-sm border border-zinc-300 hover:border-green-500 hover:bg-green-50"
@@ -1308,7 +1390,17 @@ let tasksByNode = $derived(
 					onclick={() => (showEditPanel = false)}
 					class="flex w-full items-center gap-1 border-b border-zinc-100 px-3 py-2 text-xs text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
 				>
-					<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="10"
+						height="10"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg
+					>
 					All nodes
 				</button>
 				<!-- Node inspector -->
@@ -1335,7 +1427,10 @@ let tasksByNode = $derived(
 									class="flex cursor-pointer items-center gap-2 border-b border-zinc-100 px-3 py-2 text-xs hover:bg-zinc-50"
 								>
 									<span class="truncate text-zinc-700">{label}</span>
-									<span class="ml-auto shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-400" style="font-size:10px">{node.data?.templateType}</span>
+									<span
+										class="ml-auto shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-400"
+										style="font-size:10px">{node.data?.templateType}</span
+									>
 								</div>
 							{/if}
 						{/each}
@@ -1359,7 +1454,7 @@ let tasksByNode = $derived(
 		<!-- Small show-panel button on the right edge when sidebar is hidden -->
 		<button
 			onclick={() => (showRightSidebar = true)}
-			class="absolute right-0 top-1/2 z-50 -translate-y-1/2 rounded-l border border-r-0 border-zinc-200 bg-white px-0.5 py-2 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
+			class="absolute top-1/2 right-0 z-50 -translate-y-1/2 rounded-l border border-r-0 border-zinc-200 bg-white px-0.5 py-2 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
 			title="Show panel"
 		>
 			<ChevronLeft class="h-3 w-3" />
