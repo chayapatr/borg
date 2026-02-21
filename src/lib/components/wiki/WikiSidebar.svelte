@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight, ChevronLeft, Calendar, Hash, Link2, CheckSquare, Plus, FileText, Folder, X, ArrowLeft } from '@lucide/svelte';
+	import { ChevronRight, ChevronLeft, Calendar, Hash, Link2, CheckSquare, Plus, FileText, Folder, ArrowLeft } from '@lucide/svelte';
 	import type { WikiEntry } from '../../types/wiki';
 	import type { Task } from '../../types/task';
 	import WikiTaskSidebar from './WikiTaskSidebar.svelte';
@@ -99,19 +99,29 @@
 </script>
 
 {#if isOpen}
-	<div class="flex h-full min-h-0 w-80 flex-shrink-0 flex-col overflow-hidden border-l border-zinc-200 bg-white">
+	<div class="flex h-full min-h-0 w-72 flex-shrink-0 flex-col overflow-hidden border-l border-zinc-200 bg-white">
 		<!-- Header -->
 		<div class="flex items-center justify-between border-b border-zinc-200 px-3 py-2">
 			{#if currentView !== 'info'}
 				<button
 					onclick={() => (currentView = 'info')}
-					class="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-700"
+					class="flex items-center gap-1 text-xs text-zinc-500 transition-colors hover:text-zinc-800"
 				>
 					<ArrowLeft class="h-3.5 w-3.5" />
 					Back
 				</button>
+				<span class="text-xs text-zinc-400">
+					{currentView === 'task' ? (editingTask ? 'Edit Task' : 'New Task') : currentView === 'page' ? 'Link Page' : 'Link Project'}
+				</span>
 			{:else}
 				<span class="text-xs font-medium text-zinc-600">Page Info</span>
+				<button
+					onclick={onToggle}
+					class="rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+					title="Hide panel"
+				>
+					<ChevronRight class="h-3.5 w-3.5" />
+				</button>
 			{/if}
 		</div>
 
@@ -161,16 +171,16 @@
 				/>
 			</div>
 		{:else}
-			<div class="flex-1 overflow-y-auto">
+			<div class="flex-1 overflow-y-auto p-3 text-xs">
 				{#if entry}
-					<div class="space-y-4 p-3">
+					<div class="space-y-4">
 						<!-- Quick Actions -->
 						<div>
-							<div class="mb-2 text-xs font-medium text-zinc-600">Add to Page</div>
+							<div class="mb-1.5 font-medium text-zinc-500">Add to Page</div>
 							<div class="space-y-1">
 								<button
 									onclick={() => (currentView = 'task')}
-									class="flex w-full items-center gap-2 rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-700 transition-colors hover:bg-zinc-50"
+									class="flex w-full items-center gap-2 rounded border border-zinc-200 bg-borg-beige px-2 py-1.5 text-xs text-black transition-colors hover:bg-black hover:text-white"
 								>
 									<CheckSquare class="h-3.5 w-3.5" />
 									Add Task
@@ -193,90 +203,76 @@
 						</div>
 
 						<!-- Properties -->
-					<div class="space-y-2">
-						<div class="flex items-start gap-2 text-xs">
-							<Calendar class="mt-0.5 h-3 w-3 shrink-0 text-zinc-400" />
-							<div class="min-w-0 flex-1">
-								<div class="text-zinc-500">Created</div>
-								<div class="text-zinc-700">{formatDate(entry.createdAt)}</div>
-							</div>
-						</div>
-						{#if entry.updatedAt && entry.updatedAt !== entry.createdAt}
-							<div class="flex items-start gap-2 text-xs">
+						<div class="space-y-2 border-t border-zinc-100 pt-3">
+							<div class="flex items-start gap-2">
 								<Calendar class="mt-0.5 h-3 w-3 shrink-0 text-zinc-400" />
 								<div class="min-w-0 flex-1">
-									<div class="text-zinc-500">Updated</div>
-									<div class="text-zinc-700">{formatDate(entry.updatedAt)}</div>
+									<div class="text-zinc-400">Created</div>
+									<div class="text-zinc-700">{formatDate(entry.createdAt)}</div>
+								</div>
+							</div>
+							{#if entry.updatedAt && entry.updatedAt !== entry.createdAt}
+								<div class="flex items-start gap-2">
+									<Calendar class="mt-0.5 h-3 w-3 shrink-0 text-zinc-400" />
+									<div class="min-w-0 flex-1">
+										<div class="text-zinc-400">Updated</div>
+										<div class="text-zinc-700">{formatDate(entry.updatedAt)}</div>
+									</div>
+								</div>
+							{/if}
+						</div>
+
+						<!-- Table of Contents -->
+						{#if headings.length > 0}
+							<div class="border-t border-zinc-100 pt-3">
+								<div class="mb-1.5 flex items-center gap-1.5 font-medium text-zinc-500">
+									<Hash class="h-3 w-3" />
+									Contents
+								</div>
+								<div class="space-y-1">
+									{#each headings as heading}
+										<button
+											class="block w-full truncate text-left text-zinc-500 transition-colors hover:text-zinc-900"
+											style="padding-left: {(heading.level - 1) * 10}px"
+										>
+											{heading.text}
+										</button>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
+						<!-- Linked Tasks -->
+						{#if linkedTasks.length > 0}
+							<div class="border-t border-zinc-100 pt-3">
+								<div class="mb-1 flex items-center gap-1.5 font-medium text-zinc-500">
+									<CheckSquare class="h-3 w-3" />
+									Tasks ({linkedTasks.length})
+								</div>
+								<div class="text-zinc-400">
+									{linkedTasks.length} task{linkedTasks.length > 1 ? 's' : ''} linked
+								</div>
+							</div>
+						{/if}
+
+						<!-- Linked Pages -->
+						{#if linkedPages.length > 0}
+							<div class="border-t border-zinc-100 pt-3">
+								<div class="mb-1 flex items-center gap-1.5 font-medium text-zinc-500">
+									<Link2 class="h-3 w-3" />
+									Links ({linkedPages.length})
+								</div>
+								<div class="text-zinc-400">
+									{linkedPages.length} page{linkedPages.length > 1 ? 's' : ''} linked
 								</div>
 							</div>
 						{/if}
 					</div>
-
-					<!-- Table of Contents -->
-					{#if headings.length > 0}
-						<div>
-							<div class="mb-2 flex items-center gap-1.5 text-xs font-medium text-zinc-600">
-								<Hash class="h-3 w-3" />
-								Table of Contents
-							</div>
-							<div class="space-y-1">
-								{#each headings as heading}
-									<button
-										class="block w-full truncate text-left text-xs text-zinc-600 hover:text-zinc-900"
-										style="padding-left: {(heading.level - 1) * 12}px"
-									>
-										{heading.text}
-									</button>
-								{/each}
-							</div>
-						</div>
-					{/if}
-
-					<!-- Linked Tasks -->
-					{#if linkedTasks.length > 0}
-						<div>
-							<div class="mb-2 flex items-center gap-1.5 text-xs font-medium text-zinc-600">
-								<CheckSquare class="h-3 w-3" />
-								Tasks ({linkedTasks.length})
-							</div>
-							<div class="text-xs text-zinc-500">
-								{linkedTasks.length} task{linkedTasks.length > 1 ? 's' : ''} linked
-							</div>
-						</div>
-					{/if}
-
-					<!-- Linked Pages -->
-					{#if linkedPages.length > 0}
-						<div>
-							<div class="mb-2 flex items-center gap-1.5 text-xs font-medium text-zinc-600">
-								<Link2 class="h-3 w-3" />
-								Links ({linkedPages.length})
-							</div>
-							<div class="text-xs text-zinc-500">
-								{linkedPages.length} page{linkedPages.length > 1 ? 's' : ''} linked
-							</div>
-						</div>
-					{/if}
-					</div>
 				{:else}
-					<div class="p-4 text-center text-xs text-zinc-400">
+					<div class="py-8 text-center text-zinc-400">
 						No page selected
 					</div>
 				{/if}
-			</div>
-		{/if}
-
-		<!-- Collapse button (only show in info view) -->
-		{#if currentView === 'info'}
-			<div class="border-t border-zinc-100 p-2">
-				<button
-					onclick={onToggle}
-					class="flex w-full items-center justify-center gap-1 rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
-					title="Hide panel"
-				>
-					<ChevronRight class="h-3 w-3" />
-					<span>Hide</span>
-				</button>
 			</div>
 		{/if}
 	</div>
@@ -284,7 +280,7 @@
 	<!-- Small show-panel button on the right edge when sidebar is hidden -->
 	<button
 		onclick={onToggle}
-		class="absolute right-0 top-1/2 z-50 -translate-y-1/2 rounded-l border border-r-0 border-zinc-200 bg-white px-0.5 py-2 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
+		class="absolute right-0 top-1/2 z-50 -translate-y-1/2 rounded-l border border-r-0 border-zinc-200 bg-white px-0.5 py-2 text-zinc-400 transition-colors hover:bg-zinc-50 hover:text-zinc-600"
 		title="Show panel"
 	>
 		<ChevronLeft class="h-3 w-3" />

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { X, FileText, Search } from '@lucide/svelte';
+	import { FileText, Search } from '@lucide/svelte';
 	import { ServiceFactory } from '$lib/services/ServiceFactory';
 	import type { WikiEntry } from '$lib/types/wiki';
 
@@ -21,7 +21,6 @@
 			loading = true;
 			const result = wikiService.getAllEntries();
 			const allPages = result instanceof Promise ? await result : result;
-			// Filter out current page
 			pages = allPages.filter((p) => p.id !== currentWikiId);
 			loading = false;
 		})();
@@ -38,61 +37,48 @@
 	}
 </script>
 
-<div class="flex h-full w-80 flex-col border-l border-black bg-borg-white">
-	<!-- Header -->
-	<div class="flex h-14 shrink-0 items-center justify-between border-b border-black px-4">
-		<h3 class="font-semibold">Link Page</h3>
-		<button onclick={onClose} class="rounded p-1 hover:bg-borg-beige">
-			<X class="h-5 w-5" />
-		</button>
-	</div>
-
+<div class="flex h-full flex-col bg-white">
 	<!-- Search -->
-	<div class="border-b border-black p-3">
-		<div class="flex items-center gap-2 rounded-lg border border-black bg-white px-3 py-2">
-			<Search class="h-4 w-4 text-zinc-400" />
+	<div class="shrink-0 border-b border-zinc-200 p-2">
+		<div class="flex items-center gap-1">
 			<input
 				type="text"
 				bind:value={searchQuery}
 				placeholder="Search pages..."
-				class="flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+				class="min-w-0 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs text-black placeholder-zinc-400 outline-none focus:border-zinc-400"
 			/>
 		</div>
 	</div>
 
 	<!-- Pages list -->
-	<div class="flex-1 overflow-y-auto p-3">
+	<div class="flex-1 overflow-y-auto">
 		{#if loading}
 			<div class="flex items-center justify-center py-8">
-				<div class="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-black"></div>
+				<div class="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-black"></div>
 			</div>
 		{:else if filteredPages.length === 0}
-			<div class="py-8 text-center text-sm text-zinc-500">
+			<p class="p-4 text-center text-xs text-zinc-400">
 				{searchQuery ? 'No pages found' : 'No other pages available'}
-			</div>
+			</p>
 		{:else}
-			<div class="space-y-2">
-				{#each filteredPages as page}
-					<button
-						onclick={() => handleSelect(page.id)}
-						class="flex w-full items-center gap-3 rounded-lg border border-black bg-white p-3 text-left transition-colors hover:bg-borg-beige/30"
-					>
-						<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-black/20 bg-borg-beige/50">
-							<FileText class="h-4 w-4 text-black" />
-						</div>
-						<div class="min-w-0 flex-1">
-							<div class="truncate text-sm font-medium text-black">{page.title || 'Untitled'}</div>
-							<div class="text-xs text-zinc-500">
-								{#if page.updatedAt}
-									Updated {new Date(page.updatedAt).toLocaleDateString()}
-								{:else}
-									Created {new Date(page.createdAt).toLocaleDateString()}
-								{/if}
-							</div>
-						</div>
-					</button>
-				{/each}
-			</div>
+			{#each filteredPages as page}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					onclick={() => handleSelect(page.id)}
+					class="flex cursor-pointer items-center gap-2 border-b border-zinc-100 px-3 py-2 text-xs hover:bg-zinc-50"
+				>
+					<FileText class="h-3 w-3 shrink-0 text-zinc-400" />
+					<span class="truncate text-zinc-700">{page.title || 'Untitled'}</span>
+					<span class="ml-auto shrink-0 text-zinc-400" style="font-size:10px">
+						{#if page.updatedAt}
+							{new Date(page.updatedAt).toLocaleDateString()}
+						{:else}
+							{new Date(page.createdAt).toLocaleDateString()}
+						{/if}
+					</span>
+				</div>
+			{/each}
 		{/if}
 	</div>
 </div>

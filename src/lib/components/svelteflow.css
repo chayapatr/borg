@@ -20,11 +20,11 @@
 
 /* Edge paths */
 .svelte-flow__edge-path {
-	stroke: #a1a1aa !important;
+	stroke: #b1b1bb !important;
 	stroke-width: 1px !important;
 }
 
 .svelte-flow__connection-path {
-	stroke: #a1a1aa;
+	stroke: #b1b1bb;
 	stroke-width: 1px;
 }
