@@ -31,6 +31,9 @@
 		nextMatch as goToNextMatch,
 		previousMatch as goToPreviousMatch
 	} from '../../utils/canvasSearch';
+	import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+	import { app } from '../../firebase/config';
+	import { compressImageFile } from '../../utils/resizeImage';
 	import '@xyflow/svelte/dist/style.css';
 	import '../svelteflow.css';
 
@@ -62,6 +65,7 @@
 	// Svelte Flow helpers - will be initialized after SvelteFlow is ready
 	let getViewport: any;
 	let setViewport: any;
+	let screenToFlowPosition: any;
 	let svelteFlowReady = $state(false);
 
 	// Current working nodes (mutable for SvelteFlow)
@@ -356,6 +360,7 @@
 				const svelteFlowHelpers = useSvelteFlow();
 				getViewport = svelteFlowHelpers.getViewport;
 				setViewport = svelteFlowHelpers.setViewport;
+				screenToFlowPosition = svelteFlowHelpers.screenToFlowPosition;
 				svelteFlowReady = true;
 
 				// Load viewport position after helpers are initialized
@@ -560,6 +565,97 @@
 			console.error('Failed to delete node:', error);
 			alert('Failed to delete node. Check console for details.');
 		}
+	}
+
+	// ── Canvas drag-and-drop ─────────────────────────────────────────────────
+
+	let canvasDragOver = $state(false);
+	let canvasUploading = $state(false);
+
+	function handleCanvasDragOver(e: DragEvent) {
+		const types = e.dataTransfer?.types ?? [];
+		const isFile = types.includes('Files');
+		const isSticker = types.includes('application/borg-sticker');
+		if (!isFile && !isSticker) return;
+		const target = e.target as HTMLElement;
+		if (target.closest('.svelte-flow__node')) return;
+		e.preventDefault();
+		e.dataTransfer!.dropEffect = 'copy';
+		canvasDragOver = true;
+	}
+
+	function handleCanvasDragLeave(e: DragEvent) {
+		if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
+			canvasDragOver = false;
+		}
+	}
+
+	async function handleCanvasDrop(e: DragEvent) {
+		e.preventDefault();
+		canvasDragOver = false;
+
+		const target = e.target as HTMLElement;
+		if (target.closest('.svelte-flow__node')) return;
+		if (!nodesService || !screenToFlowPosition) return;
+
+		// ── Sticker drop ──────────────────────────────────────────────────────
+		const stickerJson = e.dataTransfer?.getData('application/borg-sticker');
+		if (stickerJson) {
+			try {
+				const stickerData = JSON.parse(stickerJson);
+				const dropPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+				const position = { x: dropPos.x - 50, y: dropPos.y - 50 };
+
+				const newNode = await nodesService.addNode('sticker', position);
+				if (newNode?.id) {
+					await nodesService.updateNode(newNode.id, {
+						nodeData: {
+							title: stickerData.name,
+							stickerUrl: stickerData.stickerUrl,
+							category: stickerData.category || '',
+							filename: stickerData.filename || '',
+							width: 100,
+							height: 100,
+							rotation: 0
+						}
+					});
+				}
+			} catch (err) {
+				console.error('ProjectsCanvas sticker drop failed', err);
+			}
+			return;
+		}
+
+		// ── Image file drop ───────────────────────────────────────────────────
+		const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => f.type.startsWith('image/'));
+		if (files.length === 0) return;
+
+		canvasUploading = true;
+		const storage = getStorage(app);
+
+		for (const file of files) {
+			try {
+				const dropPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+				const position = { x: dropPos.x - 100, y: dropPos.y - 75 };
+
+				const newNode = await nodesService.addNode('image', position);
+				if (!newNode?.id) continue;
+
+				const compressed = await compressImageFile(file);
+				const timestamp = Date.now();
+				const storageRef = ref(storage, `images/${newNode.id}/${timestamp}_${file.name}`);
+				const snapshot = await uploadBytes(storageRef, compressed);
+				const downloadURL = await getDownloadURL(snapshot.ref);
+
+				await nodesService.updateNode(newNode.id, {
+					nodeData: { imageUrl: downloadURL }
+				});
+			} catch (err) {
+				console.error('ProjectsCanvas image drop failed', err);
+			}
+		}
+
+		canvasUploading = false;
 	}
 
 	function handleShowStickers() {
@@ -828,46 +924,66 @@
 				</div>
 			</div>
 
-			<!-- fitView -->
-
-			<SvelteFlow
-				class="h-full w-full bg-black"
-				bind:nodes={workingNodes}
-				bind:edges={canvasEdges}
-				{nodeTypes}
-				defaultEdgeOptions={{ style: 'stroke: #d4d4d8; stroke-width: 1px;' }}
-				onconnect={handleConnect}
-				onbeforedelete={handleBeforeDelete}
-				ondelete={handleDelete}
-				onnodedragstart={handleNodeDragStart}
-				onnodedragstop={handleNodeDragStop}
-				oninit={initializeSvelteFlowHelpers}
-				onmoveend={handleViewportChange}
-				onselectionchange={handleSelectionChange}
-				nodesDraggable={true}
-				nodesConnectable={true}
-				elevateNodesOnSelect={true}
-				minZoom={0.3}
-				deleteKey={['Delete', 'Backspace']}
-				panOnDrag={false}
-				panOnScroll={true}
-				zoomOnScroll={false}
-				zoomOnPinch={true}
+			<div
+				class="relative h-full w-full"
+				ondragover={handleCanvasDragOver}
+				ondragleave={handleCanvasDragLeave}
+				ondrop={handleCanvasDrop}
+				role="region"
+				aria-label="Projects canvas"
 			>
-				<Background />
-				<Controls />
-				<Panel position="bottom-right">
-					<button
-						onclick={() => (showMinimap = !showMinimap)}
-						class="rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
-					>
-						{showMinimap ? 'Hide' : 'Show'} Map
-					</button>
-				</Panel>
-				{#if showMinimap}
-					<MiniMap class="border border-zinc-200" style="margin-bottom: 54px" />
+				{#if canvasDragOver || canvasUploading}
+					<div class="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-white/60 bg-black/30">
+						<div class="flex flex-col items-center gap-2 text-sm font-medium text-white drop-shadow">
+							{#if canvasUploading}
+								<div class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+								<span>Uploading...</span>
+							{:else}
+								<span>Drop to add to canvas</span>
+							{/if}
+						</div>
+					</div>
 				{/if}
-			</SvelteFlow>
+
+				<SvelteFlow
+					class="h-full w-full bg-black"
+					bind:nodes={workingNodes}
+					bind:edges={canvasEdges}
+					{nodeTypes}
+					defaultEdgeOptions={{ style: 'stroke: #d4d4d8; stroke-width: 1px;' }}
+					onconnect={handleConnect}
+					onbeforedelete={handleBeforeDelete}
+					ondelete={handleDelete}
+					onnodedragstart={handleNodeDragStart}
+					onnodedragstop={handleNodeDragStop}
+					oninit={initializeSvelteFlowHelpers}
+					onmoveend={handleViewportChange}
+					onselectionchange={handleSelectionChange}
+					nodesDraggable={true}
+					nodesConnectable={true}
+					elevateNodesOnSelect={true}
+					minZoom={0.3}
+					deleteKey={['Delete', 'Backspace']}
+					panOnDrag={false}
+					panOnScroll={true}
+					zoomOnScroll={false}
+					zoomOnPinch={true}
+				>
+					<Background />
+					<Controls />
+					<Panel position="bottom-right">
+						<button
+							onclick={() => (showMinimap = !showMinimap)}
+							class="rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
+						>
+							{showMinimap ? 'Hide' : 'Show'} Map
+						</button>
+					</Panel>
+					{#if showMinimap}
+						<MiniMap class="border border-zinc-200" style="margin-bottom: 54px" />
+					{/if}
+				</SvelteFlow>
+			</div>
 		</div>
 
 		<!-- Edit Sidebar -->

@@ -36,33 +36,31 @@
 
 	// Click handler to add sticker to canvas
 	function handleClick() {
-		console.log('🎨 Clicked sticker:', sticker.name, 'URL:', imageUrl);
-		
-		if (!imageUrl) {
-			console.warn('⚠️ No image URL available');
-			return;
-		}
-		
-		// Dispatch custom event to parent to add sticker to canvas
-		const addStickerEvent = new CustomEvent('addSticker', {
-			detail: {
-				type: 'sticker',
-				stickerUrl: imageUrl,
-				category: category,
-				filename: sticker.filename,
-				name: sticker.name
-			},
+		if (!imageUrl) return;
+		document.dispatchEvent(new CustomEvent('addSticker', {
+			detail: { type: 'sticker', stickerUrl: imageUrl, category, filename: sticker.filename, name: sticker.name },
 			bubbles: true
-		});
-		
-		document.dispatchEvent(addStickerEvent);
-		console.log('🎨 Add sticker event dispatched');
+		}));
+	}
+
+	// Drag-and-drop handlers
+	function handleDragStart(e: DragEvent) {
+		if (!imageUrl || !e.dataTransfer) return;
+		e.dataTransfer.effectAllowed = 'copy';
+		e.dataTransfer.setData('application/borg-sticker', JSON.stringify({
+			stickerUrl: imageUrl,
+			category,
+			filename: sticker.filename,
+			name: sticker.name
+		}));
 	}
 </script>
 
 <div
-	class="sticker-item group relative cursor-pointer hover:bg-gray-100 rounded-lg p-1 transition-colors"
+	class="sticker-item group relative cursor-grab hover:bg-gray-100 rounded-lg p-1 transition-colors"
 	onclick={handleClick}
+	draggable={!!imageUrl}
+	ondragstart={handleDragStart}
 >
 	{#if imageError}
 		<!-- Error placeholder -->
@@ -91,7 +89,7 @@
 				class="w-16 h-16 object-contain rounded-lg transition-all duration-200 group-hover:scale-105 {imageLoaded ? 'opacity-100' : 'opacity-0'}"
 				onload={handleImageLoad}
 				onerror={handleImageError}
-				draggable="false"
+				draggable="true"
 			/>
 		</div>
 	{/if}

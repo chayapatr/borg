@@ -14,7 +14,8 @@
 		CheckSquare,
 		FileText,
 		Folder,
-		ChevronLeft
+		ChevronLeft,
+		ImageIcon
 	} from '@lucide/svelte';
 	import { ServiceFactory } from '$lib/services/ServiceFactory';
 	import type { WikiEntry } from '$lib/types/wiki';
@@ -29,6 +30,7 @@
 		onCreateTask?: (callback: (taskId: string) => void) => void;
 		onLinkPage?: (callback: (pageId: string) => void) => void;
 		onLinkProject?: (callback: (projectSlug: string) => void) => void;
+		onInsertImage?: () => void;
 	}
 
 	interface CommandItem {
@@ -52,10 +54,11 @@
 		{ label: 'Divider', description: 'Horizontal rule', icon: Minus, prefix: '---' },
 		{ label: 'Task', description: 'Create a task', icon: CheckSquare, prefix: '', action: 'task', inlineOnly: true },
 		{ label: 'Page', description: 'Link to a wiki page', icon: FileText, prefix: '', action: 'page', inlineOnly: true },
-		{ label: 'Project', description: 'Link to a project', icon: Folder, prefix: '', action: 'project', inlineOnly: true }
+		{ label: 'Project', description: 'Link to a project', icon: Folder, prefix: '', action: 'project', inlineOnly: true },
+		{ label: 'Image', description: 'Upload an image', icon: ImageIcon, prefix: '', action: 'image' }
 	];
 
-	let { content, onUpdate, onEnter, onDelete, onFocus, onCreateTask, onLinkPage, onLinkProject }: Props = $props();
+	let { content, onUpdate, onEnter, onDelete, onFocus, onCreateTask, onLinkPage, onLinkProject, onInsertImage }: Props = $props();
 
 	let focused = $state(false);
 	let editContent = $state(content);
@@ -119,11 +122,11 @@
 				);
 			} else if (ph.startsWith('WIKIPAGELINK')) {
 				html = html.replace(ph,
-					`<span class="wiki-inline-link wiki-page-link" data-page-id="${value}"><span class="link-text" data-page-id="${value}">Loading...</span></span>`
+					`<span class="wiki-inline-link wiki-page-link" data-page-id="${value}"><svg class=\"wiki-link-icon\" xmlns=\"http://www.w3.org/2000/svg\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><polyline points=\"14 2 14 8 20 8\"/></svg><span class="link-text" data-page-id="${value}">Loading...</span></span>`
 				);
 			} else if (ph.startsWith('WIKIPROJECTLINK')) {
 				html = html.replace(ph,
-					`<span class="wiki-inline-link wiki-project-link" data-project-slug="${value}"><span class="link-text" data-project-slug="${value}">Loading...</span></span>`
+					`<span class="wiki-inline-link wiki-project-link" data-project-slug="${value}"><svg class=\"wiki-link-icon\" xmlns=\"http://www.w3.org/2000/svg\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z\"/></svg><span class="link-text" data-project-slug="${value}">Loading...</span></span>`
 				);
 			}
 		});
@@ -368,6 +371,16 @@
 					});
 				});
 			});
+			return;
+		}
+
+		if (cmd.action === 'image') {
+			// Clear the slash command text, then trigger the image picker in the parent
+			const before = editContent.slice(0, commandStartPos);
+			const after = editContent.slice(commandEndPos);
+			editContent = before + after;
+			onUpdate(editContent);
+			onInsertImage?.();
 			return;
 		}
 
@@ -802,4 +815,12 @@
 	}
 	.wiki-block :global(.wiki-inline-link:hover) { text-decoration-color: rgba(0,0,0,1); }
 	.wiki-block :global(.wiki-inline-link .link-text) { pointer-events: none; }
+	.wiki-block :global(.wiki-link-icon) {
+		display: inline;
+		vertical-align: middle;
+		margin-right: 0.2rem;
+		opacity: 0.5;
+		flex-shrink: 0;
+		pointer-events: none;
+	}
 </style>

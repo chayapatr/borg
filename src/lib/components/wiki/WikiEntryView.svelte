@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+	import { app } from '$lib/firebase/config';
+	import { compressImageFile } from '$lib/utils/resizeImage';
 	import { ServiceFactory } from '$lib/services/ServiceFactory';
 	import type { IWikiService } from '$lib/services/interfaces/IWikiService';
 	import type { ITaskService } from '$lib/services/interfaces/ITaskService';
@@ -10,6 +13,7 @@
 	import WikiTaskBlock from './WikiTaskBlock.svelte';
 	import WikiPageBlock from './WikiPageBlock.svelte';
 	import WikiProjectBlock from './WikiProjectBlock.svelte';
+	import WikiImageBlock from './WikiImageBlock.svelte';
 	import WikiSidebar from './WikiSidebar.svelte';
 
 	interface Props {
@@ -24,7 +28,8 @@
 	interface TaskBlock { type: 'task'; taskId: string; id: string; }
 	interface PageBlock { type: 'page'; pageId: string; id: string; }
 	interface ProjectBlock { type: 'project'; projectSlug: string; id: string; }
-	type Block = TextBlock | TaskBlock | PageBlock | ProjectBlock;
+	interface ImageBlock { type: 'image'; imageUrl: string; id: string; }
+	type Block = TextBlock | TaskBlock | PageBlock | ProjectBlock | ImageBlock;
 
 	let _blockIdCounter = 0;
 	function newBlockId() { return `b${++_blockIdCounter}`; }
@@ -51,13 +56,13 @@
 	let blockRefs: Record<string, WikiBlock | null> = $state({});
 	let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-	// Ensure the last block is always an empty text block
-	function ensureTrailingEmpty() {
-		const last = blocks[blocks.length - 1];
-		if (!last || last.type !== 'text' || last.content !== '') {
-			blocks = [...blocks, { type: 'text', content: '', id: newBlockId() }];
-		}
-	}
+	// Drag-and-drop state
+	let isDragOver = $state(false);
+	let isUploadingDrop = $state(false);
+
+	// Hidden file input for /image command
+	let imageFileInput: HTMLInputElement | null = $state(null);
+	let imageInsertAfterBlockId: string | null = null;
 
 	function contentToBlocks(content: string): Block[] {
 		if (!content) return [{ type: 'text', content: '', id: newBlockId() }];
@@ -66,10 +71,14 @@
 		for (const line of lines) {
 			const trimmed = line.trim();
 			if (!trimmed) continue;
-			result.push({ type: 'text', content: trimmed, id: newBlockId() });
+			const imageMatch = trimmed.match(/^\[\[image:(https?:\/\/[^\]]+)\]\]$/);
+			if (imageMatch) {
+				result.push({ type: 'image', imageUrl: imageMatch[1], id: newBlockId() });
+			} else {
+				result.push({ type: 'text', content: trimmed, id: newBlockId() });
+			}
 		}
 		const meaningful = result.length > 0 ? result : [{ type: 'text', content: '', id: newBlockId() }];
-		// Always end with a trailing empty text block
 		return [...meaningful, { type: 'text', content: '', id: newBlockId() }];
 	}
 
@@ -79,6 +88,7 @@
 				if (block.type === 'task') return `[[task:${block.taskId}]]`;
 				if (block.type === 'page') return `[[page:${block.pageId}]]`;
 				if (block.type === 'project') return `[[project:${block.projectSlug}]]`;
+				if (block.type === 'image') return `[[image:${block.imageUrl}]]`;
 				return block.content;
 			})
 			.filter((s) => s.trim() !== '')
@@ -281,6 +291,106 @@
 		scheduleAutosave();
 	}
 
+	function handleDeleteImageBlock(blockId: string) {
+		const index = blocks.findIndex((b) => b.id === blockId);
+		if (index === -1) return;
+		blocks = [...blocks.slice(0, index), ...blocks.slice(index + 1)];
+		if (blocks.length === 0) blocks = [{ type: 'text', content: '', id: newBlockId() }];
+		hasChanges = true;
+		scheduleAutosave();
+	}
+
+	// ── Image upload ─────────────────────────────────────────────────────────
+
+	async function uploadImageFile(file: File): Promise<string> {
+		const compressed = await compressImageFile(file);
+		const storage = getStorage(app);
+		const timestamp = Date.now();
+		const storageRef = ref(storage, `wiki-images/${timestamp}_${file.name}`);
+		const snapshot = await uploadBytes(storageRef, compressed);
+		return await getDownloadURL(snapshot.ref);
+	}
+
+	function insertImageBlock(imageUrl: string, afterBlockId: string | null) {
+		const newId = newBlockId();
+		const imageBlock: ImageBlock = { type: 'image', imageUrl, id: newId };
+		const trailingText: TextBlock = { type: 'text', content: '', id: newBlockId() };
+
+		if (afterBlockId === null) {
+			// Insert before trailing empty, or at end
+			const lastIdx = blocks.length - 1;
+			const last = blocks[lastIdx];
+			if (last?.type === 'text' && last.content === '') {
+				blocks = [...blocks.slice(0, lastIdx), imageBlock, trailingText];
+			} else {
+				blocks = [...blocks, imageBlock, trailingText];
+			}
+		} else {
+			const idx = blocks.findIndex((b) => b.id === afterBlockId);
+			if (idx === -1) {
+				blocks = [...blocks, imageBlock, trailingText];
+			} else {
+				blocks = [...blocks.slice(0, idx + 1), imageBlock, trailingText, ...blocks.slice(idx + 1)];
+			}
+		}
+		hasChanges = true;
+		scheduleAutosave();
+	}
+
+	// Called from WikiBlock /image command
+	function handleInsertImage(afterBlockId: string) {
+		imageInsertAfterBlockId = afterBlockId;
+		imageFileInput?.click();
+	}
+
+	async function handleImageFileSelected(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const file = target.files?.[0];
+		target.value = '';
+		if (!file || !file.type.startsWith('image/')) return;
+		try {
+			const url = await uploadImageFile(file);
+			insertImageBlock(url, imageInsertAfterBlockId);
+		} catch (err) {
+			console.error('Image upload failed', err);
+		}
+		imageInsertAfterBlockId = null;
+	}
+
+	// ── Page-level drag-and-drop ─────────────────────────────────────────────
+
+	function handlePageDragOver(e: DragEvent) {
+		if (!e.dataTransfer?.types.includes('Files')) return;
+		e.preventDefault();
+		isDragOver = true;
+	}
+
+	function handlePageDragLeave(e: DragEvent) {
+		// Only clear if leaving the entire page area (relatedTarget is null or outside)
+		if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
+			isDragOver = false;
+		}
+	}
+
+	async function handlePageDrop(e: DragEvent) {
+		e.preventDefault();
+		isDragOver = false;
+		const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => f.type.startsWith('image/'));
+		if (files.length === 0) return;
+		isUploadingDrop = true;
+		try {
+			for (const file of files) {
+				const url = await uploadImageFile(file);
+				insertImageBlock(url, null);
+			}
+		} catch (err) {
+			console.error('Drop upload failed', err);
+		}
+		isUploadingDrop = false;
+	}
+
+	// ── Task / page / project handlers ───────────────────────────────────────
+
 	function handleCreateTask(callback: (taskId: string) => void) {
 		(window as any).__taskCreateCallback = callback;
 		pendingTaskBlockIndex = null;
@@ -423,7 +533,37 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="flex min-h-0 flex-1">
+<!-- Hidden file input for /image command -->
+<input
+	bind:this={imageFileInput}
+	type="file"
+	accept="image/*"
+	class="hidden"
+	onchange={handleImageFileSelected}
+/>
+
+<div
+	class="flex min-h-0 flex-1 relative"
+	ondragover={handlePageDragOver}
+	ondragleave={handlePageDragLeave}
+	ondrop={handlePageDrop}
+	role="region"
+	aria-label="Wiki page"
+>
+	<!-- Drag-over overlay -->
+	{#if isDragOver || isUploadingDrop}
+		<div class="pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-black bg-black/5">
+			<div class="flex flex-col items-center gap-2 text-sm font-medium text-black">
+				{#if isUploadingDrop}
+					<div class="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent"></div>
+					<span>Uploading...</span>
+				{:else}
+					<span>Drop image to insert</span>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
 	<!-- Main content -->
 	<div class="flex flex-1 flex-col overflow-hidden">
 		{#if loading}
@@ -485,6 +625,7 @@
 										onCreateTask={handleCreateTask}
 										onLinkPage={handleLinkPage}
 										onLinkProject={handleLinkProject}
+										onInsertImage={() => handleInsertImage(block.id)}
 									/>
 								{:else if block.type === 'task'}
 									{@const task = getTask(block.taskId)}
@@ -510,6 +651,11 @@
 										projectSlug={block.projectSlug}
 										onSelect={() => handleProjectBlockClick(block.projectSlug)}
 										onDelete={() => handleDeleteProjectBlock(block.id)}
+									/>
+								{:else if block.type === 'image'}
+									<WikiImageBlock
+										imageUrl={block.imageUrl}
+										onDelete={() => handleDeleteImageBlock(block.id)}
 									/>
 								{/if}
 							</div>

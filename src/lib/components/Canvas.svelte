@@ -33,6 +33,9 @@
 		previousMatch as goToPreviousMatch
 	} from '../utils/canvasSearch';
 	import { ChevronRight, ChevronLeft } from '@lucide/svelte';
+	import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+	import { app } from '../firebase/config';
+	import { compressImageFile } from '../utils/resizeImage';
 	import '@xyflow/svelte/dist/style.css';
 	import './svelteflow.css';
 
@@ -664,6 +667,98 @@
 		(nodesService as any).addNode(templateType, centerPosition);
 	}
 
+	// ── Canvas image drag-and-drop ───────────────────────────────────────────
+
+	let canvasDragOver = $state(false);
+	let canvasUploading = $state(false);
+
+	function handleCanvasDragOver(e: DragEvent) {
+		const types = e.dataTransfer?.types ?? [];
+		const isFile = types.includes('Files');
+		const isSticker = types.includes('application/borg-sticker');
+		if (!isFile && !isSticker) return;
+		// Don't intercept if the target is an existing node (let ImageNode handle it)
+		const target = e.target as HTMLElement;
+		if (target.closest('.svelte-flow__node')) return;
+		e.preventDefault();
+		e.dataTransfer!.dropEffect = 'copy';
+		canvasDragOver = true;
+	}
+
+	function handleCanvasDragLeave(e: DragEvent) {
+		if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
+			canvasDragOver = false;
+		}
+	}
+
+	async function handleCanvasDrop(e: DragEvent) {
+		e.preventDefault();
+		canvasDragOver = false;
+
+		const target = e.target as HTMLElement;
+		if (target.closest('.svelte-flow__node')) return;
+		if (!nodesService) return;
+
+		// ── Sticker drop ──────────────────────────────────────────────────────
+		const stickerJson = e.dataTransfer?.getData('application/borg-sticker');
+		if (stickerJson) {
+			try {
+				const stickerData = JSON.parse(stickerJson);
+				const dropPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+				const position = { x: dropPos.x - 50, y: dropPos.y - 50 };
+
+				const newNode = await (nodesService as any).addNode('sticker', position);
+				if (newNode?.id) {
+					await (nodesService as any).updateNode(newNode.id, {
+						nodeData: {
+							title: stickerData.name,
+							stickerUrl: stickerData.stickerUrl,
+							category: stickerData.category || '',
+							filename: stickerData.filename || '',
+							width: 100,
+							height: 100,
+							rotation: 0
+						}
+					});
+				}
+			} catch (err) {
+				console.error('Canvas sticker drop failed', err);
+			}
+			return;
+		}
+
+		// ── Image file drop ───────────────────────────────────────────────────
+		const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => f.type.startsWith('image/'));
+		if (files.length === 0) return;
+
+		canvasUploading = true;
+		const storage = getStorage(app);
+
+		for (const file of files) {
+			try {
+				const dropPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+				const position = { x: dropPos.x - 100, y: dropPos.y - 75 };
+
+				const newNode = await (nodesService as any).addNode('image', position);
+				if (!newNode?.id) continue;
+
+				const compressed = await compressImageFile(file);
+				const timestamp = Date.now();
+				const storageRef = ref(storage, `images/${newNode.id}/${timestamp}_${file.name}`);
+				const snapshot = await uploadBytes(storageRef, compressed);
+				const downloadURL = await getDownloadURL(snapshot.ref);
+
+				await (nodesService as any).updateNode(newNode.id, {
+					nodeData: { imageUrl: downloadURL }
+				});
+			} catch (err) {
+				console.error('Canvas image drop upload failed', err);
+			}
+		}
+
+		canvasUploading = false;
+	}
+
 	function handleShowStickers() {
 		console.log('🎨 handleShowStickers called, current state:', showStickerPanel);
 		// Close other drawers/panels when opening sticker panel
@@ -1193,7 +1288,26 @@
 			</div>
 		{/if}
 
-		<div class="h-full w-full">
+		<div
+			class="relative h-full w-full"
+			ondragover={handleCanvasDragOver}
+			ondragleave={handleCanvasDragLeave}
+			ondrop={handleCanvasDrop}
+			role="region"
+			aria-label="Canvas"
+		>
+			{#if canvasDragOver || canvasUploading}
+				<div class="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-white/60 bg-black/30">
+					<div class="flex flex-col items-center gap-2 text-sm font-medium text-white drop-shadow">
+						{#if canvasUploading}
+							<div class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+							<span>Uploading...</span>
+						{:else}
+							<span>Drop to add to canvas</span>
+						{/if}
+					</div>
+				</div>
+			{/if}
 			<SvelteFlow
 				class="bg-black"
 				bind:nodes
