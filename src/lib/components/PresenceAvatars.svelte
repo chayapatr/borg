@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { authStore } from '../stores/authStore';
+	import { doc, getDoc, setDoc } from 'firebase/firestore';
+	import { db } from '../firebase/config';
 	import type { User } from 'firebase/auth';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 
 	interface ActiveUser {
 		userId: string;
@@ -9,17 +13,24 @@
 		photoUrl: string;
 		color: string;
 		lastSeen: number;
+		currentPage: string; // only populated in global mode
 	}
 
-	let { room } = $props<{ room: string }>();
+	// room = project slug for project pages, or undefined for main page (global mode)
+	let { room } = $props<{ room?: string }>();
+
+	// In global mode we connect to __global__ and track everyone's location
+	let isGlobal = $derived(!room);
+	let wsRoom = $derived(room ?? '__global__');
 
 	let activeUsers = $state<Map<string, ActiveUser>>(new Map());
 	let ws: WebSocket | null = null;
 	let currentUser: User | null = $state(null);
 	let userColor = $state('');
 	let staleTimer: ReturnType<typeof setInterval> | null = null;
+	const photoCache = new Map<string, string>();
 
-	const STALE_THRESHOLD = 30000; // 30s
+	const STALE_THRESHOLD = 30000;
 
 	const COLORS = [
 		'#ef4444', '#f97316', '#eab308', '#22c55e',
@@ -34,12 +45,27 @@
 	}
 
 	function initials(name: string): string {
-		return name
-			.split(' ')
-			.map((w) => w[0])
-			.join('')
-			.slice(0, 2)
-			.toUpperCase();
+		return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+	}
+
+	async function fetchPhoto(userId: string): Promise<string> {
+		if (photoCache.has(userId)) return photoCache.get(userId)!;
+		try {
+			const snap = await getDoc(doc(db, 'users', userId));
+			const url = snap.data()?.photoUrl || '';
+			photoCache.set(userId, url);
+			return url;
+		} catch {
+			return '';
+		}
+	}
+
+	// Write our current page to Firestore so others can follow us
+	async function updateCurrentPage(path: string) {
+		if (!currentUser) return;
+		try {
+			await setDoc(doc(db, 'users', currentUser.uid), { currentPage: path }, { merge: true });
+		} catch {}
 	}
 
 	$effect(() => {
@@ -50,25 +76,28 @@
 		return unsub;
 	});
 
+	// Track page changes and write to Firestore in global mode
+	$effect(() => {
+		if (isGlobal && currentUser && $page.url.pathname) {
+			updateCurrentPage($page.url.pathname);
+		}
+	});
+
+	// Also write page for project pages (so global mode can see them)
+	$effect(() => {
+		if (!isGlobal && currentUser && room) {
+			updateCurrentPage(`/project/${room}`);
+		}
+	});
+
 	function connect() {
-		if (!currentUser || !room) return;
-		const wsUrl = `wss://borg-cursors.chayapatr.partykit.dev/party/${room}`;
-		ws = new WebSocket(wsUrl);
-
-		ws.onopen = () => {
-			sendPresence();
-		};
-
+		if (!currentUser) return;
+		ws = new WebSocket(`wss://borg-cursors.chayapatr.partykit.dev/party/${wsRoom}`);
+		ws.onopen = () => sendPresence();
 		ws.onmessage = (event) => {
-			try {
-				const data = JSON.parse(event.data);
-				handleMessage(data);
-			} catch {}
+			try { handleMessage(JSON.parse(event.data)); } catch {}
 		};
-
-		ws.onclose = () => {
-			setTimeout(connect, 3000);
-		};
+		ws.onclose = () => setTimeout(connect, 3000);
 	}
 
 	function sendPresence() {
@@ -77,17 +106,13 @@
 			type: 'cursor_update',
 			userId: currentUser.uid,
 			userName: currentUser.displayName || 'Anonymous',
-			photoUrl: currentUser.photoURL || '',
 			color: userColor,
-			// Dummy position so PartyKit accepts it
-			x: 0,
-			y: 0,
-			pointer: 'mouse'
+			x: 0, y: 0, pointer: 'mouse'
 		}));
 	}
 
 	function handleMessage(data: any) {
-		if (data.type === 'cursor_update' || data.type === 'presence_update') {
+		if (data.type === 'cursor_update') {
 			if (data.userId === currentUser?.uid) return;
 			upsertUser(data);
 		} else if (data.type === 'cursors_sync') {
@@ -100,13 +125,15 @@
 		}
 	}
 
-	function upsertUser(data: any) {
+	async function upsertUser(data: any) {
+		const photoUrl = await fetchPhoto(data.userId);
 		activeUsers.set(data.userId, {
 			userId: data.userId,
 			userName: data.userName || 'Anonymous',
-			photoUrl: data.photoUrl || '',
+			photoUrl,
 			color: data.color || colorForUser(data.userId),
-			lastSeen: Date.now()
+			lastSeen: Date.now(),
+			currentPage: '' // fetched fresh on click
 		});
 		activeUsers = new Map(activeUsers);
 	}
@@ -119,14 +146,36 @@
 		activeUsers = new Map(activeUsers);
 	}
 
+	async function followUser(user: ActiveUser) {
+		if (user.userId === currentUser?.uid) return;
+		if (!isGlobal) return; // only navigate from global/main page
+		// Re-fetch fresh page location
+		const snap = await getDoc(doc(db, 'users', user.userId));
+		const targetPage = snap.data()?.currentPage || '/';
+		goto(targetPage);
+	}
+
+	// Self avatar from authStore — always shown
+	let selfUser = $derived(currentUser ? {
+		userId: currentUser.uid,
+		userName: currentUser.displayName || 'Anonymous',
+		photoUrl: currentUser.photoURL || '',
+		color: userColor,
+		lastSeen: Date.now(),
+		currentPage: $page.url.pathname
+	} : null);
+
+	let allUsers = $derived(
+		selfUser
+			? [selfUser, ...Array.from(activeUsers.values())]
+			: Array.from(activeUsers.values())
+	);
+
 	onMount(() => {
 		connect();
-		// Heartbeat: re-send presence every 10s so others know we're alive
 		const heartbeat = setInterval(sendPresence, 10000);
 		staleTimer = setInterval(cleanStale, 10000);
-		return () => {
-			clearInterval(heartbeat);
-		};
+		return () => clearInterval(heartbeat);
 	});
 
 	onDestroy(() => {
@@ -135,35 +184,37 @@
 	});
 
 	$effect(() => {
-		if (currentUser && room && !ws) connect();
+		if (currentUser && !ws) connect();
 	});
-
-	let others = $derived(Array.from(activeUsers.values()));
 </script>
 
-<!-- Active users avatars -->
 <div class="flex items-center gap-1">
-	{#each others as user (user.userId)}
-		<div class="relative group" title={user.userName}>
+	{#each allUsers as user (user.userId)}
+		{@const isSelf = user.userId === currentUser?.uid}
+		{@const canFollow = isGlobal && !isSelf}
+		<button
+			class="group relative {canFollow ? 'cursor-pointer' : 'cursor-default'}"
+			title={canFollow ? `Follow ${user.userName}` : user.userName}
+			onclick={() => followUser(user)}
+		>
 			{#if user.photoUrl}
 				<img
 					src={user.photoUrl}
 					alt={user.userName}
-					class="h-7 w-7 rounded-full ring-2 ring-white object-cover"
-					style="ring-color: {user.color}"
+					referrerpolicy="no-referrer"
+					class="h-7 w-7 rounded-full object-cover"
 				/>
 			{:else}
 				<div
-					class="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white ring-2 ring-white"
-					style="background-color: {user.color}"
+					class="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white"
+					style="background-color: {user.color};"
 				>
 					{initials(user.userName)}
 				</div>
 			{/if}
-			<!-- Tooltip -->
-			<div class="pointer-events-none absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity">
-				{user.userName}
+			<div class="pointer-events-none absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+				{user.userName}{isSelf ? ' (you)' : ''}
 			</div>
-		</div>
+		</button>
 	{/each}
 </div>

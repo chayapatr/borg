@@ -425,9 +425,10 @@
 											</span>
 											{#if person}
 												<img
-													src={person.profileImageUrl}
+													src={person.photoUrl}
 													alt={person.name}
 													class="h-5 w-5 rounded-full border border-zinc-200"
+													referrerpolicy="no-referrer"
 													onerror={(e) =>
 														((e.currentTarget as HTMLImageElement).style.display = 'none')}
 												/>
@@ -587,9 +588,10 @@
 											</span>
 											{#if person}
 												<img
-													src={person.profileImageUrl}
+													src={person.photoUrl}
 													alt={person.name}
 													class="h-5 w-5 rounded-full border border-zinc-200"
+													referrerpolicy="no-referrer"
 													onerror={(e) =>
 														((e.currentTarget as HTMLImageElement).style.display = 'none')}
 												/>

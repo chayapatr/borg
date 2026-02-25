@@ -182,8 +182,8 @@
 		<!-- Spacer -->
 		<div class="flex-1"></div>
 
-		<!-- Active users -->
-		<PresenceAvatars room="__main__" />
+		<!-- Active users (global mode — shows everyone across all pages) -->
+		<PresenceAvatars />
 
 		<div class="h-5 border-l border-zinc-200 mx-1"></div>
 
