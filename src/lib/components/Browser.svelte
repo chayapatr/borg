@@ -28,6 +28,7 @@
 	} from '../services/interfaces';
 
 	import { firebaseAuth, authStore } from '../stores/authStore';
+	import PresenceAvatars from './PresenceAvatars.svelte';
 
 	type Tab = 'projects' | 'people' | 'timeline' | 'tasks' | 'personal' | 'wiki' | 'resources';
 
@@ -180,6 +181,11 @@
 
 		<!-- Spacer -->
 		<div class="flex-1"></div>
+
+		<!-- Active users -->
+		<PresenceAvatars room="__main__" />
+
+		<div class="h-5 border-l border-zinc-200 mx-1"></div>
 
 		<!-- Logout -->
 		<button

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Canvas from '$lib/components/Canvas.svelte';
+	import PresenceAvatars from '$lib/components/PresenceAvatars.svelte';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -103,14 +104,19 @@
 	</div>
 {:else if project}
 	<div class="relative h-screen w-full">
-		<!-- Floating back button -->
-		<button
-			onclick={() => goto('/')}
-			class="absolute left-3 top-3 z-50 flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50"
-		>
-			<ChevronLeft class="h-3.5 w-3.5" />
-			Projects
-		</button>
+		<!-- Floating top bar -->
+		<div class="absolute left-3 top-3 z-50 flex items-center gap-2">
+			<button
+				onclick={() => goto('/')}
+				class="flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50"
+			>
+				<ChevronLeft class="h-3.5 w-3.5" />
+				Projects
+			</button>
+			<div class="flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 py-1">
+				<PresenceAvatars room={projectSlug} />
+			</div>
+		</div>
 
 		<!-- Canvas fills full height -->
 		<SvelteFlowProvider>
