@@ -29,6 +29,7 @@
 	let userColor = $state('');
 	let staleTimer: ReturnType<typeof setInterval> | null = null;
 	const photoCache = new Map<string, string>();
+	let lastWrittenPage = '';
 
 	const STALE_THRESHOLD = 30000;
 
@@ -62,7 +63,8 @@
 
 	// Write our current page to Firestore so others can follow us
 	async function updateCurrentPage(path: string) {
-		if (!currentUser) return;
+		if (!currentUser || path === lastWrittenPage) return;
+		lastWrittenPage = path;
 		try {
 			await setDoc(doc(db, 'users', currentUser.uid), { currentPage: path }, { merge: true });
 		} catch {}
@@ -76,18 +78,11 @@
 		return unsub;
 	});
 
-	// Track page changes and write to Firestore in global mode
+	// Track current page and write to Firestore so others can follow us
 	$effect(() => {
-		if (isGlobal && currentUser && $page.url.pathname) {
-			updateCurrentPage($page.url.pathname);
-		}
-	});
-
-	// Also write page for project pages (so global mode can see them)
-	$effect(() => {
-		if (!isGlobal && currentUser && room) {
-			updateCurrentPage(`/project/${room}`);
-		}
+		if (!currentUser) return;
+		const path = isGlobal ? $page.url.pathname : `/project/${room}`;
+		if (path) updateCurrentPage(path);
 	});
 
 	function connect() {
