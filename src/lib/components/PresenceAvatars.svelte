@@ -13,7 +13,7 @@
 		photoUrl: string;
 		color: string;
 		lastSeen: number;
-		currentPage: string; // only populated in global mode
+		currentPage?: string;
 	}
 
 	// room = project slug for project pages, or undefined for main page (global mode)
@@ -28,7 +28,7 @@
 	let currentUser: User | null = $state(null);
 	let userColor = $state('');
 	let staleTimer: ReturnType<typeof setInterval> | null = null;
-	const photoCache = new Map<string, string>();
+	const photoCache = new Map<string, Promise<string>>();
 	let lastWrittenPage = '';
 
 	const STALE_THRESHOLD = 30000;
@@ -49,16 +49,13 @@
 		return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 	}
 
-	async function fetchPhoto(userId: string): Promise<string> {
-		if (photoCache.has(userId)) return photoCache.get(userId)!;
-		try {
-			const snap = await getDoc(doc(db, 'users', userId));
-			const url = snap.data()?.photoUrl || '';
-			photoCache.set(userId, url);
-			return url;
-		} catch {
-			return '';
+	function fetchPhoto(userId: string): Promise<string> {
+		if (!photoCache.has(userId)) {
+			photoCache.set(userId, getDoc(doc(db, 'users', userId))
+				.then((snap) => snap.data()?.photoUrl || '')
+				.catch(() => ''));
 		}
+		return photoCache.get(userId)!;
 	}
 
 	// Write our current page to Firestore so others can follow us
@@ -127,8 +124,7 @@
 			userName: data.userName || 'Anonymous',
 			photoUrl,
 			color: data.color || colorForUser(data.userId),
-			lastSeen: Date.now(),
-			currentPage: '' // fetched fresh on click
+			lastSeen: Date.now()
 		});
 		activeUsers = new Map(activeUsers);
 	}
