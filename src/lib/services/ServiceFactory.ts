@@ -6,7 +6,7 @@ import type {
 	INodesService,
 	IStickerService,
 	IUserService,
-	IWikiService
+	IOutlineService
 } from './interfaces';
 import { FirebaseProjectsService } from './firebase/FirebaseProjectsService';
 import { FirebaseTaskService } from './firebase/FirebaseTaskService';
@@ -15,7 +15,7 @@ import { FirebaseNodesService } from './firebase/FirebaseNodesService';
 import { FirebasePeopleService } from './firebase/FirebasePeopleService';
 import { FirebaseStickerService } from './firebase/FirebaseStickerService';
 import { FirebaseUserService } from './firebase/FirebaseUserService';
-import { FirebaseWikiService } from './firebase/FirebaseWikiService';
+import { OutlineService } from './OutlineService';
 import type { Node, Edge } from '@xyflow/svelte';
 
 export class ServiceFactory {
@@ -61,7 +61,7 @@ export class ServiceFactory {
 		return new FirebaseUserService();
 	}
 
-	static createWikiService(): IWikiService {
-		return new FirebaseWikiService();
+	static createOutlineService(): IOutlineService {
+		return new OutlineService();
 	}
 }

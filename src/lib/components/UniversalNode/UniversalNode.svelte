@@ -5,7 +5,7 @@
 	import StickerNode from './StickerNode.svelte';
 	import ImageNode from './ImageNode.svelte';
 	import IframeNode from './IframeNode.svelte';
-	import WikiNode from './WikiNode.svelte';
+	import OutlineNode from './OutlineNode.svelte';
 	import NodeHeader from './components/NodeHeader.svelte';
 	import NodeContent from './components/NodeContent.svelte';
 	import NodeTasks from './components/NodeTasks.svelte';
@@ -229,9 +229,9 @@
 {:else if template.id === 'iframe'}
 	<!-- Delegate entirely to IframeNode for iframe types -->
 	<IframeNode {data} {id} {isBeingEdited} />
-{:else if template.id === 'wiki'}
-	<!-- Delegate entirely to WikiNode for wiki types -->
-	<WikiNode {data} {id} {isBeingEdited} />
+{:else if template.id === 'outline'}
+	<!-- Delegate entirely to OutlineNode for outline doc types -->
+	<OutlineNode {data} {id} {isBeingEdited} />
 {:else}
 	<div>
 		<!-- Project Node Header (outside the main node box) -->

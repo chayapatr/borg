@@ -41,7 +41,7 @@
 		{ id: 'note', icon: StickyNote, template: nodeTemplates.note },
 		{ id: 'image', icon: Image, template: nodeTemplates.image },
 		{ id: 'iframe', icon: Monitor, template: nodeTemplates.iframe },
-		{ id: 'wiki', icon: BookOpen, template: nodeTemplates.wiki },
+		{ id: 'outline', icon: BookOpen, template: nodeTemplates.outline },
 		{ id: 'link', icon: Link, template: nodeTemplates.link },
 		{ id: 'blank', icon: Square, template: nodeTemplates.blank }
 	];

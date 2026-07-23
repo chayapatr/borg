@@ -4,9 +4,9 @@ import type { Task, TaskWithContext, TaskCounts, PersonTaskCount } from '../../t
 export interface TaskSourceOptions {
 	// For project-based tasks
 	projectSlug?: string;
-	// For wiki-based tasks
-	wikiId?: string;
-	wikiTitle?: string;
+	// For Outline doc-based tasks
+	outlineDocId?: string;
+	outlineDocTitle?: string;
 }
 
 export interface ITaskService {

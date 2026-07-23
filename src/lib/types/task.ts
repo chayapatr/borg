@@ -8,12 +8,12 @@ export interface Task {
 	status?: 'active' | 'resolved'; // Default to 'active' for backward compatibility
 }
 
-// Source type for tasks - can be from a project node or a wiki page
-export type TaskSourceType = 'project' | 'wiki';
+// Source type for tasks - can be from a project node or an Outline doc
+export type TaskSourceType = 'project' | 'outline';
 
 export interface TaskWithContext extends Task {
 	// Source information
-	sourceType?: TaskSourceType; // 'project' or 'wiki', defaults to 'project' for backward compat
+	sourceType?: TaskSourceType; // 'project' or 'outline', defaults to 'project' for backward compat
 
 	// Project source fields (used when sourceType is 'project')
 	projectSlug?: string;
@@ -22,9 +22,9 @@ export interface TaskWithContext extends Task {
 	nodeTitle: string;
 	nodeType: string;
 
-	// Wiki source fields (used when sourceType is 'wiki')
-	wikiId?: string;
-	wikiTitle?: string;
+	// Outline doc source fields (used when sourceType is 'outline')
+	outlineDocId?: string;
+	outlineDocTitle?: string;
 
 	updatedAt?: string;
 }

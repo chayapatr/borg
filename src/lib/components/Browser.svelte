@@ -8,8 +8,7 @@
 		LogOut,
 		BookOpen,
 		User,
-		ExternalLink,
-		FileText
+		ExternalLink
 	} from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import ProjectsTab from './browser/ProjectsTab.svelte';
@@ -17,9 +16,7 @@
 	import TimelineTab from './browser/TimelineTab.svelte';
 	import TaskTab from './browser/TaskTab.svelte';
 	import PersonalTab from './browser/PersonalTab.svelte';
-	import WikiTab from './browser/WikiTab.svelte';
 	import { ServiceFactory } from '../services/ServiceFactory';
-	import type { IWikiService } from '../services/interfaces/IWikiService';
 	import type {
 		IProjectsService,
 		ITaskService,
@@ -30,7 +27,7 @@
 	import { firebaseAuth, authStore } from '../stores/authStore';
 	import PresenceAvatars from './PresenceAvatars.svelte';
 
-	type Tab = 'projects' | 'people' | 'timeline' | 'tasks' | 'personal' | 'wiki' | 'resources';
+	type Tab = 'projects' | 'people' | 'timeline' | 'tasks' | 'personal' | 'resources';
 
 	let activeTab = $state<Tab>('projects');
 	let viewMode = $state<'list' | 'canvas'>('canvas');
@@ -44,7 +41,6 @@
 	let taskService: ITaskService;
 	let peopleService: IPeopleService;
 	let timelineService: ITimelineService;
-	let wikiService: IWikiService;
 
 	let globalCounts = $state({ todo: 0, doing: 0, done: 0 });
 	let servicesInitialized = $state(false);
@@ -56,7 +52,6 @@
 		taskService = ServiceFactory.createTaskService();
 		peopleService = ServiceFactory.createPeopleService();
 		timelineService = ServiceFactory.createTimelineService();
-		wikiService = ServiceFactory.createWikiService();
 
 		servicesInitialized = true;
 
@@ -164,14 +159,6 @@
 		</button>
 
 		<button
-			onclick={() => setActiveTab('wiki')}
-			class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab === 'wiki' ? 'bg-zinc-100 text-zinc-800 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
-		>
-			<FileText class="h-4 w-4" />
-			Wiki
-		</button>
-
-		<button
 			onclick={() => window.open('https://borg.cyborglab.org/project/lab-resources', '_blank')}
 			class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
 		>
@@ -211,8 +198,6 @@
 				<TaskTab {taskService} {peopleService} {activeTab} />
 			{:else if activeTab === 'personal'}
 				<PersonalTab {taskService} {activeTab} />
-			{:else if activeTab === 'wiki'}
-				<WikiTab {wikiService} {activeTab} />
 			{/if}
 		{:else}
 			<div class="flex h-screen w-full items-center justify-center">

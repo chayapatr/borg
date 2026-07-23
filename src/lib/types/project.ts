@@ -13,4 +13,5 @@ export interface Project {
 		y: number;
 		zoom: number;
 	};
+	outlineCollectionId?: string;
 }

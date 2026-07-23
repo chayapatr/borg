@@ -323,23 +323,31 @@ export const nodeTemplates: Record<string, NodeTemplate> = {
 		]
 	},
 
-	wiki: {
-		id: 'wiki',
-		name: 'Wiki',
+	outline: {
+		id: 'outline',
+		name: 'Outline Doc',
 		color: '#3b82f6',
 		fields: [
 			{
 				id: 'title',
-				label: 'Wiki Title',
+				label: 'Doc Title',
 				type: 'text',
-				placeholder: 'Enter wiki page title...',
+				placeholder: 'Enter document title...',
 				required: true
 			},
 			{
-				id: 'wikiId',
-				label: 'Wiki ID',
+				id: 'outlineDocId',
+				label: 'Outline Doc ID',
 				type: 'text',
-				placeholder: 'Wiki document ID...',
+				placeholder: 'Outline document ID...',
+				required: false,
+				showInDisplay: false
+			},
+			{
+				id: 'outlineUrl',
+				label: 'Outline URL',
+				type: 'text',
+				placeholder: 'Outline document URL...',
 				required: false,
 				showInDisplay: false
 			}

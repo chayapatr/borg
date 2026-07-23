@@ -28,7 +28,7 @@ export interface StoredTask {
 	createdAt: string;
 	updatedAt?: string;
 	status?: 'active' | 'resolved';
-	// Source type: 'project' or 'wiki'
+	// Source type: 'project' or 'outline'
 	sourceType: TaskSourceType;
 	// Project source fields
 	projectId: string;
@@ -37,9 +37,9 @@ export interface StoredTask {
 	nodeId: string;
 	nodeTitle: string;
 	nodeType: string;
-	// Wiki source fields
-	wikiId?: string;
-	wikiTitle?: string;
+	// Outline doc source fields
+	outlineDocId?: string;
+	outlineDocTitle?: string;
 	// Common fields
 	createdBy: string;
 	isOverdue: boolean;
@@ -191,8 +191,8 @@ export class FirebaseTaskService implements ITaskService {
 		const now = new Date();
 		const isOverdue = task.dueDate ? new Date(task.dueDate) < now : false;
 
-		// Handle wiki-based tasks
-		if (options.wikiId) {
+		// Handle Outline doc-based tasks
+		if (options.outlineDocId) {
 			const storedTask: Omit<StoredTask, 'id'> = {
 				title: task.title,
 				assignee: task.assignee,
@@ -200,17 +200,17 @@ export class FirebaseTaskService implements ITaskService {
 				notes: task.notes || '',
 				createdAt: now.toISOString(),
 				status: task.status || 'active',
-				sourceType: 'wiki',
-				// Empty project fields for wiki tasks
+				sourceType: 'outline',
+				// Empty project fields for outline-doc tasks
 				projectId: '',
 				projectSlug: '',
 				projectTitle: '',
-				nodeId: nodeId, // This will be the wikiId
-				nodeTitle: options.wikiTitle || 'Untitled Wiki',
-				nodeType: 'wiki',
-				// Wiki-specific fields
-				wikiId: options.wikiId,
-				wikiTitle: options.wikiTitle || 'Untitled Wiki',
+				nodeId: nodeId, // This will be the outlineDocId
+				nodeTitle: options.outlineDocTitle || 'Untitled Doc',
+				nodeType: 'outline',
+				// Outline doc-specific fields
+				outlineDocId: options.outlineDocId,
+				outlineDocTitle: options.outlineDocTitle || 'Untitled Doc',
 				createdBy: get(authStore).user?.uid || 'anonymous',
 				isOverdue
 			};
@@ -223,7 +223,7 @@ export class FirebaseTaskService implements ITaskService {
 		// Handle project-based tasks (original logic)
 		const projectSlug = options.projectSlug;
 		if (!projectSlug) {
-			throw new Error('Project slug or wiki ID is required for task creation');
+			throw new Error('Project slug or Outline doc ID is required for task creation');
 		}
 
 		// We'll need project and node context - this would typically come from the calling component
@@ -463,7 +463,7 @@ export class FirebaseTaskService implements ITaskService {
 	): Unsubscribe {
 		let q;
 		if (includeResolved) {
-			// For wiki pages, include all tasks regardless of status
+			// For outline-doc-linked tasks, include all tasks regardless of status
 			q = query(
 				collection(db, 'tasks'),
 				where('nodeId', '==', nodeId),
@@ -699,8 +699,8 @@ export class FirebaseTaskService implements ITaskService {
 			nodeId: storedTask.nodeId,
 			nodeTitle: storedTask.nodeTitle,
 			nodeType: storedTask.nodeType,
-			wikiId: storedTask.wikiId,
-			wikiTitle: storedTask.wikiTitle
+			outlineDocId: storedTask.outlineDocId,
+			outlineDocTitle: storedTask.outlineDocTitle
 		};
 	}
 }

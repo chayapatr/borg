@@ -88,7 +88,7 @@
 
 		for (const task of tasks) {
 			const projectSlug = task.projectSlug || 'unknown';
-			const projectTitle = task.sourceType === 'wiki' ? 'Wiki' : (task.projectTitle || 'Unknown Project');
+			const projectTitle = task.sourceType === 'outline' ? 'Outline' : (task.projectTitle || 'Unknown Project');
 			const nodeId = task.nodeId;
 			const nodeTitle = task.nodeTitle;
 			const nodeType = task.nodeType;
