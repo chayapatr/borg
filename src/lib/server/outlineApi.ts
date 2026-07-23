@@ -6,8 +6,15 @@ export interface OutlineConfig {
 	apiToken: string;
 }
 
+// Accept OUTLINE_API_URL with or without a trailing "/api" so a stray
+// "/api" in the configured env var doesn't silently double up the path.
+function apiBase(rawUrl: string): string {
+	const trimmed = rawUrl.replace(/\/+$/, '');
+	return trimmed.endsWith('/api') ? trimmed.slice(0, -'/api'.length) : trimmed;
+}
+
 async function outlineFetch(config: OutlineConfig, endpoint: string, body: Record<string, unknown>) {
-	const res = await fetch(`${config.apiUrl}/api/${endpoint}`, {
+	const res = await fetch(`${apiBase(config.apiUrl)}/api/${endpoint}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
