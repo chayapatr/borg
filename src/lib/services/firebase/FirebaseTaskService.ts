@@ -40,9 +40,34 @@ export interface StoredTask {
 	// Outline doc source fields
 	outlineDocId?: string;
 	outlineDocTitle?: string;
+	// Id of the Outline comment that originated this task, used to thread
+	// echo replies (task updates/resolves/deletes) back into that comment.
+	outlineCommentId?: string;
 	// Common fields
 	createdBy: string;
 	isOverdue: boolean;
+}
+
+// Builds the Outline echo message for an updateTask() call. Returns null
+// for updates that shouldn't produce an echo (e.g. isOverdue recalculation
+// alone, with no user-visible field changed).
+function describeUpdateForOutline(updates: Partial<Task>): string | null {
+	if (updates.status === 'resolved') return '✅ Task marked done in Borg.';
+	if (updates.status === 'active') return '↩️ Task reopened in Borg.';
+
+	const changedFields = Object.keys(updates).filter((k) => k !== 'status');
+	if (changedFields.length === 0) return null;
+
+	if (changedFields.length === 1 && changedFields[0] === 'assignee') {
+		return '✏️ Task reassigned in Borg.';
+	}
+	if (changedFields.length === 1 && changedFields[0] === 'title') {
+		return '✏️ Task retitled in Borg.';
+	}
+	if (changedFields.length === 1 && changedFields[0] === 'dueDate') {
+		return '✏️ Task due date updated in Borg.';
+	}
+	return '✏️ Task details updated in Borg.';
 }
 
 export class FirebaseTaskService implements ITaskService {
@@ -299,24 +324,26 @@ export class FirebaseTaskService implements ITaskService {
 	async updateTask(nodeId: string, taskId: string, updates: Partial<Task>, projectSlug?: string): Promise<void> {
 		const q = query(collection(db, 'tasks'), where('id', '==', taskId));
 		const snapshot = await getDocs(q);
-		
+
 		if (snapshot.empty) {
 			throw new Error(`Task not found: ${taskId}`);
 		}
-		
+
 		const taskDoc = snapshot.docs[0];
 		const now = new Date();
 		const currentData = taskDoc.data() as StoredTask;
-		
+
 		// Calculate if overdue status changed
 		const newDueDate = updates.dueDate || currentData.dueDate;
 		const isOverdue = newDueDate ? new Date(newDueDate) < now : false;
-		
+
 		await updateDoc(taskDoc.ref, {
 			...updates,
 			isOverdue,
 			updatedAt: now.toISOString()
 		});
+
+		this.notifyOutline(currentData, describeUpdateForOutline(updates));
 	}
 
 	async deleteTask(nodeId: string, taskId: string, projectSlug?: string): Promise<void> {
@@ -334,10 +361,40 @@ export class FirebaseTaskService implements ITaskService {
 		);
 
 		const snapshot = await getDocs(q);
-		
+
 		for (const docSnap of snapshot.docs) {
+			const storedTask = docSnap.data() as StoredTask;
 			await deleteDoc(docSnap.ref);
+			this.notifyOutline(storedTask, '🗑️ Task deleted in Borg.');
 		}
+	}
+
+	// Fire-and-forget echo of a task mutation back into the originating
+	// Outline comment thread. Never awaited by callers, never throws —
+	// a failed echo must not surface as a failed task mutation.
+	private notifyOutline(storedTask: StoredTask, message: string | null): void {
+		if (storedTask.sourceType !== 'outline' || !storedTask.outlineDocId || !message) return;
+
+		(async () => {
+			try {
+				const user = get(authStore).user;
+				const idToken = await user?.getIdToken();
+				await fetch('/api/outline/task-events', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						...(idToken && { Authorization: `Bearer ${idToken}` })
+					},
+					body: JSON.stringify({
+						outlineDocId: storedTask.outlineDocId,
+						commentId: storedTask.outlineCommentId,
+						message
+					})
+				});
+			} catch (err) {
+				console.error('Failed to echo task update to Outline:', err);
+			}
+		})();
 	}
 
 	async resolveTask(nodeId: string, taskId: string, projectSlug?: string): Promise<void> {
@@ -700,7 +757,8 @@ export class FirebaseTaskService implements ITaskService {
 			nodeTitle: storedTask.nodeTitle,
 			nodeType: storedTask.nodeType,
 			outlineDocId: storedTask.outlineDocId,
-			outlineDocTitle: storedTask.outlineDocTitle
+			outlineDocTitle: storedTask.outlineDocTitle,
+			outlineCommentId: storedTask.outlineCommentId
 		};
 	}
 }

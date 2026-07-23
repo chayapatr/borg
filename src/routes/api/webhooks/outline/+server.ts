@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { getDb, fsGet, fsSet, fsUpdate, fsQuery } from '$lib/server/firestoreAdmin';
+import { getDb, fsGet, fsSet, fsUpdate, fsDelete, fsQuery } from '$lib/server/firestoreAdmin';
 import { verifyOutlineSignature } from '$lib/server/outlineWebhookAuth';
-import { parseTaskComment, extractPlainText } from '$lib/server/outlineCommentParser';
+import { parseTaskComment, parseTaskReply, extractPlainText } from '$lib/server/outlineCommentParser';
 import { createComment, getDocument } from '$lib/server/outlineApi';
 
 // Ack immediately (200) for everything except a bad signature, so Outline
@@ -80,6 +80,17 @@ export const POST: RequestHandler = async ({ request }) => {
 		return ACK;
 	}
 
+	// Is this a reply within an existing task's comment thread? If so, treat
+	// it as an edit/resolve/delete command rather than a new TASK: comment.
+	if (parentCommentId) {
+		const taskMatches = await fsQuery(db, 'tasks', 'outlineCommentId', 'EQUAL', parentCommentId);
+		if (taskMatches.length > 0) {
+			const outcome = await handleTaskReply(db, outlineConfig, taskMatches[0], documentId, commentId, commentText);
+			await fsUpdate(db, 'outlineWebhookEvents', eventId, { outcome, taskId: taskMatches[0].id });
+			return ACK;
+		}
+	}
+
 	const parsed = parseTaskComment(commentText);
 
 	if (parsed.kind === 'not-a-task') {
@@ -119,14 +130,31 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 	}
 
-	// Prefer the doc title carried in the payload; fall back to one API call.
+	// Prefer the doc title/collection carried in the payload; fall back to one API call.
 	let outlineDocTitle: string = model.document?.title;
-	if (!outlineDocTitle) {
+	let collectionId: string | undefined = model.document?.collectionId ?? model.collectionId;
+	if (!outlineDocTitle || !collectionId) {
 		try {
 			const doc = await getDocument(outlineConfig, documentId);
-			outlineDocTitle = doc.title;
+			outlineDocTitle = outlineDocTitle || doc.title;
+			collectionId = collectionId || (doc as { collectionId?: string }).collectionId;
 		} catch {
-			outlineDocTitle = 'Untitled Doc';
+			outlineDocTitle = outlineDocTitle || 'Untitled Doc';
+		}
+	}
+
+	// Resolve which Borg project owns this doc's collection, so the task
+	// groups under the real project instead of a flat "Outline" bucket.
+	let projectId = '';
+	let projectSlug = '';
+	let projectTitle = '';
+	if (collectionId) {
+		const projectMatches = await fsQuery(db, 'projects', 'outlineCollectionId', 'EQUAL', collectionId);
+		if (projectMatches.length > 0) {
+			const project = projectMatches[0];
+			projectId = project.id;
+			projectSlug = (project.data.slug as string) || '';
+			projectTitle = (project.data.title as string) || '';
 		}
 	}
 
@@ -141,14 +169,15 @@ export const POST: RequestHandler = async ({ request }) => {
 		createdAt: nowIso,
 		status: 'active',
 		sourceType: 'outline',
-		projectId: '',
-		projectSlug: '',
-		projectTitle: '',
+		projectId,
+		projectSlug,
+		projectTitle,
 		nodeId: documentId,
 		nodeTitle: outlineDocTitle,
 		nodeType: 'outline',
 		outlineDocId: documentId,
 		outlineDocTitle,
+		outlineCommentId: commentId,
 		createdBy: 'outline-webhook',
 		isOverdue: false
 	});
@@ -185,4 +214,56 @@ async function postReply(
 		// (or parse-error outcome) already happened independent of this.
 		console.error('[outline webhook] failed to post reply comment', err);
 	}
+}
+
+// Handles a reply within an existing task's comment thread: DONE / DELETE /
+// EDIT: <title> [@Name]. Returns the outcome string to record on the
+// webhook event. Anything that doesn't match one of these commands is
+// treated as ordinary discussion — no action, no reply, no outcome change
+// beyond the caller's own bookkeeping.
+async function handleTaskReply(
+	db: ReturnType<typeof getDb>,
+	outlineConfig: { apiUrl: string; apiToken: string },
+	taskMatch: { id: string; data: Record<string, unknown> },
+	documentId: string,
+	commentId: string | undefined,
+	commentText: string
+): Promise<string> {
+	const reply = parseTaskReply(commentText);
+
+	if (reply.kind === 'not-a-command') {
+		return 'skipped_reply_not_command';
+	}
+
+	if (reply.kind === 'done') {
+		await fsUpdate(db, 'tasks', taskMatch.id, { status: 'resolved' });
+		await postReply(outlineConfig, documentId, commentId, '✅ Marked done from Outline.');
+		return 'reply_done';
+	}
+
+	if (reply.kind === 'delete') {
+		await fsDelete(db, 'tasks', taskMatch.id);
+		await postReply(outlineConfig, documentId, commentId, '🗑️ Deleted from Outline.');
+		return 'reply_deleted';
+	}
+
+	// reply.kind === 'edit'
+	const updates: Record<string, unknown> = { title: reply.title };
+	let confirmText = `✏️ Retitled to "${reply.title}" from Outline.`;
+
+	if (reply.mentionedName) {
+		const approvedUsers = await fsQuery(db, 'users', 'isApproved', 'EQUAL', true);
+		const needle = reply.mentionedName.toLowerCase();
+		const match = approvedUsers.find((u) => (u.data.name as string | undefined)?.toLowerCase().includes(needle));
+		if (match) {
+			updates.assignee = match.id;
+			confirmText = `✏️ Retitled to "${reply.title}" and reassigned to ${match.data.name} from Outline.`;
+		} else {
+			confirmText = `✏️ Retitled to "${reply.title}" from Outline — no person matched "@${reply.mentionedName}".`;
+		}
+	}
+
+	await fsUpdate(db, 'tasks', taskMatch.id, updates);
+	await postReply(outlineConfig, documentId, commentId, confirmText);
+	return 'reply_edited';
 }

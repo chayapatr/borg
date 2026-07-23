@@ -219,6 +219,16 @@ export async function fsSet(
 	}
 }
 
+export async function fsDelete(db: Db, collection: string, docId: string): Promise<void> {
+	const token = await getAccessToken(db.sa);
+	const res = await fetch(docUrl(db, collection, docId), {
+		method: 'DELETE',
+		headers: { Authorization: `Bearer ${token}` }
+	});
+	if (res.status === 404) return;
+	if (!res.ok) throw new Error(`Firestore DELETE failed: ${await res.text()}`);
+}
+
 export async function fsUpdate(
 	db: Db,
 	collection: string,

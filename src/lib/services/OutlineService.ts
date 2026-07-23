@@ -1,15 +1,20 @@
 import { get } from 'svelte/store';
-import type { IOutlineService, OutlineDoc } from './interfaces/IOutlineService';
+import type { IOutlineService, OutlineDoc, OutlineDocSummary } from './interfaces/IOutlineService';
 import { authStore } from '../stores/authStore';
 import { ServiceFactory } from './ServiceFactory';
 
+async function authHeader(): Promise<Record<string, string>> {
+	const user = get(authStore).user;
+	if (!user) {
+		throw new Error('Must be signed in to use the Outline integration');
+	}
+	const idToken = await user.getIdToken();
+	return { Authorization: `Bearer ${idToken}` };
+}
+
 export class OutlineService implements IOutlineService {
 	async createDoc(projectSlug: string, title: string): Promise<OutlineDoc> {
-		const user = get(authStore).user;
-		if (!user) {
-			throw new Error('Must be signed in to create an Outline doc');
-		}
-		const idToken = await user.getIdToken();
+		const headers = await authHeader();
 
 		const projectsService = ServiceFactory.createProjectsService();
 		const project = await projectsService.getProject(projectSlug);
@@ -21,7 +26,7 @@ export class OutlineService implements IOutlineService {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				Authorization: `Bearer ${idToken}`
+				...headers
 			},
 			body: JSON.stringify({
 				projectSlug,
@@ -45,5 +50,28 @@ export class OutlineService implements IOutlineService {
 		}
 
 		return { id: result.id, url: result.url, title: result.title };
+	}
+
+	async searchDocs(query: string): Promise<OutlineDocSummary[]> {
+		const headers = await authHeader();
+		const res = await fetch(`/api/outline/search?q=${encodeURIComponent(query)}`, { headers });
+		if (!res.ok) {
+			throw new Error(`Failed to search Outline docs: ${await res.text()}`);
+		}
+		const { docs } = await res.json();
+		return docs;
+	}
+
+	async listDocs(collectionIds: string[]): Promise<OutlineDocSummary[]> {
+		if (collectionIds.length === 0) return [];
+		const headers = await authHeader();
+		const params = new URLSearchParams();
+		for (const id of collectionIds) params.append('collectionId', id);
+		const res = await fetch(`/api/outline/search?${params.toString()}`, { headers });
+		if (!res.ok) {
+			throw new Error(`Failed to list Outline docs: ${await res.text()}`);
+		}
+		const { docs } = await res.json();
+		return docs;
 	}
 }

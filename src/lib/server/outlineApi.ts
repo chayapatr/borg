@@ -13,6 +13,15 @@ function apiBase(rawUrl: string): string {
 	return trimmed.endsWith('/api') ? trimmed.slice(0, -'/api'.length) : trimmed;
 }
 
+// Outline's API returns document `url` as a path relative to the Outline
+// instance (e.g. "/doc/untitled-abc123"), not an absolute URL. Resolving it
+// against Borg's own origin (browser default for a relative window.open)
+// sends users to the wrong site entirely, so make it absolute here.
+function toAbsoluteUrl(config: OutlineConfig, maybeRelativeUrl: string): string {
+	if (/^https?:\/\//i.test(maybeRelativeUrl)) return maybeRelativeUrl;
+	return `${apiBase(config.apiUrl)}${maybeRelativeUrl.startsWith('/') ? '' : '/'}${maybeRelativeUrl}`;
+}
+
 async function outlineFetch(config: OutlineConfig, endpoint: string, body: Record<string, unknown>) {
 	const res = await fetch(`${apiBase(config.apiUrl)}/api/${endpoint}`, {
 		method: 'POST',
@@ -55,12 +64,48 @@ export async function createDocument(
 		text: params.text ?? '',
 		publish: true
 	});
-	return json.data as { id: string; url: string; title: string };
+	const doc = json.data as { id: string; url: string; title: string };
+	return { ...doc, url: toAbsoluteUrl(config, doc.url) };
 }
 
 export async function getDocument(config: OutlineConfig, id: string) {
 	const json = await outlineFetch(config, 'documents.info', { id });
-	return json.data as { id: string; url: string; title: string };
+	const doc = json.data as { id: string; url: string; title: string; collectionId?: string };
+	return { ...doc, url: toAbsoluteUrl(config, doc.url) };
+}
+
+export interface OutlineDocSummary {
+	id: string;
+	title: string;
+	url: string;
+	updatedAt: string;
+	collectionId: string;
+}
+
+function toDocSummary(config: OutlineConfig, doc: any): OutlineDocSummary {
+	return {
+		id: doc.id,
+		title: doc.title,
+		url: toAbsoluteUrl(config, doc.url),
+		updatedAt: doc.updatedAt,
+		collectionId: doc.collectionId
+	};
+}
+
+export async function searchDocuments(config: OutlineConfig, query: string) {
+	const json = await outlineFetch(config, 'documents.search', { query });
+	const results = json.data as Array<{ document: any }>;
+	return results.map((r) => toDocSummary(config, r.document));
+}
+
+export async function listDocuments(config: OutlineConfig, collectionId: string) {
+	const json = await outlineFetch(config, 'documents.list', {
+		collectionId,
+		sort: 'updatedAt',
+		direction: 'DESC'
+	});
+	const results = json.data as any[];
+	return results.map((doc) => toDocSummary(config, doc));
 }
 
 export async function createComment(

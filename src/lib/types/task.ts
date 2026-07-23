@@ -25,6 +25,7 @@ export interface TaskWithContext extends Task {
 	// Outline doc source fields (used when sourceType is 'outline')
 	outlineDocId?: string;
 	outlineDocTitle?: string;
+	outlineCommentId?: string;
 
 	updatedAt?: string;
 }
